@@ -20,26 +20,20 @@ Route::prefix('admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
         
-        // Add more admin routes here as needed
-        // Events
-        Route::prefix('events')->group(function () {
-            // Add event routes
-        });
+        // Festival Management
+        Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class, ['as' => 'admin']);
+        Route::resource('events', \App\Http\Controllers\Admin\EventController::class, ['as' => 'admin']);
+        Route::resource('restaurants', \App\Http\Controllers\Admin\RestaurantController::class, ['as' => 'admin']);
         
-        // Tickets
-        Route::prefix('tickets')->group(function () {
-            // Add ticket routes
-        });
+        // Heritage & Culture
+        Route::resource('heritage-villages', \App\Http\Controllers\Admin\HeritageVillageController::class, ['as' => 'admin']);
         
-        // Users
+        // Communications
+        Route::resource('announcements', \App\Http\Controllers\Admin\AnnouncementController::class, ['as' => 'admin']);
+        Route::resource('emergency-contacts', \App\Http\Controllers\Admin\EmergencyContactController::class, ['as' => 'admin']);
+        
+        // User Management
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class, ['as' => 'admin']);
-        
-        // Roles
         Route::resource('roles', \App\Http\Controllers\Admin\RoleController::class, ['as' => 'admin']);
-        
-        // Settings
-        Route::prefix('settings')->group(function () {
-            // Add settings routes
-        });
     });
 });

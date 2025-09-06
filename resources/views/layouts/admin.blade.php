@@ -345,13 +345,65 @@
                                 لوحة التحكم
                             </a>
                         </li>
-                        
-                     
                     </ul>
                 </div>
                 
                 <div class="menu-section">
-                    <div class="menu-title">الإدارة</div>
+                    <div class="menu-title">إدارة المهرجان</div>
+                    <ul class="menu-list">
+                        <li class="menu-item">
+                            <a href="{{ route('admin.categories.index') }}" class="menu-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
+                                <i class="bi bi-tags menu-icon"></i>
+                                الفئات
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.events.index') }}" class="menu-link {{ request()->routeIs('admin.events.*') ? 'active' : '' }}">
+                                <i class="bi bi-calendar-event menu-icon"></i>
+                                الفعاليات
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.restaurants.index') }}" class="menu-link {{ request()->routeIs('admin.restaurants.*') ? 'active' : '' }}">
+                                <i class="bi bi-shop menu-icon"></i>
+                                المطاعم
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">التراث والثقافة</div>
+                    <ul class="menu-list">
+                        <li class="menu-item">
+                            <a href="{{ route('admin.heritage-villages.index') }}" class="menu-link {{ request()->routeIs('admin.heritage-villages.*') ? 'active' : '' }}">
+                                <i class="bi bi-houses menu-icon"></i>
+                                القرى التراثية
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">التواصل والإعلانات</div>
+                    <ul class="menu-list">
+                        <li class="menu-item">
+                            <a href="{{ route('admin.announcements.index') }}" class="menu-link {{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}">
+                                <i class="bi bi-megaphone menu-icon"></i>
+                                الإعلانات
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.emergency-contacts.index') }}" class="menu-link {{ request()->routeIs('admin.emergency-contacts.*') ? 'active' : '' }}">
+                                <i class="bi bi-telephone-plus menu-icon"></i>
+                                أرقام الطوارئ
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">إدارة المستخدمين</div>
                     <ul class="menu-list">
                         <li class="menu-item has-submenu">
                             <a href="#" class="menu-link" onclick="toggleSubmenu(this)">
@@ -368,13 +420,8 @@
                                 <li class="menu-item">
                                     <a href="{{ route('admin.roles.index') }}" class="menu-link {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">أدوار المستخدمين</a>
                                 </li>
-                                  <li class="menu-item">
-                            
-                        </li>
                             </ul>
                         </li>
-                        
-                      
                     </ul>
                 </div>
             </nav>
