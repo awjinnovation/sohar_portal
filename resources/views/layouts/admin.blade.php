@@ -50,9 +50,9 @@
 
         .sidebar-header {
             padding: 20px;
-            background: var(--primary-color);
+            background: white;
             text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid #E5E7EB;
         }
 
         .sidebar-logo {
@@ -62,7 +62,7 @@
         }
 
         .sidebar-brand {
-            color: white;
+            color: var(--primary-color);
             font-size: 18px;
             font-weight: 600;
             text-decoration: none;
@@ -129,7 +129,7 @@
 
         .menu-icon {
             margin-right: 12px;
-            margin-left: 0;
+            margin-left: 12px;
             font-size: 18px;
             width: 20px;
             text-align: center;
@@ -269,17 +269,6 @@
             transition: max-height 0.3s ease;
         }
 
-        .menu-item.has-submenu .menu-link::after {
-            content: '\f285';
-            font-family: 'bootstrap-icons';
-            margin-right: auto;
-            transition: transform 0.3s ease;
-        }
-
-        .menu-item.has-submenu.open .menu-link::after {
-            transform: rotate(-90deg);
-        }
-
         .menu-item.has-submenu.open .submenu {
             max-height: 500px;
         }
@@ -380,10 +369,7 @@
                                     <a href="{{ route('admin.roles.index') }}" class="menu-link {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">أدوار المستخدمين</a>
                                 </li>
                                   <li class="menu-item">
-                            <a href="#" class="menu-link">
-                                <i class="bi bi-shield-lock menu-icon"></i>
-                                الصلاحيات
-                            </a>
+                            
                         </li>
                             </ul>
                         </li>
@@ -426,14 +412,14 @@
                         </div>
                         
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#"><i class="bi bi-person ms-2"></i> الملف الشخصي</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear ms-2"></i> الإعدادات</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> الملف الشخصي</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> الإعدادات</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form method="POST" action="{{ route('admin.logout') }}">
                                     @csrf
                                     <button type="submit" class="dropdown-item text-danger">
-                                        <i class="bi bi-box-arrow-left ms-2"></i> تسجيل الخروج
+                                        <i class="bi bi-box-arrow-left"></i> تسجيل الخروج
                                     </button>
                                 </form>
                             </li>

@@ -15,7 +15,7 @@
                             @if(!in_array($role->name, ['super-admin', 'admin']))
                                 @can('assign roles')
                                 <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-pencil ms-2"></i>
+                                    <i class="bi bi-pencil"></i>
                                     تعديل
                                 </a>
                                 @endcan
@@ -58,14 +58,14 @@
                             @forelse($groupedPermissions as $group => $permissions)
                             <div class="mb-3">
                                 <h6 class="text-primary">
-                                    <i class="bi bi-shield-check ms-2"></i>
+                                    <i class="bi bi-shield-check"></i>
                                     {{ ucfirst(str_replace('_', ' ', $group)) }}
                                 </h6>
                                 <div class="row mt-2">
                                     @foreach($permissions as $permission)
                                     <div class="col-md-4 mb-2">
                                         <span class="badge bg-success">
-                                            <i class="bi bi-check-circle ms-1"></i>
+                                            <i class="bi bi-check-circle"></i>
                                             {{ $permission->name }}
                                         </span>
                                     </div>
@@ -113,7 +113,6 @@
                     
                     <div class="d-flex justify-content-between">
                         <a href="{{ route('admin.roles.index') }}" class="btn btn-secondary">
-                            <i class="bi bi-arrow-right ms-2"></i>
                             رجوع
                         </a>
                         
@@ -123,7 +122,7 @@
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger">
-                                    <i class="bi bi-trash ms-2"></i>
+                                    <i class="bi bi-trash"></i>
                                     حذف الدور
                                 </button>
                             </form>
