@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('traditional_activities', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('village_id')->constrained('heritage_villages')->onDelete('cascade');
-            $table->string('name_en', 255);
-            $table->string('name_ar', 255);
+            $table->foreignId('heritage_village_id')->constrained('heritage_villages')->onDelete('cascade');
+            $table->string('activity_name_en', 255);
+            $table->string('activity_name_ar', 255);
             $table->text('description_en');
             $table->text('description_ar');
             $table->string('image_url', 500);
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             
-            $table->index('village_id');
+            $table->index('heritage_village_id');
             $table->index('is_active');
         });
     }

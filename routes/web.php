@@ -7,6 +7,9 @@ use App\Http\Controllers\Admin\DashboardController;
 // Redirect root to admin
 Route::get('/', fn() => redirect('/admin/login'));
 
+// Add fallback login route for Laravel's default auth middleware
+Route::get('/login', fn() => redirect('/admin/login'))->name('login');
+
 // Admin Routes
 Route::prefix('admin')->group(function () {
     // Guest routes

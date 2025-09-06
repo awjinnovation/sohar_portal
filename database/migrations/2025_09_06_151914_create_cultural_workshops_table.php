@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('cultural_workshops', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('village_id')->constrained('heritage_villages')->onDelete('cascade');
+            $table->foreignId('heritage_village_id')->constrained('heritage_villages')->onDelete('cascade');
             $table->string('title_en', 255);
             $table->string('title_ar', 255);
             $table->text('description_en');
@@ -27,7 +27,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             
-            $table->index('village_id');
+            $table->index('heritage_village_id');
             $table->index('is_active');
         });
     }

@@ -13,18 +13,23 @@ return new class extends Migration
     {
         Schema::create('craft_demonstrations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('village_id')->constrained('heritage_villages')->onDelete('cascade');
-            $table->string('title_en', 255);
-            $table->string('title_ar', 255);
+            $table->foreignId('heritage_village_id')->constrained('heritage_villages')->onDelete('cascade');
+            $table->string('craft_name_en', 255);
+            $table->string('craft_name_ar', 255);
             $table->text('description_en');
             $table->text('description_ar');
-            $table->string('craftsperson_name', 255);
-            $table->string('image_url', 500);
-            $table->integer('duration_minutes');
+            $table->string('artisan_name', 255)->nullable();
+            $table->text('demonstration_times')->nullable();
+            $table->text('materials_used_en')->nullable();
+            $table->text('materials_used_ar')->nullable();
+            $table->text('historical_significance_en')->nullable();
+            $table->text('historical_significance_ar')->nullable();
+            $table->integer('duration_minutes')->nullable();
+            $table->boolean('can_try_hands_on')->default(false);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             
-            $table->index('village_id');
+            $table->index('heritage_village_id');
             $table->index('is_active');
         });
     }

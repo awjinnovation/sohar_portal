@@ -12,4 +12,8 @@ class EventTag extends Model
     {
         return $this->belongsTo(Event::class);
     }
+    public function events()
+    {
+        return $this->belongsTo(Event::class);
+    }
 }

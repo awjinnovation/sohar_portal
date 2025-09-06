@@ -17,32 +17,38 @@ class HeritageVillage extends Model
 
     public function images()
     {
-        return $this->hasMany(VillageImage::class, 'village_id');
+        return $this->hasMany(VillageImage::class, 'heritage_village_id');
     }
 
     public function attractions()
     {
-        return $this->hasMany(VillageAttraction::class, 'village_id');
+        return $this->hasMany(VillageAttraction::class, 'heritage_village_id');
     }
 
     public function craftDemonstrations()
     {
-        return $this->hasMany(CraftDemonstration::class, 'village_id');
+        return $this->hasMany(CraftDemonstration::class, 'heritage_village_id');
     }
 
     public function traditionalActivities()
     {
-        return $this->hasMany(TraditionalActivity::class, 'village_id');
+        return $this->hasMany(TraditionalActivity::class, 'heritage_village_id');
     }
 
     public function culturalWorkshops()
     {
-        return $this->hasMany(CulturalWorkshop::class, 'village_id');
+        return $this->hasMany(CulturalWorkshop::class, 'heritage_village_id');
+    }
+    
+    // Alias for culturalWorkshops for backward compatibility
+    public function workshops()
+    {
+        return $this->culturalWorkshops();
     }
 
     public function photoSpots()
     {
-        return $this->hasMany(PhotoSpot::class, 'village_id');
+        return $this->hasMany(PhotoSpot::class, 'heritage_village_id');
     }
 
     public function scopeActive($query)

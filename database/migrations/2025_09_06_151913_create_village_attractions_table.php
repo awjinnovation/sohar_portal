@@ -13,13 +13,22 @@ return new class extends Migration
     {
         Schema::create('village_attractions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('village_id')->constrained('heritage_villages')->onDelete('cascade');
-            $table->string('attraction_en', 255);
-            $table->string('attraction_ar', 255);
-            $table->integer('display_order')->default(0);
+            $table->foreignId('heritage_village_id')->constrained('heritage_villages')->onDelete('cascade');
+            $table->string('name_en', 255);
+            $table->string('name_ar', 255);
+            $table->text('description_en');
+            $table->text('description_ar');
+            $table->text('location_description_en')->nullable();
+            $table->text('location_description_ar')->nullable();
+            $table->string('visiting_hours')->nullable();
+            $table->text('accessibility_info_en')->nullable();
+            $table->text('accessibility_info_ar')->nullable();
+            $table->string('recommended_duration', 100)->nullable();
+            $table->string('age_suitability', 100)->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
             
-            $table->index('village_id');
+            $table->index('heritage_village_id');
         });
     }
 
