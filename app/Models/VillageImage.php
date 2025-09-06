@@ -6,14 +6,22 @@ use Illuminate\Database\Eloquent\Model;
 
 class VillageImage extends Model
 {
-    protected $fillable = ['village_id', 'image_url', 'display_order'];
+    protected $fillable = [
+        'heritage_village_id', 
+        'image_url', 
+        'caption_en',
+        'caption_ar',
+        'display_order',
+        'is_featured'
+    ];
 
     protected $casts = [
-        'display_order' => 'integer'
+        'display_order' => 'integer',
+        'is_featured' => 'boolean'
     ];
 
     public function village()
     {
-        return $this->belongsTo(HeritageVillage::class, 'village_id');
+        return $this->belongsTo(HeritageVillage::class, 'heritage_village_id');
     }
 }

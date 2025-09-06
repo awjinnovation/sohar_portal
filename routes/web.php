@@ -23,10 +23,18 @@ Route::prefix('admin')->group(function () {
         // Festival Management
         Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class, ['as' => 'admin']);
         Route::resource('events', \App\Http\Controllers\Admin\EventController::class, ['as' => 'admin']);
+        Route::resource('event-tags', \App\Http\Controllers\Admin\EventTagController::class, ['as' => 'admin']);
+        Route::resource('tickets', \App\Http\Controllers\Admin\TicketController::class, ['as' => 'admin']);
         Route::resource('restaurants', \App\Http\Controllers\Admin\RestaurantController::class, ['as' => 'admin']);
         
         // Heritage & Culture
         Route::resource('heritage-villages', \App\Http\Controllers\Admin\HeritageVillageController::class, ['as' => 'admin']);
+        Route::resource('village-images', \App\Http\Controllers\Admin\VillageImageController::class, ['as' => 'admin']);
+        Route::resource('village-attractions', \App\Http\Controllers\Admin\VillageAttractionController::class, ['as' => 'admin']);
+        Route::resource('craft-demonstrations', \App\Http\Controllers\Admin\CraftDemonstrationController::class, ['as' => 'admin']);
+        Route::resource('traditional-activities', \App\Http\Controllers\Admin\TraditionalActivityController::class, ['as' => 'admin']);
+        Route::resource('cultural-workshops', \App\Http\Controllers\Admin\CulturalWorkshopController::class, ['as' => 'admin']);
+        Route::resource('photo-spots', \App\Http\Controllers\Admin\PhotoSpotController::class, ['as' => 'admin']);
         
         // Communications
         Route::resource('announcements', \App\Http\Controllers\Admin\AnnouncementController::class, ['as' => 'admin']);

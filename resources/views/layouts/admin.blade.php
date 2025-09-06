@@ -364,6 +364,18 @@
                             </a>
                         </li>
                         <li class="menu-item">
+                            <a href="{{ route('admin.event-tags.index') }}" class="menu-link {{ request()->routeIs('admin.event-tags.*') ? 'active' : '' }}">
+                                <i class="bi bi-tags-fill menu-icon"></i>
+                                وسوم الفعاليات
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.tickets.index') }}" class="menu-link {{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}">
+                                <i class="bi bi-ticket-perforated menu-icon"></i>
+                                التذاكر
+                            </a>
+                        </li>
+                        <li class="menu-item">
                             <a href="{{ route('admin.restaurants.index') }}" class="menu-link {{ request()->routeIs('admin.restaurants.*') ? 'active' : '' }}">
                                 <i class="bi bi-shop menu-icon"></i>
                                 المطاعم
@@ -379,6 +391,42 @@
                             <a href="{{ route('admin.heritage-villages.index') }}" class="menu-link {{ request()->routeIs('admin.heritage-villages.*') ? 'active' : '' }}">
                                 <i class="bi bi-houses menu-icon"></i>
                                 القرى التراثية
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.village-images.index') }}" class="menu-link {{ request()->routeIs('admin.village-images.*') ? 'active' : '' }}">
+                                <i class="bi bi-images menu-icon"></i>
+                                صور القرى
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.village-attractions.index') }}" class="menu-link {{ request()->routeIs('admin.village-attractions.*') ? 'active' : '' }}">
+                                <i class="bi bi-geo-alt menu-icon"></i>
+                                معالم القرى
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.craft-demonstrations.index') }}" class="menu-link {{ request()->routeIs('admin.craft-demonstrations.*') ? 'active' : '' }}">
+                                <i class="bi bi-palette menu-icon"></i>
+                                العروض الحرفية
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.traditional-activities.index') }}" class="menu-link {{ request()->routeIs('admin.traditional-activities.*') ? 'active' : '' }}">
+                                <i class="bi bi-activity menu-icon"></i>
+                                الأنشطة التقليدية
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.cultural-workshops.index') }}" class="menu-link {{ request()->routeIs('admin.cultural-workshops.*') ? 'active' : '' }}">
+                                <i class="bi bi-mortarboard menu-icon"></i>
+                                الورش الثقافية
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.photo-spots.index') }}" class="menu-link {{ request()->routeIs('admin.photo-spots.*') ? 'active' : '' }}">
+                                <i class="bi bi-camera menu-icon"></i>
+                                مواقع التصوير
                             </a>
                         </li>
                     </ul>
