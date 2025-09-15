@@ -58,6 +58,8 @@ class DatabaseSeeder extends Seeder
 
         // Call other seeders
         $this->call([
+            RolesAndPermissionsSeeder::class,
+            
             HeritageVillageSeeder::class,
             TestDataSeeder::class,
             FixedApiSeeder::class,

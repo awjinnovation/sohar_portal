@@ -15,69 +15,69 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Event Management Permissions
-        Permission::create(['name' => 'view events']);
-        Permission::create(['name' => 'create events']);
-        Permission::create(['name' => 'edit events']);
-        Permission::create(['name' => 'delete events']);
-        Permission::create(['name' => 'publish events']);
+        Permission::firstOrCreate(['name' => 'view events']);
+        Permission::firstOrCreate(['name' => 'create events']);
+        Permission::firstOrCreate(['name' => 'edit events']);
+        Permission::firstOrCreate(['name' => 'delete events']);
+        Permission::firstOrCreate(['name' => 'publish events']);
 
         // Ticket Management Permissions
-        Permission::create(['name' => 'view tickets']);
-        Permission::create(['name' => 'create tickets']);
-        Permission::create(['name' => 'edit tickets']);
-        Permission::create(['name' => 'delete tickets']);
-        Permission::create(['name' => 'validate tickets']);
-        Permission::create(['name' => 'refund tickets']);
+        Permission::firstOrCreate(['name' => 'view tickets']);
+        Permission::firstOrCreate(['name' => 'create tickets']);
+        Permission::firstOrCreate(['name' => 'edit tickets']);
+        Permission::firstOrCreate(['name' => 'delete tickets']);
+        Permission::firstOrCreate(['name' => 'validate tickets']);
+        Permission::firstOrCreate(['name' => 'refund tickets']);
 
         // Restaurant Management Permissions
-        Permission::create(['name' => 'view restaurants']);
-        Permission::create(['name' => 'create restaurants']);
-        Permission::create(['name' => 'edit restaurants']);
-        Permission::create(['name' => 'delete restaurants']);
-        Permission::create(['name' => 'manage menus']);
+        Permission::firstOrCreate(['name' => 'view restaurants']);
+        Permission::firstOrCreate(['name' => 'create restaurants']);
+        Permission::firstOrCreate(['name' => 'edit restaurants']);
+        Permission::firstOrCreate(['name' => 'delete restaurants']);
+        Permission::firstOrCreate(['name' => 'manage menus']);
 
         // Heritage Village Management Permissions
-        Permission::create(['name' => 'view heritage villages']);
-        Permission::create(['name' => 'create heritage villages']);
-        Permission::create(['name' => 'edit heritage villages']);
-        Permission::create(['name' => 'delete heritage villages']);
+        Permission::firstOrCreate(['name' => 'view heritage villages']);
+        Permission::firstOrCreate(['name' => 'create heritage villages']);
+        Permission::firstOrCreate(['name' => 'edit heritage villages']);
+        Permission::firstOrCreate(['name' => 'delete heritage villages']);
 
         // Healthcare Management Permissions
-        Permission::create(['name' => 'view healthcare services']);
-        Permission::create(['name' => 'create healthcare services']);
-        Permission::create(['name' => 'edit healthcare services']);
-        Permission::create(['name' => 'delete healthcare services']);
+        Permission::firstOrCreate(['name' => 'view healthcare services']);
+        Permission::firstOrCreate(['name' => 'create healthcare services']);
+        Permission::firstOrCreate(['name' => 'edit healthcare services']);
+        Permission::firstOrCreate(['name' => 'delete healthcare services']);
 
         // User Management Permissions
-        Permission::create(['name' => 'view users']);
-        Permission::create(['name' => 'create users']);
-        Permission::create(['name' => 'edit users']);
-        Permission::create(['name' => 'delete users']);
-        Permission::create(['name' => 'assign roles']);
+        Permission::firstOrCreate(['name' => 'view users']);
+        Permission::firstOrCreate(['name' => 'create users']);
+        Permission::firstOrCreate(['name' => 'edit users']);
+        Permission::firstOrCreate(['name' => 'delete users']);
+        Permission::firstOrCreate(['name' => 'assign roles']);
 
         // Report Permissions
-        Permission::create(['name' => 'view reports']);
-        Permission::create(['name' => 'export reports']);
-        Permission::create(['name' => 'view analytics']);
+        Permission::firstOrCreate(['name' => 'view reports']);
+        Permission::firstOrCreate(['name' => 'export reports']);
+        Permission::firstOrCreate(['name' => 'view analytics']);
 
         // System Settings Permissions
-        Permission::create(['name' => 'manage settings']);
-        Permission::create(['name' => 'manage translations']);
-        Permission::create(['name' => 'manage notifications']);
+        Permission::firstOrCreate(['name' => 'manage settings']);
+        Permission::firstOrCreate(['name' => 'manage translations']);
+        Permission::firstOrCreate(['name' => 'manage notifications']);
 
         // Create Roles
-        $superAdmin = Role::create(['name' => 'super-admin']);
-        $admin = Role::create(['name' => 'admin']);
-        $eventManager = Role::create(['name' => 'event-manager']);
-        $ticketManager = Role::create(['name' => 'ticket-manager']);
-        $contentManager = Role::create(['name' => 'content-manager']);
-        $viewer = Role::create(['name' => 'viewer']);
+        $superAdmin = Role::firstOrCreate(['name' => 'super-admin']);
+        $admin = Role::firstOrCreate(['name' => 'admin']);
+        $eventManager = Role::firstOrCreate(['name' => 'event-manager']);
+        $ticketManager = Role::firstOrCreate(['name' => 'ticket-manager']);
+        $contentManager = Role::firstOrCreate(['name' => 'content-manager']);
+        $viewer = Role::firstOrCreate(['name' => 'viewer']);
 
         // Super Admin gets all permissions
-        $superAdmin->givePermissionTo(Permission::all());
+        $superAdmin->syncPermissions(Permission::all());
 
         // Admin gets most permissions except system critical ones
-        $admin->givePermissionTo([
+        $admin->syncPermissions([
             'view events', 'create events', 'edit events', 'delete events', 'publish events',
             'view tickets', 'create tickets', 'edit tickets', 'delete tickets', 'validate tickets',
             'view restaurants', 'create restaurants', 'edit restaurants', 'delete restaurants', 'manage menus',
@@ -89,21 +89,21 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // Event Manager permissions
-        $eventManager->givePermissionTo([
+        $eventManager->syncPermissions([
             'view events', 'create events', 'edit events', 'publish events',
             'view tickets', 'create tickets', 'edit tickets',
             'view reports', 'view analytics'
         ]);
 
         // Ticket Manager permissions
-        $ticketManager->givePermissionTo([
+        $ticketManager->syncPermissions([
             'view tickets', 'create tickets', 'edit tickets', 'validate tickets', 'refund tickets',
             'view events',
             'view reports', 'export reports'
         ]);
 
         // Content Manager permissions
-        $contentManager->givePermissionTo([
+        $contentManager->syncPermissions([
             'view restaurants', 'create restaurants', 'edit restaurants', 'manage menus',
             'view heritage villages', 'create heritage villages', 'edit heritage villages',
             'view healthcare services', 'create healthcare services', 'edit healthcare services',
@@ -111,7 +111,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // Viewer permissions
-        $viewer->givePermissionTo([
+        $viewer->syncPermissions([
             'view events',
             'view tickets',
             'view restaurants',
@@ -121,33 +121,41 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // Create default super admin user
-        $user = User::create([
-            'name' => 'Super Admin',
-            'email' => 'admin@soharfestival.com',
-            'password' => Hash::make('password123')
-        ]);
-        $user->assignRole('super-admin');
+        $user = User::firstOrCreate(
+            ['email' => 'admin@soharfestival.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('password123')
+            ]
+        );
+        $user->syncRoles(['super-admin']);
 
         // Create additional demo users
-        $adminUser = User::create([
-            'name' => 'Admin User',
-            'email' => 'admin.user@soharfestival.com',
-            'password' => Hash::make('password123')
-        ]);
-        $adminUser->assignRole('admin');
+        $adminUser = User::firstOrCreate(
+            ['email' => 'admin.user@soharfestival.com'],
+            [
+                'name' => 'Admin User',
+                'password' => Hash::make('password123')
+            ]
+        );
+        $adminUser->syncRoles(['admin']);
 
-        $eventManagerUser = User::create([
-            'name' => 'Event Manager',
-            'email' => 'events@soharfestival.com',
-            'password' => Hash::make('password123')
-        ]);
-        $eventManagerUser->assignRole('event-manager');
+        $eventManagerUser = User::firstOrCreate(
+            ['email' => 'events@soharfestival.com'],
+            [
+                'name' => 'Event Manager',
+                'password' => Hash::make('password123')
+            ]
+        );
+        $eventManagerUser->syncRoles(['event-manager']);
 
-        $ticketManagerUser = User::create([
-            'name' => 'Ticket Manager',
-            'email' => 'tickets@soharfestival.com',
-            'password' => Hash::make('password123')
-        ]);
-        $ticketManagerUser->assignRole('ticket-manager');
+        $ticketManagerUser = User::firstOrCreate(
+            ['email' => 'tickets@soharfestival.com'],
+            [
+                'name' => 'Ticket Manager',
+                'password' => Hash::make('password123')
+            ]
+        );
+        $ticketManagerUser->syncRoles(['ticket-manager']);
     }
 }
