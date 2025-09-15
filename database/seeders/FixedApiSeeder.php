@@ -15,6 +15,7 @@ use App\Models\Notification;
 use App\Models\TicketPricing;
 use App\Models\Restaurant;
 use App\Models\Announcement;
+use App\Models\Category;
 use Carbon\Carbon;
 use DB;
 
@@ -22,6 +23,12 @@ class FixedApiSeeder extends Seeder
 {
     public function run(): void
     {
+        // Create categories first
+        $this->addCategories();
+
+        // Create heritage village first
+        $this->addHeritageVillage();
+
         // Add future events for today and upcoming
         $this->addFutureEvents();
 
@@ -41,6 +48,40 @@ class FixedApiSeeder extends Seeder
         $this->addCraftDemonstrations();
 
         echo "Fixed API data seeded successfully!\n";
+    }
+
+    private function addCategories()
+    {
+        $categories = [
+            ['id' => 1, 'name' => 'Cultural', 'name_ar' => 'ثقافي', 'description' => 'Cultural events and activities', 'description_ar' => 'الفعاليات والأنشطة الثقافية', 'icon_name' => 'culture', 'color_value' => hexdec('FF5722')],
+            ['id' => 2, 'name' => 'Music', 'name_ar' => 'موسيقى', 'description' => 'Music concerts and performances', 'description_ar' => 'الحفلات الموسيقية والعروض', 'icon_name' => 'music', 'color_value' => hexdec('9C27B0')],
+            ['id' => 3, 'name' => 'Food', 'name_ar' => 'طعام', 'description' => 'Food and culinary experiences', 'description_ar' => 'تجارب الطعام والطهي', 'icon_name' => 'food', 'color_value' => hexdec('4CAF50')],
+            ['id' => 4, 'name' => 'Sports', 'name_ar' => 'رياضة', 'description' => 'Sports activities and competitions', 'description_ar' => 'الأنشطة الرياضية والمسابقات', 'icon_name' => 'sports', 'color_value' => hexdec('2196F3')],
+            ['id' => 5, 'name' => 'Kids', 'name_ar' => 'أطفال', 'description' => 'Activities for children', 'description_ar' => 'أنشطة للأطفال', 'icon_name' => 'kids', 'color_value' => hexdec('FFC107')],
+            ['id' => 6, 'name' => 'Arts', 'name_ar' => 'فنون', 'description' => 'Art exhibitions and workshops', 'description_ar' => 'المعارض الفنية وورش العمل', 'icon_name' => 'arts', 'color_value' => hexdec('E91E63')],
+        ];
+
+        foreach ($categories as $category) {
+            Category::updateOrCreate(['id' => $category['id']], $category);
+        }
+    }
+
+    private function addHeritageVillage()
+    {
+        HeritageVillage::updateOrCreate(
+            ['id' => 1],
+            [
+                'name_en' => 'Sohar Heritage Village',
+                'name_ar' => 'قرية صحار التراثية',
+                'description_en' => 'Experience the rich cultural heritage of Sohar with traditional crafts, activities, and performances.',
+                'description_ar' => 'استمتع بالتراث الثقافي الغني لصحار مع الحرف والأنشطة والعروض التقليدية.',
+                'type' => 'maritime',
+                'cover_image' => 'https://example.com/heritage-village.jpg',
+                'opening_hours' => '10:00 AM - 10:00 PM',
+                'virtual_tour_url' => 'https://example.com/virtual-tour',
+                'is_active' => true
+            ]
+        );
     }
 
     private function addFutureEvents()
@@ -255,6 +296,10 @@ class FixedApiSeeder extends Seeder
         ];
 
         foreach ($locations as $location) {
+            // Convert hex color to integer
+            if (isset($location['color'])) {
+                $location['color'] = hexdec(str_replace('#', '', $location['color']));
+            }
             MapLocation::create($location);
         }
     }
