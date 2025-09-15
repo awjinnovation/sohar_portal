@@ -6,30 +6,33 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasRoles, HasApiTokens;
 
     protected $fillable = [
         'name',
         'email',
         'password',
-        'phone',
-        'otp',
-        'otp_expires_at'
+        'phone_number',
+        'otp_secret',
+        'phone_verified_at',
+        'device_token',
+        'preferred_language'
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
-        'otp'
+        'otp_secret'
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'otp_expires_at' => 'datetime',
+        'phone_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
 

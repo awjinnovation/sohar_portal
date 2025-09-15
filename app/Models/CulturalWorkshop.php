@@ -8,21 +8,16 @@ class CulturalWorkshop extends Model
 {
     protected $fillable = [
         'heritage_village_id',
-        'workshop_title_en',
-        'workshop_title_ar',
+        'title_en',
+        'title_ar',
         'description_en',
         'description_ar',
         'instructor_name',
-        'instructor_bio_en',
-        'instructor_bio_ar',
-        'schedule',
+        'image_url',
         'duration_minutes',
         'max_participants',
-        'min_age',
+        'price_omr',
         'skill_level',
-        'materials_included',
-        'price',
-        'booking_link',
         'is_active'
     ];
 
@@ -38,6 +33,11 @@ class CulturalWorkshop extends Model
     public function village()
     {
         return $this->belongsTo(HeritageVillage::class, 'heritage_village_id');
+    }
+
+    public function schedules()
+    {
+        return $this->hasMany(\App\Models\WorkshopSchedule::class, 'workshop_id');
     }
 
     public function scopeActive($query)

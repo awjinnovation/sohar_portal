@@ -60,6 +60,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             HeritageVillageSeeder::class,
             TestDataSeeder::class,
+            FixedApiSeeder::class,
         ]);
     }
 }

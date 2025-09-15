@@ -1,0 +1,1117 @@
+{
+    "info": {
+        "_postman_id": "sohar-festival-api-v1",
+        "name": "Sohar Festival API",
+        "description": "Complete API collection for Sohar Festival mobile app with OTP authentication and Thawani payment integration",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000/api/v1",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Send OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phone_number\": \"92345678\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/send-otp",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "send-otp"]
+                        }
+                    }
+                },
+                {
+                    "name": "Verify OTP",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set(\"token\", jsonData.token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phone_number\": \"92345678\",\n    \"otp_code\": \"123456\",\n    \"device_token\": \"firebase_token_here\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/verify-otp",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "verify-otp"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/profile",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "profile"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Profile",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"preferred_language\": \"ar\",\n    \"device_token\": \"new_firebase_token\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/update-profile",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "update-profile"]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/logout",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "logout"]
+                        }
+                    }
+                },
+                {
+                    "name": "Refresh Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.collectionVariables.set(\"token\", jsonData.token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/refresh-token",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "refresh-token"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Events",
+            "item": [
+                {
+                    "name": "List Events",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/events?date=2024-02-15&status=active&search=music&page=1",
+                            "host": ["{{base_url}}"],
+                            "path": ["events"],
+                            "query": [
+                                {
+                                    "key": "date",
+                                    "value": "2024-02-15"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "active"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "music"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Event Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/events/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["events", "1"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Events by Category",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/events/category/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["events", "category", "1"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Upcoming Events",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/events/upcoming",
+                            "host": ["{{base_url}}"],
+                            "path": ["events", "upcoming"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Today's Events",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/events/today",
+                            "host": ["{{base_url}}"],
+                            "path": ["events", "today"]
+                        }
+                    }
+                },
+                {
+                    "name": "Toggle Event Favorite",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/events/1/favorite",
+                            "host": ["{{base_url}}"],
+                            "path": ["events", "1", "favorite"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Favorite Events",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/events/favorites",
+                            "host": ["{{base_url}}"],
+                            "path": ["events", "favorites"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Payments (Thawani)",
+            "item": [
+                {
+                    "name": "Initialize Payment",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"payment_type\": \"ticket\",\n    \"payable_id\": 1,\n    \"quantity\": 2,\n    \"amount\": 10.000\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/payments/initialize",
+                            "host": ["{{base_url}}"],
+                            "path": ["payments", "initialize"]
+                        }
+                    }
+                },
+                {
+                    "name": "Confirm Payment",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"session_id\": \"thawani_session_id_here\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/payments/confirm",
+                            "host": ["{{base_url}}"],
+                            "path": ["payments", "confirm"]
+                        }
+                    }
+                },
+                {
+                    "name": "Check Payment Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/payments/status/session_id_here",
+                            "host": ["{{base_url}}"],
+                            "path": ["payments", "status", "session_id_here"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get My Transactions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/payments/my-transactions",
+                            "host": ["{{base_url}}"],
+                            "path": ["payments", "my-transactions"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Tickets",
+            "item": [
+                {
+                    "name": "Get Available Tickets",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/tickets/available",
+                            "host": ["{{base_url}}"],
+                            "path": ["tickets", "available"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Ticket Pricing",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/tickets/pricing",
+                            "host": ["{{base_url}}"],
+                            "path": ["tickets", "pricing"]
+                        }
+                    }
+                },
+                {
+                    "name": "Check Ticket Availability",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"ticket_type\": \"general\",\n    \"quantity\": 2,\n    \"date\": \"2024-02-15\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/tickets/check-availability",
+                            "host": ["{{base_url}}"],
+                            "path": ["tickets", "check-availability"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get My Tickets",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/tickets/my-tickets",
+                            "host": ["{{base_url}}"],
+                            "path": ["tickets", "my-tickets"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Ticket Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/tickets/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["tickets", "1"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Ticket QR Code",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/tickets/1/qr-code",
+                            "host": ["{{base_url}}"],
+                            "path": ["tickets", "1", "qr-code"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Heritage Villages",
+            "item": [
+                {
+                    "name": "List Heritage Villages",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/heritage-villages",
+                            "host": ["{{base_url}}"],
+                            "path": ["heritage-villages"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Heritage Village Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/heritage-villages/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["heritage-villages", "1"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Restaurants",
+            "item": [
+                {
+                    "name": "List Restaurants",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/restaurants?cuisine=Omani&is_vegetarian=true&is_family_friendly=true",
+                            "host": ["{{base_url}}"],
+                            "path": ["restaurants"],
+                            "query": [
+                                {
+                                    "key": "cuisine",
+                                    "value": "Omani"
+                                },
+                                {
+                                    "key": "is_vegetarian",
+                                    "value": "true"
+                                },
+                                {
+                                    "key": "is_family_friendly",
+                                    "value": "true"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Restaurant Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/restaurants/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["restaurants", "1"]
+                        }
+                    }
+                },
+                {
+                    "name": "Search Restaurants",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/restaurants/search?query=mandi",
+                            "host": ["{{base_url}}"],
+                            "path": ["restaurants", "search"],
+                            "query": [
+                                {
+                                    "key": "query",
+                                    "value": "mandi"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Toggle Restaurant Favorite",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/restaurants/1/favorite",
+                            "host": ["{{base_url}}"],
+                            "path": ["restaurants", "1", "favorite"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Favorite Restaurants",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/restaurants/favorites",
+                            "host": ["{{base_url}}"],
+                            "path": ["restaurants", "favorites"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Cultural Workshops",
+            "item": [
+                {
+                    "name": "List Workshops",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cultural-workshops",
+                            "host": ["{{base_url}}"],
+                            "path": ["cultural-workshops"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Workshop Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cultural-workshops/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["cultural-workshops", "1"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Available Workshops",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cultural-workshops/available",
+                            "host": ["{{base_url}}"],
+                            "path": ["cultural-workshops", "available"]
+                        }
+                    }
+                },
+                {
+                    "name": "Register for Workshop",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cultural-workshops/1/register",
+                            "host": ["{{base_url}}"],
+                            "path": ["cultural-workshops", "1", "register"]
+                        }
+                    }
+                },
+                {
+                    "name": "Cancel Workshop Registration",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cultural-workshops/1/cancel",
+                            "host": ["{{base_url}}"],
+                            "path": ["cultural-workshops", "1", "cancel"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get My Workshop Registrations",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/cultural-workshops/my-registrations",
+                            "host": ["{{base_url}}"],
+                            "path": ["cultural-workshops", "my-registrations"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Photo Spots",
+            "item": [
+                {
+                    "name": "List Photo Spots",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/photo-spots",
+                            "host": ["{{base_url}}"],
+                            "path": ["photo-spots"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Photo Spot Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/photo-spots/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["photo-spots", "1"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Village Attractions",
+            "item": [
+                {
+                    "name": "List Village Attractions",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/village-attractions",
+                            "host": ["{{base_url}}"],
+                            "path": ["village-attractions"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Village Attraction Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/village-attractions/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["village-attractions", "1"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Attractions by Village",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/village-attractions/village/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["village-attractions", "village", "1"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Traditional Activities",
+            "item": [
+                {
+                    "name": "List Traditional Activities",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/traditional-activities",
+                            "host": ["{{base_url}}"],
+                            "path": ["traditional-activities"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Traditional Activity Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/traditional-activities/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["traditional-activities", "1"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Craft Demonstrations",
+            "item": [
+                {
+                    "name": "List Craft Demonstrations",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/craft-demonstrations",
+                            "host": ["{{base_url}}"],
+                            "path": ["craft-demonstrations"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Craft Demonstration Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/craft-demonstrations/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["craft-demonstrations", "1"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Emergency Contacts",
+            "item": [
+                {
+                    "name": "List Emergency Contacts",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/emergency-contacts",
+                            "host": ["{{base_url}}"],
+                            "path": ["emergency-contacts"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Map Locations",
+            "item": [
+                {
+                    "name": "List All Map Locations",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/map-locations",
+                            "host": ["{{base_url}}"],
+                            "path": ["map-locations"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Locations by Category",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/map-locations/category/entertainment",
+                            "host": ["{{base_url}}"],
+                            "path": ["map-locations", "category", "entertainment"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Notifications",
+            "item": [
+                {
+                    "name": "Get Public Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications",
+                            "host": ["{{base_url}}"],
+                            "path": ["notifications"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get My Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/my-notifications",
+                            "host": ["{{base_url}}"],
+                            "path": ["notifications", "my-notifications"]
+                        }
+                    }
+                },
+                {
+                    "name": "Mark Notification as Read",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/1/mark-read",
+                            "host": ["{{base_url}}"],
+                            "path": ["notifications", "1", "mark-read"]
+                        }
+                    }
+                },
+                {
+                    "name": "Mark All Notifications as Read",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/mark-all-read",
+                            "host": ["{{base_url}}"],
+                            "path": ["notifications", "mark-all-read"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Unread Count",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/notifications/unread-count",
+                            "host": ["{{base_url}}"],
+                            "path": ["notifications", "unread-count"]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
