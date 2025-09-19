@@ -60,12 +60,13 @@ class AuthController extends Controller
     {
         $request->validate([
             'phone_number' => 'required|string',
-            'otp' => 'required|string|size:6',
+            'otp_code' => 'required_without:otp|string|size:6',
+            'otp' => 'required_without:otp_code|string|size:6',
             'device_token' => 'nullable|string'
         ]);
 
         $phoneNumber = $request->phone_number;
-        $otpCode = $request->otp;
+        $otpCode = $request->otp_code ?? $request->otp;
 
         // Check OTP validity
         $otpRecord = DB::table('otp_verifications')
