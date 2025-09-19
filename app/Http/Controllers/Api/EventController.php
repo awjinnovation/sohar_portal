@@ -17,10 +17,13 @@ class EventController extends Controller
     {
         $query = Event::with(['category', 'tags']);
 
-        // Filter by date
+        // Filter by date - check if date falls within event range
         if ($request->has('date')) {
             $date = Carbon::parse($request->date);
-            $query->whereDate('start_time', $date);
+            $query->where(function($q) use ($date) {
+                $q->whereDate('start_time', '<=', $date)
+                  ->whereDate('end_time', '>=', $date);
+            });
         }
 
         // Filter by status
@@ -107,12 +110,16 @@ class EventController extends Controller
     }
 
     /**
-     * Get today's events
+     * Get today's events (events active today within their date range)
      */
     public function today()
     {
+        $today = Carbon::today();
         $events = Event::with(['category', 'tags'])
-            ->whereDate('start_time', today())
+            ->where(function($q) use ($today) {
+                $q->whereDate('start_time', '<=', $today)
+                  ->whereDate('end_time', '>=', $today);
+            })
             ->where('is_active', true)
             ->orderBy('start_time')
             ->get();
