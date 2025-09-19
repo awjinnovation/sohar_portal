@@ -8,7 +8,6 @@ use App\Models\CulturalWorkshop;
 use App\Models\TraditionalActivity;
 use App\Models\CraftDemonstration;
 use App\Models\PhotoSpot;
-use App\Models\VillageAttraction;
 use App\Models\HeritageVillage;
 use App\Models\MapLocation;
 use App\Models\Notification;
@@ -101,6 +100,7 @@ class FixedApiSeeder extends Seeder
             'end_time' => $festivalEnd,
             'location' => 'Sohar Heritage Village',
             'location_ar' => 'قرية صحار التراثية',
+            'image_url' => 'https://picsum.photos/seed/heritage2025/800/600',
             'price' => 5, // Per hour slot
             'currency' => 'OMR',
             'available_tickets' => 100, // Per hour slot
@@ -120,6 +120,7 @@ class FixedApiSeeder extends Seeder
             'end_time' => Carbon::create(2025, 11, 30, 22, 0, 0),
             'location' => 'Main Amphitheater',
             'location_ar' => 'المدرج الرئيسي',
+            'image_url' => 'https://picsum.photos/seed/musicdance2025/800/600',
             'price' => 10,
             'currency' => 'OMR',
             'available_tickets' => 150, // Per hour slot
@@ -139,6 +140,7 @@ class FixedApiSeeder extends Seeder
             'end_time' => Carbon::create(2025, 12, 11, 22, 0, 0),
             'location' => 'Food Court',
             'location_ar' => 'ساحة الطعام',
+            'image_url' => 'https://picsum.photos/seed/foodfest2025/800/600',
             'price' => 15,
             'currency' => 'OMR',
             'available_tickets' => 80, // Per hour slot
@@ -157,6 +159,7 @@ class FixedApiSeeder extends Seeder
             'end_time' => $festivalEnd,
             'location' => 'Kids Zone',
             'location_ar' => 'منطقة الأطفال',
+            'image_url' => 'https://picsum.photos/seed/kidszone2025/800/600',
             'price' => 3,
             'currency' => 'OMR',
             'available_tickets' => 50, // Per hour slot
@@ -175,6 +178,7 @@ class FixedApiSeeder extends Seeder
             'end_time' => Carbon::create(2025, 12, 5, 20, 0, 0),
             'location' => 'Art Gallery Hall',
             'location_ar' => 'قاعة المعرض الفني',
+            'image_url' => 'https://picsum.photos/seed/artexpo2025/800/600',
             'price' => 8,
             'currency' => 'OMR',
             'available_tickets' => 60, // Per hour slot
@@ -193,6 +197,7 @@ class FixedApiSeeder extends Seeder
             'end_time' => Carbon::create(2025, 11, 30, 21, 0, 0),
             'location' => 'Sports Arena',
             'location_ar' => 'الساحة الرياضية',
+            'image_url' => 'https://picsum.photos/seed/sports2025/800/600',
             'price' => 7,
             'currency' => 'OMR',
             'available_tickets' => 40, // Per hour slot
@@ -408,7 +413,7 @@ class FixedApiSeeder extends Seeder
 
     private function addTicketPricing()
     {
-        $events = Event::take(3)->get();
+        $events = Event::limit(3)->get();
 
         foreach ($events as $event) {
             $pricing = [
