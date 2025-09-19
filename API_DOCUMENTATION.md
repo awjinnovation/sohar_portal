@@ -1,930 +1,910 @@
 # Sohar Festival API Documentation
 
-## Base URL
-```
-Production: https://api.soharfestival.om/api/v1
-Development: http://localhost:8000/api/v1
-```
+Base URL: `https://your-domain.com/api/v1`
+Development: `http://localhost:8000/api/v1`
+
+## Table of Contents
+- [Authentication](#authentication)
+- [Events](#events)
+- [Tickets](#tickets)
+- [Heritage Villages](#heritage-villages)
+- [Restaurants](#restaurants)
+- [Cultural Workshops](#cultural-workshops)
+- [Traditional Activities](#traditional-activities)
+- [Craft Demonstrations](#craft-demonstrations)
+- [Photo Spots](#photo-spots)
+- [Map Locations](#map-locations)
+- [Notifications](#notifications)
+- [Payments](#payments)
+- [Emergency Contacts](#emergency-contacts)
+- [Announcements](#announcements)
+- [App Settings](#app-settings)
+
+---
 
 ## Authentication
+
 The API uses OTP-based authentication with Laravel Sanctum tokens.
 
 ### Headers
-For authenticated requests, include:
+For authenticated endpoints (marked with 🔒), include:
 ```
 Authorization: Bearer {token}
 Content-Type: application/json
 Accept: application/json
 ```
 
----
-
-## Authentication Endpoints
-
-### 1. Send OTP
+### Send OTP
 **POST** `/auth/send-otp`
 
-Request:
+Sends an OTP code to the provided phone number.
+
+**Request Body:**
 ```json
 {
-    "phone_number": "92345678"
+  "phone_number": "96812345678"
 }
 ```
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "message": "OTP sent successfully",
-    "expires_in": 300,
-    "otp": "123456"  // Only in development mode
+  "success": true,
+  "message": "OTP sent successfully",
+  "expires_in": 300,
+  "otp": 123456  // Only in development mode
 }
 ```
 
-### 2. Verify OTP & Login
+### Verify OTP
 **POST** `/auth/verify-otp`
 
-Request:
+Verifies the OTP and returns an authentication token.
+
+**Request Body:**
 ```json
 {
-    "phone_number": "92345678",
-    "otp_code": "123456",
-    "device_token": "firebase_token_here"  // Optional
+  "phone_number": "96812345678",
+  "otp_code": "123456",  // Can also use "otp" field
+  "device_token": "optional_firebase_token"
 }
 ```
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "message": "Login successful",
-    "user": {
-        "id": 1,
-        "name": "User 5678",
-        "phone_number": "92345678",
-        "email": "92345678@soharfestival.om",
-        "preferred_language": "en"
-    },
-    "token": "1|laravel_sanctum_token_here"
+  "success": true,
+  "message": "Login successful",
+  "user": {
+    "id": 1,
+    "name": "User Name",
+    "phone_number": "96812345678",
+    "email": "user@soharfestival.om",
+    "preferred_language": "en"
+  },
+  "token": "1|authentication_token_here"
 }
 ```
 
-### 3. Get Profile
-**GET** `/auth/profile` (Authenticated)
+### Get Profile 🔒
+**GET** `/auth/profile`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "user": {
-        "id": 1,
-        "name": "User Name",
-        "phone_number": "92345678",
-        "email": "user@example.com",
-        "preferred_language": "en",
-        "created_at": "2024-01-01T00:00:00.000000Z"
-    }
+  "success": true,
+  "user": {
+    "id": 1,
+    "name": "User Name",
+    "phone_number": "96812345678",
+    "email": "user@example.com",
+    "preferred_language": "en",
+    "created_at": "2025-09-19T10:00:00Z"
+  }
 }
 ```
 
-### 4. Update Profile
-**POST** `/auth/update-profile` (Authenticated)
+### Update Profile 🔒
+**POST** `/auth/update-profile`
 
-Request:
+**Request Body:**
 ```json
 {
-    "name": "John Doe",
-    "email": "john@example.com",
-    "preferred_language": "ar",
-    "device_token": "new_firebase_token"
+  "name": "New Name",
+  "email": "newemail@example.com",
+  "preferred_language": "ar",
+  "device_token": "new_device_token"
 }
 ```
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "message": "Profile updated successfully",
-    "user": {
-        "id": 1,
-        "name": "John Doe",
-        "phone_number": "92345678",
-        "email": "john@example.com",
-        "preferred_language": "ar"
-    }
+  "success": true,
+  "message": "Profile updated successfully",
+  "user": {
+    "id": 1,
+    "name": "New Name",
+    "phone_number": "96812345678",
+    "email": "newemail@example.com",
+    "preferred_language": "ar"
+  }
 }
 ```
 
-### 5. Logout
-**POST** `/auth/logout` (Authenticated)
+### Logout 🔒
+**POST** `/auth/logout`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "message": "Logged out successfully"
+  "success": true,
+  "message": "Logged out successfully"
 }
 ```
 
-### 6. Refresh Token
-**POST** `/auth/refresh-token` (Authenticated)
+### Refresh Token 🔒
+**POST** `/auth/refresh-token`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "token": "2|new_laravel_sanctum_token"
+  "success": true,
+  "token": "new_authentication_token"
 }
 ```
 
 ---
 
-## Event Endpoints
+## Events
 
-### 1. List Events
+### List Events
 **GET** `/events`
 
-Query Parameters:
-- `date`: Filter by date (YYYY-MM-DD)
-- `status`: Filter by status (active, inactive)
-- `search`: Search in title and description
-- `page`: Page number for pagination
+Returns all events with support for filtering.
 
-Response (200 OK):
+**Query Parameters:**
+- `date` (YYYY-MM-DD): Get events active on this specific date (checks if date falls within event's date range)
+- `status` (active|inactive): Filter by active status
+- `search` (string): Search in title and description
+- `page` (integer): Page number for pagination
+
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "title": "Traditional Music Performance",
-            "description": "Experience authentic Omani music",
-            "event_date": "2024-02-15",
-            "event_time": "19:00:00",
-            "duration": 120,
-            "location": "Main Stage",
-            "max_attendees": 500,
-            "current_attendees": 150,
-            "status": "active",
-            "image_url": "https://example.com/image.jpg",
-            "category": {
-                "id": 1,
-                "name": "Music",
-                "icon": "music-note"
-            },
-            "tags": [
-                {"id": 1, "name": "Traditional"},
-                {"id": 2, "name": "Family Friendly"}
-            ]
-        }
-    ],
-    "pagination": {
-        "current_page": 1,
-        "last_page": 5,
-        "per_page": 20,
-        "total": 100
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Sohar Heritage Festival 2025",
+      "title_ar": "مهرجان صحار التراثي 2025",
+      "description": "Experience the rich cultural heritage...",
+      "description_ar": "استمتع بالتراث الثقافي الغني...",
+      "category_id": 1,
+      "start_time": "2025-09-19T10:00:00.000000Z",
+      "end_time": "2025-12-11T22:00:00.000000Z",
+      "location": "Sohar Heritage Village",
+      "location_ar": "قرية صحار التراثية",
+      "latitude": null,
+      "longitude": null,
+      "image_url": "https://picsum.photos/seed/heritage2025/800/600",
+      "price": "5.000",
+      "currency": "OMR",
+      "available_tickets": 100,
+      "total_tickets": 100,
+      "organizer_name": null,
+      "organizer_name_ar": null,
+      "is_featured": true,
+      "is_active": true,
+      "category": {
+        "id": 1,
+        "name": "Cultural",
+        "name_ar": "ثقافي"
+      },
+      "tags": []
     }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 20,
+    "total": 6
+  }
 }
 ```
 
-### 2. Get Event Details
+### Get Event Details
 **GET** `/events/{id}`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": {
-        "id": 1,
-        "title": "Traditional Music Performance",
-        "description": "Full description here...",
-        "event_date": "2024-02-15",
-        "event_time": "19:00:00",
-        "duration": 120,
-        "location": "Main Stage",
-        "latitude": 24.3456,
-        "longitude": 56.7890,
-        "max_attendees": 500,
-        "current_attendees": 150,
-        "status": "active",
-        "image_url": "https://example.com/image.jpg",
-        "category": {
-            "id": 1,
-            "name": "Music"
-        },
-        "tags": [
-            {"id": 1, "name": "Traditional"}
-        ]
-    }
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Sohar Heritage Festival 2025",
+    "title_ar": "مهرجان صحار التراثي 2025",
+    "description": "Full description...",
+    "category": {...},
+    "tags": [...]
+  }
 }
 ```
 
-### 3. Get Upcoming Events
-**GET** `/events/upcoming`
-
-Response: Same as List Events but limited to 10 upcoming events
-
-### 4. Get Today's Events
+### Today's Events
 **GET** `/events/today`
 
-Response: Same as List Events but only today's events
+Returns events that are active today (checks if today falls within event's date range).
 
-### 5. Toggle Event Favorite
-**POST** `/events/{id}/favorite` (Authenticated)
+### Upcoming Events
+**GET** `/events/upcoming`
 
-Response (200 OK):
+Returns events that will start in the future.
+
+### Featured Events
+**GET** `/events/featured`
+
+Returns events marked as featured.
+
+### Events by Category
+**GET** `/events/category/{categoryId}`
+
+Category IDs:
+- 1: Cultural
+- 2: Music
+- 3: Food
+- 4: Sports
+- 5: Kids
+- 6: Arts
+
+### Toggle Favorite 🔒
+**POST** `/events/{id}/favorite`
+
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "is_favorite": true,
-    "message": "Added to favorites"
+  "success": true,
+  "is_favorite": true,
+  "message": "Added to favorites"
 }
 ```
 
-### 6. Get Favorite Events
-**GET** `/events/favorites` (Authenticated)
+### Get Favorite Events 🔒
+**GET** `/events/favorites`
 
-Response: Same as List Events but only favorited events
+Returns user's favorited events.
 
 ---
 
-## Heritage Village Endpoints
+## Tickets
 
-### 1. List Heritage Villages
+### Ticket Pricing (Public)
+**GET** `/tickets/pricing`
+
+Returns all ticket pricing options for active events.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "event_id": 1,
+      "ticket_type": "standard",
+      "price": "5.000",
+      "available_quantity": 100,
+      "benefits": "General admission",
+      "benefits_ar": "دخول عام",
+      "event": {
+        "id": 1,
+        "title": "Sohar Heritage Festival 2025"
+      }
+    }
+  ]
+}
+```
+
+### Available Tickets 🔒
+**GET** `/tickets/available`
+
+Returns tickets available for purchase for events within their active date range.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "event_id": 1,
+      "ticket_type": "standard",
+      "price": "5.000",
+      "available_quantity": 100,
+      "benefits": "General admission",
+      "benefits_ar": "دخول عام",
+      "event": {
+        "id": 1,
+        "title": "Sohar Heritage Festival 2025",
+        "start_time": "2025-09-19T10:00:00.000000Z",
+        "end_time": "2025-12-11T22:00:00.000000Z"
+      }
+    }
+  ]
+}
+```
+
+### Check Availability 🔒
+**POST** `/tickets/check-availability`
+
+**Request Body:**
+```json
+{
+  "ticket_type": "standard",
+  "quantity": 2,
+  "date": "2025-10-15"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "available": true,
+  "price_per_ticket": "5.000",
+  "total_price": "10.000"
+}
+```
+
+### Purchase Tickets 🔒
+**POST** `/tickets/purchase`
+
+**Request Body:**
+```json
+{
+  "event_id": 1,
+  "ticket_type": "standard",
+  "quantity": 2,
+  "payment_method": "card"
+}
+```
+
+### My Tickets 🔒
+**GET** `/tickets/my-tickets`
+
+### Get Ticket Details 🔒
+**GET** `/tickets/{id}`
+
+### Get Ticket QR Code 🔒
+**GET** `/tickets/{id}/qr-code`
+
+---
+
+## Heritage Villages
+
+### List Heritage Villages
 **GET** `/heritage-villages`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "name": "Al Hazm Village",
-            "description": "Traditional Omani village showcase",
-            "opening_hours": "09:00 - 22:00",
-            "location": "Festival Grounds East",
-            "latitude": 24.3456,
-            "longitude": 56.7890,
-            "status": "active",
-            "images": [
-                {"id": 1, "image_url": "https://example.com/img1.jpg"},
-                {"id": 2, "image_url": "https://example.com/img2.jpg"}
-            ],
-            "attractions": [
-                {
-                    "id": 1,
-                    "name": "Traditional House",
-                    "description": "Authentic Omani architecture"
-                }
-            ]
-        }
-    ]
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name_en": "Sohar Heritage Village",
+      "name_ar": "قرية صحار التراثية",
+      "description_en": "Experience the rich cultural heritage...",
+      "description_ar": "استمتع بالتراث الثقافي الغني...",
+      "type": "maritime",
+      "cover_image": "https://example.com/image.jpg",
+      "opening_hours": "10:00 AM - 10:00 PM",
+      "virtual_tour_url": "https://example.com/tour",
+      "is_active": true
+    }
+  ]
 }
 ```
 
-### 2. Get Heritage Village Details
+### Get Heritage Village Details
 **GET** `/heritage-villages/{id}`
 
-Response: Same as single item from list
-
 ---
 
-## Restaurant Endpoints
+## Restaurants
 
-### 1. List Restaurants
+### List Restaurants
 **GET** `/restaurants`
 
-Query Parameters:
-- `cuisine`: Filter by cuisine type
-- `is_vegetarian`: Filter vegetarian options (true/false)
-- `is_family_friendly`: Filter family friendly (true/false)
-
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "name": "Al Mandi House",
-            "description": "Traditional Omani cuisine",
-            "cuisine_type": "Omani",
-            "location": "Food Court A",
-            "latitude": 24.3456,
-            "longitude": 56.7890,
-            "phone": "+968 9234 5678",
-            "average_price": 15.000,
-            "is_vegetarian": true,
-            "is_family_friendly": true,
-            "status": "active",
-            "images": [
-                {"id": 1, "image_url": "https://example.com/rest1.jpg"}
-            ],
-            "features": [
-                {"id": 1, "name": "Outdoor Seating"},
-                {"id": 2, "name": "WiFi"}
-            ],
-            "opening_hours": [
-                {
-                    "day": "Monday",
-                    "open_time": "10:00",
-                    "close_time": "23:00"
-                }
-            ]
-        }
-    ],
-    "pagination": {
-        "current_page": 1,
-        "last_page": 3,
-        "per_page": 20,
-        "total": 45
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Traditional Omani Kitchen",
+      "name_ar": "المطبخ العماني التقليدي",
+      "description": "Authentic Omani cuisine",
+      "description_ar": "المأكولات العمانية الأصيلة",
+      "cuisine": "Omani",
+      "cuisine_ar": "عماني",
+      "location": "Food Court Area A",
+      "location_ar": "منطقة الطعام أ",
+      "latitude": 24.4541,
+      "longitude": 56.6240,
+      "phone": "+968 12345678",
+      "website": "https://soharfestival.om/restaurants/omani",
+      "price_range": "$$",
+      "rating": 4.5,
+      "total_ratings": 120,
+      "is_open": true,
+      "is_featured": true,
+      "is_active": true
     }
+  ],
+  "pagination": {...}
 }
 ```
 
-### 2. Search Restaurants
+### Open Now
+**GET** `/restaurants/open-now`
+
+### Search Restaurants
 **GET** `/restaurants/search`
 
-Query Parameters:
-- `query`: Search term (required, min 2 characters)
+**Query Parameters:**
+- `q` (string): Search query
 
-Response: Same as List Restaurants
+### Get Restaurant Details
+**GET** `/restaurants/{id}`
 
----
+### Toggle Favorite 🔒
+**POST** `/restaurants/{id}/favorite`
 
-## Ticket Endpoints
-
-### 1. Get Available Tickets
-**GET** `/tickets/available` (Authenticated)
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "ticket_type": "general",
-            "name": "General Admission",
-            "description": "Access to all public areas",
-            "price": 5.000,
-            "currency": "OMR",
-            "start_date": "2024-02-01",
-            "end_date": "2024-02-28",
-            "is_available": true
-        },
-        {
-            "id": 2,
-            "ticket_type": "vip",
-            "name": "VIP Pass",
-            "description": "VIP access with special benefits",
-            "price": 25.000,
-            "currency": "OMR",
-            "start_date": "2024-02-01",
-            "end_date": "2024-02-28",
-            "is_available": true
-        }
-    ]
-}
-```
-
-### 2. Check Ticket Availability
-**POST** `/tickets/check-availability` (Authenticated)
-
-Request:
-```json
-{
-    "ticket_type": "general",
-    "quantity": 2,
-    "date": "2024-02-15"
-}
-```
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "available": true,
-    "price_per_ticket": 5.000,
-    "total_price": 10.000
-}
-```
-
-### 3. Get My Tickets
-**GET** `/tickets/my-tickets` (Authenticated)
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "ticket_type": "general",
-            "ticket_number": "TKT12345678",
-            "qr_code": "uuid-string-here",
-            "purchase_date": "2024-02-01T10:00:00.000000Z",
-            "status": "active",
-            "payment_id": 1
-        }
-    ],
-    "pagination": {
-        "current_page": 1,
-        "last_page": 1,
-        "per_page": 20,
-        "total": 2
-    }
-}
-```
-
-### 4. Get Ticket QR Code
-**GET** `/tickets/{id}/qr-code` (Authenticated)
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "qr_code": "data:image/png;base64,iVBORw0KGgoAAAANS...",
-    "ticket_number": "TKT12345678"
-}
-```
+### Get Favorite Restaurants 🔒
+**GET** `/restaurants/favorites`
 
 ---
 
-## Payment Endpoints (Thawani Integration)
+## Cultural Workshops
 
-### 1. Initialize Payment
-**POST** `/payments/initialize` (Authenticated)
-
-Request:
-```json
-{
-    "payment_type": "ticket",
-    "payable_id": 1,
-    "quantity": 2,
-    "amount": 10.000
-}
-```
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "payment_id": 1,
-    "session_id": "thawani_session_id_here",
-    "checkout_url": "https://uatcheckout.thawani.om/checkout/session_id?key=publishable_key",
-    "expires_at": "2024-02-01T11:00:00.000000Z"
-}
-```
-
-### 2. Confirm Payment
-**POST** `/payments/confirm` (Authenticated)
-
-Request:
-```json
-{
-    "session_id": "thawani_session_id_here"
-}
-```
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "message": "Payment successful",
-    "payment_id": 1,
-    "transaction_id": "TXN1234567890"
-}
-```
-
-### 3. Check Payment Status
-**GET** `/payments/status/{sessionId}` (Authenticated)
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "payment_status": "paid",
-    "session_data": {
-        "session_id": "thawani_session_id",
-        "payment_status": "paid",
-        "amount": 10000,
-        "currency": "OMR"
-    }
-}
-```
-
-### 4. Get My Transactions
-**GET** `/payments/my-transactions` (Authenticated)
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "transaction_id": "TXN1234567890",
-            "payment_type": "ticket",
-            "amount": "10.000",
-            "currency": "OMR",
-            "status": "completed",
-            "payment_method": "card",
-            "paid_at": "2024-02-01T10:30:00.000000Z",
-            "created_at": "2024-02-01T10:28:00.000000Z"
-        }
-    ],
-    "pagination": {
-        "current_page": 1,
-        "last_page": 1,
-        "per_page": 20,
-        "total": 5
-    }
-}
-```
-
-### 5. Webhook (For Thawani Server)
-**POST** `/payments/webhook`
-
-This endpoint is called by Thawani servers to notify payment status changes.
-
----
-
-## Cultural Workshop Endpoints
-
-### 1. List Workshops
+### List Workshops
 **GET** `/cultural-workshops`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "title": "Traditional Pottery Making",
-            "description": "Learn the art of Omani pottery",
-            "instructor_name": "Ahmed Al Rashdi",
-            "workshop_date": "2024-02-15",
-            "workshop_time": "10:00:00",
-            "duration": 120,
-            "location": "Workshop Hall A",
-            "max_participants": 20,
-            "current_participants": 12,
-            "price": 15.000,
-            "status": "active",
-            "requirements": "No prior experience needed",
-            "image_url": "https://example.com/workshop.jpg"
-        }
-    ],
-    "pagination": {
-        "current_page": 1,
-        "last_page": 2,
-        "per_page": 20,
-        "total": 25
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "heritage_village_id": 1,
+      "title_en": "Pottery Workshop",
+      "title_ar": "ورشة الفخار",
+      "description_en": "Learn pottery making",
+      "description_ar": "تعلم صناعة الفخار",
+      "instructor_name": "Ahmed Ali",
+      "image_url": "https://example.com/pottery.jpg",
+      "duration_minutes": 120,
+      "max_participants": 20,
+      "price_omr": "15.00",
+      "skill_level": "beginner",
+      "is_active": true
     }
+  ]
 }
 ```
 
-### 2. Get Available Workshops
+### Available Workshops
 **GET** `/cultural-workshops/available`
 
-Response: Same as List Workshops but only shows workshops with available spots
+### Get Workshop Details
+**GET** `/cultural-workshops/{id}`
 
-### 3. Register for Workshop
-**POST** `/cultural-workshops/{id}/register` (Authenticated)
+### Register for Workshop 🔒
+**POST** `/cultural-workshops/{id}/register`
 
-Response (200 OK):
-```json
-{
-    "success": true,
-    "message": "Successfully registered for workshop"
-}
-```
+### Cancel Registration 🔒
+**DELETE** `/cultural-workshops/{id}/cancel`
 
-### 4. Cancel Workshop Registration
-**DELETE** `/cultural-workshops/{id}/cancel` (Authenticated)
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "message": "Registration cancelled successfully"
-}
-```
-
-### 5. Get My Workshop Registrations
-**GET** `/cultural-workshops/my-registrations` (Authenticated)
-
-Response: Same as List Workshops but only user's registered workshops
+### My Registrations 🔒
+**GET** `/cultural-workshops/my-registrations`
 
 ---
 
-## Traditional Activity Endpoints
+## Traditional Activities
 
-### 1. List Traditional Activities
+### List Activities
 **GET** `/traditional-activities`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "name": "Al Razha Dance",
-            "description": "Traditional Omani warrior dance",
-            "activity_time": "20:00:00",
-            "duration": 30,
-            "location": "Cultural Stage",
-            "performers": "Al Wahiba Troupe",
-            "is_active": true,
-            "image_url": "https://example.com/razha.jpg"
-        }
-    ]
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "heritage_village_id": 1,
+      "activity_name_en": "Traditional Dance",
+      "activity_name_ar": "الرقص التقليدي",
+      "description_en": "Watch traditional Omani dances",
+      "description_ar": "شاهد الرقصات العمانية التقليدية",
+      "image_url": "https://example.com/dance.jpg",
+      "is_interactive": true,
+      "age_recommendation": "All ages",
+      "timing": "7:00 PM - 8:00 PM",
+      "is_active": true
+    }
+  ]
 }
 ```
 
+### Interactive Activities
+**GET** `/traditional-activities/interactive`
+
+### Get Activity Details
+**GET** `/traditional-activities/{id}`
+
 ---
 
-## Craft Demonstration Endpoints
+## Craft Demonstrations
 
-### 1. List Craft Demonstrations
+### List Demonstrations
 **GET** `/craft-demonstrations`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "craft_name": "Silver Making",
-            "craftsman_name": "Mohammed Al Balushi",
-            "description": "Traditional Omani silver jewelry crafting",
-            "demonstration_time": "11:00:00",
-            "duration": 45,
-            "location": "Craft Village",
-            "is_active": true,
-            "image_url": "https://example.com/silver.jpg"
-        }
-    ]
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "heritage_village_id": 1,
+      "craft_name_en": "Silver Making",
+      "craft_name_ar": "صناعة الفضة",
+      "artisan_name": "Mohammed Al-Salmi",
+      "description_en": "Traditional silver jewelry making",
+      "description_ar": "صناعة المجوهرات الفضية التقليدية",
+      "demonstration_times": "10:00 AM - 12:00 PM",
+      "duration_minutes": 120,
+      "can_try_hands_on": true,
+      "is_active": true
+    }
+  ]
 }
 ```
 
+### Live Demonstrations
+**GET** `/craft-demonstrations/live`
+
+### Get Demonstration Details
+**GET** `/craft-demonstrations/{id}`
+
 ---
 
-## Photo Spot Endpoints
+## Photo Spots
 
-### 1. List Photo Spots
+### List Photo Spots
 **GET** `/photo-spots`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "name": "Traditional Gate",
-            "description": "Beautiful traditional Omani gate perfect for photos",
-            "location": "Main Entrance",
-            "latitude": 24.3456,
-            "longitude": 56.7890,
-            "best_time": "Golden hour (6-7 PM)",
-            "tips": "Great lighting in the evening",
-            "is_active": true,
-            "image_url": "https://example.com/spot.jpg"
-        }
-    ]
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "heritage_village_id": 1,
+      "name_en": "Main Gate Photo Spot",
+      "name_ar": "نقطة تصوير البوابة الرئيسية",
+      "description_en": "Perfect spot for entrance photos",
+      "description_ar": "مكان مثالي لصور المدخل",
+      "image_url": "https://example.com/gate-photo.jpg",
+      "best_time_for_photos": "Sunset - 6:00 PM to 7:00 PM",
+      "is_active": true
+    }
+  ]
 }
 ```
 
----
-
-## Emergency Contact Endpoints
-
-### 1. List Emergency Contacts
-**GET** `/emergency-contacts`
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "service_name": "Medical Emergency",
-            "contact_number": "9999",
-            "location": "Medical Tent - Main Gate",
-            "available_hours": "24/7",
-            "priority": 1,
-            "is_active": true
-        },
-        {
-            "id": 2,
-            "service_name": "Security",
-            "contact_number": "9123 4567",
-            "location": "Security Office",
-            "available_hours": "24/7",
-            "priority": 2,
-            "is_active": true
-        }
-    ]
-}
-```
+### Get Photo Spot Details
+**GET** `/photo-spots/{id}`
 
 ---
 
-## Map Location Endpoints
+## Map Locations
 
-### 1. List All Map Locations
+### List All Locations
 **GET** `/map-locations`
 
-Response (200 OK):
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "name": "Main Stage",
-            "category": "entertainment",
-            "description": "Main performance stage",
-            "latitude": 24.3456,
-            "longitude": 56.7890,
-            "icon": "stage",
-            "is_active": true
-        },
-        {
-            "id": 2,
-            "name": "Food Court A",
-            "category": "food",
-            "description": "Various food stalls",
-            "latitude": 24.3457,
-            "longitude": 56.7891,
-            "icon": "restaurant",
-            "is_active": true
-        }
-    ]
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "type": "entertainment",
+      "name": "Main Stage",
+      "name_ar": "المسرح الرئيسي",
+      "description": "Main performance area",
+      "description_ar": "منطقة العروض الرئيسية",
+      "latitude": 24.4539,
+      "longitude": 56.6238,
+      "icon": "stage",
+      "color": "#FF5722",
+      "is_active": true
+    }
+  ]
 }
 ```
 
-### 2. Get Locations by Category
+### Entertainment Locations
+**GET** `/map-locations/entertainment`
+
+### Food Locations
+**GET** `/map-locations/food`
+
+### Facilities
+**GET** `/map-locations/facilities`
+
+### Parking Areas
+**GET** `/map-locations/parking`
+
+### Locations by Category
 **GET** `/map-locations/category/{category}`
 
-Categories: entertainment, food, facility, parking, entrance, emergency
-
-Response: Same as List All Map Locations but filtered by category
+Categories: entertainment, food, facilities, parking
 
 ---
 
-## Notification Endpoints
+## Notifications
 
-### 1. Get Public Notifications
-**GET** `/notifications`
+### Public Notifications
+**GET** `/notifications/public`
 
-Response (200 OK):
+### My Notifications 🔒
+**GET** `/notifications/my-notifications`
+
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "title": "Festival Opening Ceremony",
-            "message": "Join us for the grand opening at 6 PM",
-            "type": "announcement",
-            "priority": "high",
-            "created_at": "2024-02-01T09:00:00.000000Z"
-        }
-    ]
-}
-```
-
-### 2. Get My Notifications
-**GET** `/notifications/my-notifications` (Authenticated)
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "title": "Ticket Purchase Confirmed",
-            "message": "Your ticket purchase was successful",
-            "type": "purchase",
-            "priority": "normal",
-            "is_read": false,
-            "created_at": "2024-02-01T10:30:00.000000Z"
-        }
-    ],
-    "pagination": {
-        "current_page": 1,
-        "last_page": 1,
-        "per_page": 20,
-        "total": 5
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Welcome to Festival",
+      "title_ar": "مرحباً بكم في المهرجان",
+      "body": "Enjoy your visit!",
+      "body_ar": "استمتع بزيارتك!",
+      "type": "announcement",
+      "is_read": false,
+      "created_at": "2025-09-19T10:00:00.000000Z"
     }
+  ],
+  "pagination": {...}
 }
 ```
 
-### 3. Mark Notification as Read
-**POST** `/notifications/{id}/mark-read` (Authenticated)
+### Mark as Read 🔒
+**POST** `/notifications/{id}/mark-read`
 
-Response (200 OK):
+### Mark All as Read 🔒
+**POST** `/notifications/mark-all-read`
+
+### Unread Count 🔒
+**GET** `/notifications/unread-count`
+
+**Response (200 OK):**
 ```json
 {
-    "success": true,
-    "message": "Notification marked as read"
-}
-```
-
-### 4. Mark All Notifications as Read
-**POST** `/notifications/mark-all-read` (Authenticated)
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "message": "All notifications marked as read"
-}
-```
-
-### 5. Get Unread Count
-**GET** `/notifications/unread-count` (Authenticated)
-
-Response (200 OK):
-```json
-{
-    "success": true,
-    "unread_count": 3
+  "success": true,
+  "unread_count": 3
 }
 ```
 
 ---
 
-## Error Responses
+## Payments
 
-All endpoints may return the following error responses:
+### Initialize Payment 🔒
+**POST** `/payments/initialize`
 
-### 400 Bad Request
+**Request Body:**
 ```json
 {
-    "success": false,
-    "message": "Validation error",
-    "errors": {
-        "phone_number": ["The phone number field is required."]
+  "ticket_id": 1,
+  "amount": 10.000,
+  "payment_method": "card"
+}
+```
+
+### Confirm Payment 🔒
+**POST** `/payments/confirm`
+
+**Request Body:**
+```json
+{
+  "session_id": "payment_session_id",
+  "payment_id": "payment_id_from_gateway"
+}
+```
+
+### Check Payment Status 🔒
+**GET** `/payments/status/{sessionId}`
+
+### My Transactions 🔒
+**GET** `/payments/my-transactions`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "transaction_id": "TXN1234567890",
+      "amount": "10.000",
+      "currency": "OMR",
+      "status": "completed",
+      "payment_method": "card",
+      "created_at": "2025-09-19T10:00:00.000000Z"
     }
+  ],
+  "pagination": {...}
 }
 ```
 
-### 401 Unauthorized
-```json
-{
-    "success": false,
-    "message": "Unauthenticated"
-}
-```
+### Webhook (For Payment Gateway)
+**POST** `/payments/webhook`
 
-### 404 Not Found
-```json
-{
-    "success": false,
-    "message": "Resource not found"
-}
-```
+This endpoint is called by payment gateway servers to notify payment status changes.
 
-### 500 Internal Server Error
+---
+
+## Emergency Contacts
+
+### List Emergency Contacts
+**GET** `/emergency-contacts`
+
+**Response (200 OK):**
 ```json
 {
-    "success": false,
-    "message": "Server error occurred"
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "service_name": "Police",
+      "service_name_ar": "الشرطة",
+      "phone_number": "999",
+      "description": "Emergency police services",
+      "description_ar": "خدمات الشرطة الطارئة",
+      "is_active": true
+    }
+  ]
 }
 ```
 
 ---
 
-## Rate Limiting
+## Announcements
 
-- Authentication endpoints: 5 requests per minute
+### List Announcements
+**GET** `/announcements`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Festival Schedule Update",
+      "title_ar": "تحديث جدول المهرجان",
+      "content": "New events added for the weekend",
+      "content_ar": "فعاليات جديدة أضيفت لنهاية الأسبوع",
+      "type": "info",
+      "priority": 2,
+      "is_pinned": true,
+      "is_active": true,
+      "start_datetime": "2025-09-19T00:00:00.000000Z",
+      "end_datetime": "2025-09-26T00:00:00.000000Z"
+    }
+  ]
+}
+```
+
+### Active Announcements
+**GET** `/announcements/active`
+
+Returns only currently active announcements.
+
+---
+
+## App Settings
+
+### Get App Settings
+**GET** `/app-settings`
+
+Returns configuration settings for the mobile app.
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "app_version": "1.0.0",
+    "force_update": false,
+    "maintenance_mode": false,
+    "features": {
+      "tickets_enabled": true,
+      "workshops_enabled": true,
+      "payments_enabled": true
+    }
+  }
+}
+```
+
+---
+
+## Response Codes
+
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request
+- `401` - Unauthorized
+- `403` - Forbidden
+- `404` - Not Found
+- `422` - Unprocessable Entity (Validation Error)
+- `500` - Internal Server Error
+
+## Error Response Format
+
+```json
+{
+  "success": false,
+  "message": "Error message here",
+  "errors": {
+    "field_name": ["Validation error message"]
+  }
+}
+```
+
+## Important Notes
+
+### Date Range Events
+Events in the Sohar Festival span multiple days (Sept 19 - Dec 11, 2025). When querying events:
+- Use `date` parameter to get events active on a specific date
+- The API checks if the requested date falls within the event's `start_time` and `end_time` range
+- Each event supports hourly booking slots with capacity limits
+
+### Ticket Availability
+- The `available_tickets` field represents capacity per hour slot
+- Tickets are available when the event is within its active date range
+- Use `/tickets/check-availability` with a specific date to verify slot availability
+
+### Authentication
+- All endpoints marked with 🔒 require Bearer token authentication
+- OTP codes expire after 5 minutes
+- Tokens should be included in the `Authorization` header
+
+### Multilingual Support
+- Most content fields have Arabic translations with `_ar` suffix
+- Use `preferred_language` in user profile to set default language
+
+### Development vs Production
+In development mode:
+- OTP codes are returned in the response for testing
+- Debug information may be included in error responses
+
+In production mode:
+- OTP codes are sent via SMS only
+- Error responses contain minimal information
+
+### Rate Limiting
 - Public endpoints: 60 requests per minute
 - Authenticated endpoints: 120 requests per minute
 
----
-
-## Environment Variables
-
-Add these to your `.env` file:
-
-```env
-# Thawani Payment Gateway
-THAWANI_URL=https://uatcheckout.thawani.om
-THAWANI_SECRET_KEY=your_secret_key_here
-THAWANI_PUBLISHABLE_KEY=your_publishable_key_here
-
-# SMS Gateway (for OTP)
-SMS_GATEWAY_URL=https://sms-provider.com/api
-SMS_GATEWAY_KEY=your_sms_api_key
-SMS_GATEWAY_SENDER=SOHAR_FEST
-```
+### Date Format
+All dates use ISO 8601 format (YYYY-MM-DDTHH:mm:ss.000000Z)

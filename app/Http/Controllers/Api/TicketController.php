@@ -13,9 +13,14 @@ class TicketController extends Controller
 {
     public function available()
     {
-        $tickets = TicketPricing::where('is_available', true)
-            ->where('start_date', '<=', now())
-            ->where('end_date', '>=', now())
+        // Get ticket pricing for events that are currently active (within date range)
+        $tickets = TicketPricing::with('event')
+            ->whereHas('event', function($query) {
+                $query->where('is_active', true)
+                      ->whereDate('start_time', '<=', now())
+                      ->whereDate('end_time', '>=', now());
+            })
+            ->where('available_quantity', '>', 0)
             ->get();
 
         return response()->json([
@@ -26,7 +31,11 @@ class TicketController extends Controller
 
     public function pricing()
     {
-        $pricing = TicketPricing::all();
+        $pricing = TicketPricing::with('event')
+            ->whereHas('event', function($query) {
+                $query->where('is_active', true);
+            })
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -42,15 +51,29 @@ class TicketController extends Controller
             'date' => 'required|date'
         ]);
 
+        // Find ticket pricing for the requested type with available quantity
         $pricing = TicketPricing::where('ticket_type', $request->ticket_type)
-            ->where('is_available', true)
+            ->where('available_quantity', '>', 0)
+            ->whereHas('event', function($query) use ($request) {
+                $query->where('is_active', true)
+                      ->whereDate('start_time', '<=', $request->date)
+                      ->whereDate('end_time', '>=', $request->date);
+            })
             ->first();
 
         if (!$pricing) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ticket type not available'
+                'message' => 'Ticket type not available for the selected date'
             ], 404);
+        }
+
+        if ($pricing->available_quantity < $request->quantity) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not enough tickets available',
+                'available' => $pricing->available_quantity
+            ], 400);
         }
 
         return response()->json([
