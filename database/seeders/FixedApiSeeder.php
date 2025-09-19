@@ -86,44 +86,120 @@ class FixedApiSeeder extends Seeder
 
     private function addFutureEvents()
     {
-        // Add events for today
+        // Festival start and end dates
+        $festivalStart = Carbon::create(2025, 9, 19, 10, 0, 0);
+        $festivalEnd = Carbon::create(2025, 12, 11, 22, 0, 0);
+
+        // Main Festival Event (spanning entire period)
         Event::create([
-            'title' => 'Today Festival Opening',
-            'title_ar' => 'افتتاح المهرجان اليوم',
-            'description' => 'Special opening ceremony today',
-            'description_ar' => 'حفل افتتاح خاص اليوم',
-            'category_id' => 1,
-            'start_time' => Carbon::today()->setTime(18, 0),
-            'end_time' => Carbon::today()->setTime(20, 0),
-            'location' => 'Main Stage',
-            'location_ar' => 'المسرح الرئيسي',
-            'price' => 0,
+            'title' => 'Sohar Heritage Festival 2025',
+            'title_ar' => 'مهرجان صحار التراثي 2025',
+            'description' => 'Experience the rich cultural heritage of Sohar with daily activities, performances, and workshops. Book your time slot for each day. Each slot has a 1-hour duration with limited capacity.',
+            'description_ar' => 'استمتع بالتراث الثقافي الغني لصحار مع الأنشطة اليومية والعروض وورش العمل. احجز موعدك لكل يوم. كل موعد مدته ساعة واحدة بسعة محدودة.',
+            'category_id' => 1, // Cultural
+            'start_time' => $festivalStart,
+            'end_time' => $festivalEnd,
+            'location' => 'Sohar Heritage Village',
+            'location_ar' => 'قرية صحار التراثية',
+            'price' => 5, // Per hour slot
             'currency' => 'OMR',
-            'available_tickets' => 1000,
-            'total_tickets' => 1000,
+            'available_tickets' => 100, // Per hour slot
+            'total_tickets' => 100, // Per hour slot capacity
             'is_featured' => true,
             'is_active' => true
         ]);
 
-        // Add events for upcoming
-        for ($i = 1; $i <= 5; $i++) {
-            Event::create([
-                'title' => "Event Day $i",
-                'title_ar' => "فعالية اليوم $i",
-                'description' => "Special event on day $i",
-                'description_ar' => "فعالية خاصة في اليوم $i",
-                'category_id' => rand(1, 2),
-                'start_time' => Carbon::now()->addDays($i)->setTime(19, 0),
-                'end_time' => Carbon::now()->addDays($i)->setTime(21, 0),
-                'location' => 'Festival Ground',
-                'location_ar' => 'أرض المهرجان',
-                'price' => rand(0, 10),
-                'currency' => 'OMR',
-                'available_tickets' => 500,
-                'total_tickets' => 500,
-                'is_active' => true
-            ]);
-        }
+        // Traditional Music & Dance Festival
+        Event::create([
+            'title' => 'Traditional Music & Dance Festival',
+            'title_ar' => 'مهرجان الموسيقى والرقص التقليدي',
+            'description' => 'Daily performances of traditional Omani music and dance. Book your 1-hour viewing slot. Limited seats available per session.',
+            'description_ar' => 'عروض يومية للموسيقى والرقص العماني التقليدي. احجز موعد المشاهدة لمدة ساعة. مقاعد محدودة لكل جلسة.',
+            'category_id' => 2, // Music
+            'start_time' => $festivalStart,
+            'end_time' => Carbon::create(2025, 11, 30, 22, 0, 0),
+            'location' => 'Main Amphitheater',
+            'location_ar' => 'المدرج الرئيسي',
+            'price' => 10,
+            'currency' => 'OMR',
+            'available_tickets' => 150, // Per hour slot
+            'total_tickets' => 150,
+            'is_featured' => true,
+            'is_active' => true
+        ]);
+
+        // Food Festival
+        Event::create([
+            'title' => 'Omani Food Festival',
+            'title_ar' => 'مهرجان الطعام العماني',
+            'description' => 'Taste authentic Omani cuisine. Book your dining slot (1-hour sessions). Tables limited per hour.',
+            'description_ar' => 'تذوق المأكولات العمانية الأصيلة. احجز موعد تناول الطعام (جلسات لمدة ساعة). الطاولات محدودة لكل ساعة.',
+            'category_id' => 3, // Food
+            'start_time' => Carbon::create(2025, 10, 1, 12, 0, 0),
+            'end_time' => Carbon::create(2025, 12, 11, 22, 0, 0),
+            'location' => 'Food Court',
+            'location_ar' => 'ساحة الطعام',
+            'price' => 15,
+            'currency' => 'OMR',
+            'available_tickets' => 80, // Per hour slot
+            'total_tickets' => 80,
+            'is_active' => true
+        ]);
+
+        // Kids Festival
+        Event::create([
+            'title' => 'Kids Entertainment Zone',
+            'title_ar' => 'منطقة ترفيه الأطفال',
+            'description' => 'Fun activities for children. Book 1-hour play sessions. Limited capacity for safety.',
+            'description_ar' => 'أنشطة ممتعة للأطفال. احجز جلسات لعب لمدة ساعة. سعة محدودة للسلامة.',
+            'category_id' => 5, // Kids
+            'start_time' => $festivalStart,
+            'end_time' => $festivalEnd,
+            'location' => 'Kids Zone',
+            'location_ar' => 'منطقة الأطفال',
+            'price' => 3,
+            'currency' => 'OMR',
+            'available_tickets' => 50, // Per hour slot
+            'total_tickets' => 50,
+            'is_active' => true
+        ]);
+
+        // Art Exhibition
+        Event::create([
+            'title' => 'Contemporary & Traditional Art Exhibition',
+            'title_ar' => 'معرض الفن المعاصر والتقليدي',
+            'description' => 'Explore Omani art through the ages. Book your 1-hour gallery tour slot.',
+            'description_ar' => 'استكشف الفن العماني عبر العصور. احجز موعد جولة المعرض لمدة ساعة.',
+            'category_id' => 6, // Arts
+            'start_time' => Carbon::create(2025, 9, 25, 10, 0, 0),
+            'end_time' => Carbon::create(2025, 12, 5, 20, 0, 0),
+            'location' => 'Art Gallery Hall',
+            'location_ar' => 'قاعة المعرض الفني',
+            'price' => 8,
+            'currency' => 'OMR',
+            'available_tickets' => 60, // Per hour slot
+            'total_tickets' => 60,
+            'is_active' => true
+        ]);
+
+        // Sports Activities
+        Event::create([
+            'title' => 'Traditional Sports & Games',
+            'title_ar' => 'الرياضات والألعاب التقليدية',
+            'description' => 'Participate in traditional Omani sports. Book your 1-hour activity slot.',
+            'description_ar' => 'شارك في الرياضات العمانية التقليدية. احجز موعد نشاطك لمدة ساعة.',
+            'category_id' => 4, // Sports
+            'start_time' => Carbon::create(2025, 10, 15, 16, 0, 0),
+            'end_time' => Carbon::create(2025, 11, 30, 21, 0, 0),
+            'location' => 'Sports Arena',
+            'location_ar' => 'الساحة الرياضية',
+            'price' => 7,
+            'currency' => 'OMR',
+            'available_tickets' => 40, // Per hour slot
+            'total_tickets' => 40,
+            'is_featured' => true,
+            'is_active' => true
+        ]);
     }
 
     private function addCulturalWorkshops()
