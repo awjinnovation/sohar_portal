@@ -11,7 +11,7 @@ class PhotoSpotController extends Controller
 {
     public function index()
     {
-        $photoSpots = PhotoSpot::with('village')->latest()->paginate(20);
+        $photoSpots = PhotoSpot::with('heritageVillage')->latest()->paginate(20);
         return view('admin.photo-spots.index', compact('photoSpots'));
     }
 

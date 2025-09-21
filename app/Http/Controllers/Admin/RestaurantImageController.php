@@ -3,63 +3,68 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\RestaurantImage;
+use App\Models\Restaurant;
 use Illuminate\Http\Request;
 
 class RestaurantImageController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        $images = RestaurantImage::with('restaurant')->paginate(10);
+        return view('admin.restaurant-images.index', compact('images'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        $restaurants = Restaurant::all();
+        return view('admin.restaurant-images.create', compact('restaurants'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'restaurant_id' => 'required|exists:restaurants,id',
+            'image_url' => 'required|string|max:255',
+            'display_order' => 'nullable|integer'
+        ]);
+
+        RestaurantImage::create($validated);
+
+        return redirect()->route('admin.restaurant-images.index')
+            ->with('success', 'تم إضافة صورة المطعم بنجاح');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(RestaurantImage $restaurantImage)
     {
-        //
+        return view('admin.restaurant-images.show', compact('restaurantImage'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function edit(RestaurantImage $restaurantImage)
     {
-        //
+        $restaurants = Restaurant::all();
+        return view('admin.restaurant-images.edit', compact('restaurantImage', 'restaurants'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(Request $request, RestaurantImage $restaurantImage)
     {
-        //
+        $validated = $request->validate([
+            'restaurant_id' => 'required|exists:restaurants,id',
+            'image_url' => 'required|string|max:255',
+            'display_order' => 'nullable|integer'
+        ]);
+
+        $restaurantImage->update($validated);
+
+        return redirect()->route('admin.restaurant-images.index')
+            ->with('success', 'تم تحديث صورة المطعم بنجاح');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function destroy(RestaurantImage $restaurantImage)
     {
-        //
+        $restaurantImage->delete();
+
+        return redirect()->route('admin.restaurant-images.index')
+            ->with('success', 'تم حذف صورة المطعم بنجاح');
     }
 }

@@ -1,11 +1,14 @@
 @extends('layouts.admin')
 
+@section('title', 'أسعار التذاكر')
+@section('page-title', 'أسعار التذاكر')
+
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">تسعير التذاكر</h1>
+        <h1 class="h3 mb-0 text-gray-800">أسعار التذاكر</h1>
         <a href="{{ route('admin.ticket-pricing.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> إضافة جديد
+            <i class="bi bi-plus-circle"></i> إضافة سعر جديد
         </a>
     </div>
 
@@ -22,39 +25,39 @@
                 <table class="table table-bordered">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>الاسم</th>
-                            <th>الحالة</th>
-                            <th>تاريخ الإنشاء</th>
-                            <th>الإجراءات</th>
+                            <th width="5%">#</th>
+                            <th width="25%">الفعالية</th>
+                            <th width="20%">نوع التذكرة</th>
+                            <th width="15%">السعر</th>
+                            <th width="15%">الكمية المتاحة</th>
+                            <th width="20%">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($items as $item)
+                        @forelse($pricings as $pricing)
                             <tr>
-                                <td>{{ $item->id }}</td>
-                                <td>{{ $item->name ?? $item->title ?? '-' }}</td>
-                                <td>
-                                    @if($item->is_active ?? true)
-                                        <span class="badge bg-success">نشط</span>
-                                    @else
-                                        <span class="badge bg-danger">غير نشط</span>
-                                    @endif
-                                </td>
-                                <td>{{ $item->created_at->format('Y-m-d') }}</td>
+                                <td>{{ $pricing->id }}</td>
+                                <td>{{ $pricing->event->name ?? 'غير محدد' }}</td>
+                                <td>{{ $pricing->ticket_type }}</td>
+                                <td>{{ number_format($pricing->price, 3) }} ر.ع</td>
+                                <td>{{ $pricing->available_quantity }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.ticket-pricing.show', $item) }}" class="btn btn-sm btn-info">
-                                            <i class="fas fa-eye"></i>
+                                        <a href="{{ route('admin.ticket-pricing.show', $pricing) }}"
+                                           class="btn btn-sm btn-info" title="عرض">
+                                            <i class="bi bi-eye"></i>
                                         </a>
-                                        <a href="{{ route('admin.ticket-pricing.edit', $item) }}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-edit"></i>
+                                        <a href="{{ route('admin.ticket-pricing.edit', $pricing) }}"
+                                           class="btn btn-sm btn-warning" title="تعديل">
+                                            <i class="bi bi-pencil"></i>
                                         </a>
-                                        <form action="{{ route('admin.ticket-pricing.destroy', $item) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
+                                        <form action="{{ route('admin.ticket-pricing.destroy', $pricing) }}"
+                                              method="POST" class="d-inline"
+                                              onsubmit="return confirm('هل أنت متأكد من حذف هذا السعر؟')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash"></i>
+                                            <button type="submit" class="btn btn-sm btn-danger" title="حذف">
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
                                     </div>
@@ -62,15 +65,13 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center">لا توجد بيانات</td>
+                                <td colspan="6" class="text-center">لا توجد أسعار مسجلة</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-            @if(method_exists($items, 'links'))
-                {{ $items->links() }}
-            @endif
+            {{ $pricings->links() }}
         </div>
     </div>
 </div>

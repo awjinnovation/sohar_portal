@@ -84,6 +84,9 @@ Route::prefix('v1')->group(function () {
 
     // Public ticket pricing
     Route::get('/tickets/pricing', [TicketController::class, 'pricing']);
+
+    // Payment cancel endpoint (called by Thawani)
+    Route::post('/payments/cancel', [PaymentController::class, 'cancel']);
 });
 
 // Protected routes - Authentication required

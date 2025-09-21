@@ -1,11 +1,14 @@
 @extends('layouts.admin')
 
+@section('title', 'ميزات المطاعم')
+@section('page-title', 'ميزات المطاعم')
+
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">ميزة المطعم</h1>
+        <h1 class="h3 mb-0 text-gray-800">ميزات المطاعم</h1>
         <a href="{{ route('admin.restaurant-features.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> إضافة جديد
+            <i class="bi bi-plus-circle"></i> إضافة ميزة جديدة
         </a>
     </div>
 
@@ -22,39 +25,37 @@
                 <table class="table table-bordered">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>الاسم</th>
-                            <th>الحالة</th>
-                            <th>تاريخ الإنشاء</th>
-                            <th>الإجراءات</th>
+                            <th width="5%">#</th>
+                            <th width="25%">المطعم</th>
+                            <th width="30%">الميزة (عربي)</th>
+                            <th width="25%">الميزة (انجليزي)</th>
+                            <th width="15%">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($items as $item)
+                        @forelse($features as $feature)
                             <tr>
-                                <td>{{ $item->id }}</td>
-                                <td>{{ $item->name ?? $item->title ?? '-' }}</td>
-                                <td>
-                                    @if($item->is_active ?? true)
-                                        <span class="badge bg-success">نشط</span>
-                                    @else
-                                        <span class="badge bg-danger">غير نشط</span>
-                                    @endif
-                                </td>
-                                <td>{{ $item->created_at->format('Y-m-d') }}</td>
+                                <td>{{ $feature->id }}</td>
+                                <td>{{ $feature->restaurant->name ?? 'غير محدد' }}</td>
+                                <td>{{ $feature->feature_ar }}</td>
+                                <td>{{ $feature->feature }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.restaurant-features.show', $item) }}" class="btn btn-sm btn-info">
-                                            <i class="fas fa-eye"></i>
+                                        <a href="{{ route('admin.restaurant-features.show', $feature) }}"
+                                           class="btn btn-sm btn-info" title="عرض">
+                                            <i class="bi bi-eye"></i>
                                         </a>
-                                        <a href="{{ route('admin.restaurant-features.edit', $item) }}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-edit"></i>
+                                        <a href="{{ route('admin.restaurant-features.edit', $feature) }}"
+                                           class="btn btn-sm btn-warning" title="تعديل">
+                                            <i class="bi bi-pencil"></i>
                                         </a>
-                                        <form action="{{ route('admin.restaurant-features.destroy', $item) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
+                                        <form action="{{ route('admin.restaurant-features.destroy', $feature) }}"
+                                              method="POST" class="d-inline"
+                                              onsubmit="return confirm('هل أنت متأكد من حذف هذه الميزة؟')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash"></i>
+                                            <button type="submit" class="btn btn-sm btn-danger" title="حذف">
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
                                     </div>
@@ -62,15 +63,13 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center">لا توجد بيانات</td>
+                                <td colspan="5" class="text-center">لا توجد ميزات مسجلة</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-            @if(method_exists($items, 'links'))
-                {{ $items->links() }}
-            @endif
+            {{ $features->links() }}
         </div>
     </div>
 </div>

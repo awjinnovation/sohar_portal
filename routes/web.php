@@ -28,23 +28,90 @@ Route::prefix('admin')->group(function () {
         Route::resource('events', \App\Http\Controllers\Admin\EventController::class, ['as' => 'admin']);
         Route::resource('event-tags', \App\Http\Controllers\Admin\EventTagController::class, ['as' => 'admin']);
         Route::resource('tickets', \App\Http\Controllers\Admin\TicketController::class, ['as' => 'admin']);
+
+        // Additional Festival Resources
+        if (file_exists(app_path('Http/Controllers/Admin/TicketPricingController.php'))) {
+            Route::resource('ticket-pricing', \App\Http\Controllers\Admin\TicketPricingController::class, ['as' => 'admin']);
+        }
+
+        // Restaurant Management
         Route::resource('restaurants', \App\Http\Controllers\Admin\RestaurantController::class, ['as' => 'admin']);
-        
+        if (file_exists(app_path('Http/Controllers/Admin/RestaurantFeatureController.php'))) {
+            Route::resource('restaurant-features', \App\Http\Controllers\Admin\RestaurantFeatureController::class, ['as' => 'admin']);
+        }
+        if (file_exists(app_path('Http/Controllers/Admin/RestaurantImageController.php'))) {
+            Route::resource('restaurant-images', \App\Http\Controllers\Admin\RestaurantImageController::class, ['as' => 'admin']);
+        }
+        if (file_exists(app_path('Http/Controllers/Admin/RestaurantOpeningHourController.php'))) {
+            Route::resource('restaurant-opening-hours', \App\Http\Controllers\Admin\RestaurantOpeningHourController::class, ['as' => 'admin']);
+        }
+
         // Heritage & Culture
         Route::resource('heritage-villages', \App\Http\Controllers\Admin\HeritageVillageController::class, ['as' => 'admin']);
         Route::resource('village-images', \App\Http\Controllers\Admin\VillageImageController::class, ['as' => 'admin']);
         Route::resource('village-attractions', \App\Http\Controllers\Admin\VillageAttractionController::class, ['as' => 'admin']);
         Route::resource('craft-demonstrations', \App\Http\Controllers\Admin\CraftDemonstrationController::class, ['as' => 'admin']);
+        if (file_exists(app_path('Http/Controllers/Admin/CraftDemonstrationScheduleController.php'))) {
+            Route::resource('craft-demonstration-schedules', \App\Http\Controllers\Admin\CraftDemonstrationScheduleController::class, ['as' => 'admin']);
+        }
         Route::resource('traditional-activities', \App\Http\Controllers\Admin\TraditionalActivityController::class, ['as' => 'admin']);
+        if (file_exists(app_path('Http/Controllers/Admin/CulturalTimelineEventController.php'))) {
+            Route::resource('cultural-timeline-events', \App\Http\Controllers\Admin\CulturalTimelineEventController::class, ['as' => 'admin']);
+        }
+
+        // Workshops
         Route::resource('cultural-workshops', \App\Http\Controllers\Admin\CulturalWorkshopController::class, ['as' => 'admin']);
+        if (file_exists(app_path('Http/Controllers/Admin/WorkshopRegistrationController.php'))) {
+            Route::resource('workshop-registrations', \App\Http\Controllers\Admin\WorkshopRegistrationController::class, ['as' => 'admin']);
+        }
+        if (file_exists(app_path('Http/Controllers/Admin/WorkshopScheduleController.php'))) {
+            Route::resource('workshop-schedules', \App\Http\Controllers\Admin\WorkshopScheduleController::class, ['as' => 'admin']);
+        }
+
+        // Photography & Maps
         Route::resource('photo-spots', \App\Http\Controllers\Admin\PhotoSpotController::class, ['as' => 'admin']);
-        
+        if (file_exists(app_path('Http/Controllers/Admin/PhotographyTipController.php'))) {
+            Route::resource('photography-tips', \App\Http\Controllers\Admin\PhotographyTipController::class, ['as' => 'admin']);
+        }
+        Route::resource('map-locations', \App\Http\Controllers\Admin\MapLocationController::class, ['as' => 'admin']);
+        if (file_exists(app_path('Http/Controllers/Admin/LocationCategoryController.php'))) {
+            Route::resource('location-categories', \App\Http\Controllers\Admin\LocationCategoryController::class, ['as' => 'admin']);
+        }
+
+        // Safety & Health
+        if (file_exists(app_path('Http/Controllers/Admin/FirstAidStationController.php'))) {
+            Route::resource('first-aid-stations', \App\Http\Controllers\Admin\FirstAidStationController::class, ['as' => 'admin']);
+        }
+        if (file_exists(app_path('Http/Controllers/Admin/HealthTipController.php'))) {
+            Route::resource('health-tips', \App\Http\Controllers\Admin\HealthTipController::class, ['as' => 'admin']);
+        }
+
         // Communications
         Route::resource('announcements', \App\Http\Controllers\Admin\AnnouncementController::class, ['as' => 'admin']);
+        if (file_exists(app_path('Http/Controllers/Admin/NotificationController.php'))) {
+            Route::resource('notifications', \App\Http\Controllers\Admin\NotificationController::class, ['as' => 'admin']);
+        }
         Route::resource('emergency-contacts', \App\Http\Controllers\Admin\EmergencyContactController::class, ['as' => 'admin']);
-        
+
         // User Management
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class, ['as' => 'admin']);
         Route::resource('roles', \App\Http\Controllers\Admin\RoleController::class, ['as' => 'admin']);
+        if (file_exists(app_path('Http/Controllers/Admin/UserFavoriteController.php'))) {
+            Route::resource('user-favorites', \App\Http\Controllers\Admin\UserFavoriteController::class, ['as' => 'admin']);
+        }
+        if (file_exists(app_path('Http/Controllers/Admin/UserInterestController.php'))) {
+            Route::resource('user-interests', \App\Http\Controllers\Admin\UserInterestController::class, ['as' => 'admin']);
+        }
+        if (file_exists(app_path('Http/Controllers/Admin/OtpVerificationController.php'))) {
+            Route::resource('otp-verifications', \App\Http\Controllers\Admin\OtpVerificationController::class, ['as' => 'admin']);
+        }
+        if (file_exists(app_path('Http/Controllers/Admin/PaymentController.php'))) {
+            Route::resource('payments', \App\Http\Controllers\Admin\PaymentController::class, ['as' => 'admin']);
+        }
+
+        // App Settings
+        if (file_exists(app_path('Http/Controllers/Admin/AppSettingController.php'))) {
+            Route::resource('app-settings', \App\Http\Controllers\Admin\AppSettingController::class, ['as' => 'admin']);
+        }
     });
 });

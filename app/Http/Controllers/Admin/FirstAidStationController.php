@@ -3,63 +3,73 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\FirstAidStation;
 use Illuminate\Http\Request;
 
 class FirstAidStationController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        $stations = FirstAidStation::paginate(10);
+        return view('admin.first-aid-stations.index', compact('stations'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        return view('admin.first-aid-stations.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'name_ar' => 'required|string|max:255',
+            'location' => 'required|string|max:255',
+            'location_ar' => 'required|string|max:255',
+            'contact_number' => 'required|string|max:255',
+            'available_services' => 'nullable|string',
+            'available_services_ar' => 'nullable|string'
+        ]);
+
+        FirstAidStation::create($validated);
+
+        return redirect()->route('admin.first-aid-stations.index')
+            ->with('success', 'تم إضافة محطة الإسعاف الأولي بنجاح');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(FirstAidStation $firstAidStation)
     {
-        //
+        return view('admin.first-aid-stations.show', compact('firstAidStation'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function edit(FirstAidStation $firstAidStation)
     {
-        //
+        return view('admin.first-aid-stations.edit', compact('firstAidStation'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(Request $request, FirstAidStation $firstAidStation)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'name_ar' => 'required|string|max:255',
+            'location' => 'required|string|max:255',
+            'location_ar' => 'required|string|max:255',
+            'contact_number' => 'required|string|max:255',
+            'available_services' => 'nullable|string',
+            'available_services_ar' => 'nullable|string'
+        ]);
+
+        $firstAidStation->update($validated);
+
+        return redirect()->route('admin.first-aid-stations.index')
+            ->with('success', 'تم تحديث محطة الإسعاف الأولي بنجاح');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function destroy(FirstAidStation $firstAidStation)
     {
-        //
+        $firstAidStation->delete();
+
+        return redirect()->route('admin.first-aid-stations.index')
+            ->with('success', 'تم حذف محطة الإسعاف الأولي بنجاح');
     }
 }

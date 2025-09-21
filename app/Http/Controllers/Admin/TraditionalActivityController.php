@@ -11,7 +11,7 @@ class TraditionalActivityController extends Controller
 {
     public function index()
     {
-        $activities = TraditionalActivity::with('village')->latest()->paginate(20);
+        $activities = TraditionalActivity::with('heritageVillage')->latest()->paginate(20);
         return view('admin.traditional-activities.index', compact('activities'));
     }
 

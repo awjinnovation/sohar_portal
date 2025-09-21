@@ -30,27 +30,27 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($items as $item)
+                        @forelse($settings as $setting)
                             <tr>
-                                <td>{{ $item->id }}</td>
-                                <td>{{ $item->name ?? $item->title ?? '-' }}</td>
+                                <td>{{ $setting->id }}</td>
+                                <td>{{ $setting->name ?? $setting->title ?? '-' }}</td>
                                 <td>
-                                    @if($item->is_active ?? true)
+                                    @if($setting->is_active ?? true)
                                         <span class="badge bg-success">نشط</span>
                                     @else
                                         <span class="badge bg-danger">غير نشط</span>
                                     @endif
                                 </td>
-                                <td>{{ $item->created_at->format('Y-m-d') }}</td>
+                                <td>{{ $setting->created_at->format('Y-m-d') }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.app-settings.show', $item) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('admin.app-settings.show', $setting) }}" class="btn btn-sm btn-info">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('admin.app-settings.edit', $item) }}" class="btn btn-sm btn-warning">
+                                        <a href="{{ route('admin.app-settings.edit', $setting) }}" class="btn btn-sm btn-warning">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form action="{{ route('admin.app-settings.destroy', $item) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
+                                        <form action="{{ route('admin.app-settings.destroy', $setting) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger">
@@ -68,8 +68,8 @@
                     </tbody>
                 </table>
             </div>
-            @if(method_exists($items, 'links'))
-                {{ $items->links() }}
+            @if(method_exists($settings, 'links'))
+                {{ $settings->links() }}
             @endif
         </div>
     </div>

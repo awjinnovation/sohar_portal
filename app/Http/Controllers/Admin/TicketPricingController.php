@@ -3,63 +3,74 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\TicketPricing;
+use App\Models\Event;
 use Illuminate\Http\Request;
 
 class TicketPricingController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        $pricings = TicketPricing::with('event')->paginate(10);
+        return view('admin.ticket-pricing.index', compact('pricings'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        $events = Event::all();
+        return view('admin.ticket-pricing.create', compact('events'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'ticket_type' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'available_quantity' => 'required|integer|min:0',
+            'benefits' => 'nullable|string',
+            'benefits_ar' => 'nullable|string'
+        ]);
+
+        TicketPricing::create($validated);
+
+        return redirect()->route('admin.ticket-pricing.index')
+            ->with('success', 'تم إضافة سعر التذكرة بنجاح');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function show(TicketPricing $ticketPricing)
     {
-        //
+        return view('admin.ticket-pricing.show', compact('ticketPricing'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function edit(TicketPricing $ticketPricing)
     {
-        //
+        $events = Event::all();
+        return view('admin.ticket-pricing.edit', compact('ticketPricing', 'events'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(Request $request, TicketPricing $ticketPricing)
     {
-        //
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'ticket_type' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'available_quantity' => 'required|integer|min:0',
+            'benefits' => 'nullable|string',
+            'benefits_ar' => 'nullable|string'
+        ]);
+
+        $ticketPricing->update($validated);
+
+        return redirect()->route('admin.ticket-pricing.index')
+            ->with('success', 'تم تحديث سعر التذكرة بنجاح');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function destroy(TicketPricing $ticketPricing)
     {
-        //
+        $ticketPricing->delete();
+
+        return redirect()->route('admin.ticket-pricing.index')
+            ->with('success', 'تم حذف سعر التذكرة بنجاح');
     }
 }

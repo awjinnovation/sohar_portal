@@ -30,27 +30,27 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($items as $item)
+                        @forelse($stations as $station)
                             <tr>
-                                <td>{{ $item->id }}</td>
-                                <td>{{ $item->name ?? $item->title ?? '-' }}</td>
+                                <td>{{ $station->id }}</td>
+                                <td>{{ $station->name ?? $station->title ?? '-' }}</td>
                                 <td>
-                                    @if($item->is_active ?? true)
+                                    @if($station->is_active ?? true)
                                         <span class="badge bg-success">نشط</span>
                                     @else
                                         <span class="badge bg-danger">غير نشط</span>
                                     @endif
                                 </td>
-                                <td>{{ $item->created_at->format('Y-m-d') }}</td>
+                                <td>{{ $station->created_at->format('Y-m-d') }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.first-aid-stations.show', $item) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('admin.first-aid-stations.show', $station) }}" class="btn btn-sm btn-info">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('admin.first-aid-stations.edit', $item) }}" class="btn btn-sm btn-warning">
+                                        <a href="{{ route('admin.first-aid-stations.edit', $station) }}" class="btn btn-sm btn-warning">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form action="{{ route('admin.first-aid-stations.destroy', $item) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
+                                        <form action="{{ route('admin.first-aid-stations.destroy', $station) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger">
@@ -68,8 +68,8 @@
                     </tbody>
                 </table>
             </div>
-            @if(method_exists($items, 'links'))
-                {{ $items->links() }}
+            @if(method_exists($stations, 'links'))
+                {{ $stations->links() }}
             @endif
         </div>
     </div>

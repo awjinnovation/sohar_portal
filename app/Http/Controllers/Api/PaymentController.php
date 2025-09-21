@@ -190,6 +190,36 @@ class PaymentController extends Controller
     }
 
     /**
+     * Handle payment cancellation
+     */
+    public function cancel(Request $request)
+    {
+        // Get session ID from query parameter or request
+        $sessionId = $request->query('session_id') ?? $request->input('session_id');
+
+        if (!$sessionId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session ID is required'
+            ], 400);
+        }
+
+        // Find payment by session ID
+        $payment = Payment::where('thawani_session_id', $sessionId)->first();
+
+        if ($payment) {
+            $payment->update([
+                'status' => 'cancelled'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment cancelled successfully'
+        ]);
+    }
+
+    /**
      * Check payment status
      */
     public function checkStatus($sessionId)

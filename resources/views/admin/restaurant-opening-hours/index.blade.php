@@ -1,5 +1,8 @@
 @extends('layouts.admin')
 
+@section('title', 'ساعات عمل المطاعم')
+@section('page-title', 'ساعات عمل المطاعم')
+
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -30,27 +33,27 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($items as $item)
+                        @forelse($hours as $hour)
                             <tr>
-                                <td>{{ $item->id }}</td>
-                                <td>{{ $item->name ?? $item->title ?? '-' }}</td>
+                                <td>{{ $hour->id }}</td>
+                                <td>{{ $hour->name ?? $hour->title ?? '-' }}</td>
                                 <td>
-                                    @if($item->is_active ?? true)
+                                    @if($hour->is_active ?? true)
                                         <span class="badge bg-success">نشط</span>
                                     @else
                                         <span class="badge bg-danger">غير نشط</span>
                                     @endif
                                 </td>
-                                <td>{{ $item->created_at->format('Y-m-d') }}</td>
+                                <td>{{ $hour->created_at->format('Y-m-d') }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.restaurant-opening-hours.show', $item) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('admin.restaurant-opening-hours.show', $hour) }}" class="btn btn-sm btn-info">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('admin.restaurant-opening-hours.edit', $item) }}" class="btn btn-sm btn-warning">
+                                        <a href="{{ route('admin.restaurant-opening-hours.edit', $hour) }}" class="btn btn-sm btn-warning">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form action="{{ route('admin.restaurant-opening-hours.destroy', $item) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
+                                        <form action="{{ route('admin.restaurant-opening-hours.destroy', $hour) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger">

@@ -30,27 +30,27 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($items as $item)
+                        @forelse($tips as $tip)
                             <tr>
-                                <td>{{ $item->id }}</td>
-                                <td>{{ $item->name ?? $item->title ?? '-' }}</td>
+                                <td>{{ $tip->id }}</td>
+                                <td>{{ $tip->name ?? $tip->title ?? '-' }}</td>
                                 <td>
-                                    @if($item->is_active ?? true)
+                                    @if($tip->is_active ?? true)
                                         <span class="badge bg-success">نشط</span>
                                     @else
                                         <span class="badge bg-danger">غير نشط</span>
                                     @endif
                                 </td>
-                                <td>{{ $item->created_at->format('Y-m-d') }}</td>
+                                <td>{{ $tip->created_at->format('Y-m-d') }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.health-tips.show', $item) }}" class="btn btn-sm btn-info">
+                                        <a href="{{ route('admin.health-tips.show', $tip) }}" class="btn btn-sm btn-info">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('admin.health-tips.edit', $item) }}" class="btn btn-sm btn-warning">
+                                        <a href="{{ route('admin.health-tips.edit', $tip) }}" class="btn btn-sm btn-warning">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form action="{{ route('admin.health-tips.destroy', $item) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
+                                        <form action="{{ route('admin.health-tips.destroy', $tip) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger">
@@ -68,8 +68,8 @@
                     </tbody>
                 </table>
             </div>
-            @if(method_exists($items, 'links'))
-                {{ $items->links() }}
+            @if(method_exists($tips, 'links'))
+                {{ $tips->links() }}
             @endif
         </div>
     </div>
