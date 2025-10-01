@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Sohar Heritage Festival 2025",
+      "title_ar": "مهرجان صحار التراثي 2025",
+      "description": "Experience the rich cultural heritage...",
+      "description_ar": "استمتع بالتراث الثقافي الغني...",
+      "category_id": 1,
+      "start_time": "2025-09-19T10:00:00.000000Z",
+      "end_time": "2025-12-11T22:00:00.000000Z",
+      "location": "Sohar Heritage Village",
+      "location_ar": "قرية صحار التراثية",
+      "latitude": null,
+      "longitude": null,
+      "image_url": "https://picsum.photos/seed/heritage2025/800/600",
+      "price": "5.000",
+      "currency": "OMR",
+      "available_tickets": 100,
+      "total_tickets": 100,
+      "organizer_name": null,
+      "organizer_name_ar": null,
+      "is_featured": true,
+      "is_active": true,
+      "category": {
+        "id": 1,
+        "name": "Cultural",
+        "name_ar": "ثقافي"
+      },
+      "tags": []
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 20,
+    "total": 6
+  }
+}

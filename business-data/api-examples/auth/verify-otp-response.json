@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "message": "Login successful",
+  "user": {
+    "id": 1,
+    "name": "User Name",
+    "phone_number": "96812345678",
+    "email": "user@soharfestival.om",
+    "preferred_language": "en"
+  },
+  "token": "1|authentication_token_here"
+}

@@ -10,7 +10,7 @@ class Event extends Model
         'title', 'title_ar', 'description', 'description_ar', 'category_id',
         'start_time', 'end_time', 'location', 'location_ar', 'latitude', 'longitude',
         'image_url', 'price', 'currency', 'available_tickets', 'total_tickets',
-        'organizer_name', 'organizer_name_ar', 'is_featured', 'is_active'
+        'organizer_name', 'organizer_name_ar', 'is_featured', 'is_active', 'pricing'
     ];
 
     protected $casts = [
@@ -20,7 +20,8 @@ class Event extends Model
         'longitude' => 'decimal:8',
         'price' => 'decimal:3',
         'is_featured' => 'boolean',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
+        'pricing' => 'array'
     ];
 
     public function category()

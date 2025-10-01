@@ -1,0 +1,6 @@
+{
+  "event_id": 1,
+  "ticket_type": "standard",
+  "quantity": 2,
+  "payment_method": "card"
+}

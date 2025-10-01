@@ -375,14 +375,6 @@
                                 التذاكر
                             </a>
                         </li>
-                        @if(Route::has('admin.ticket-pricing.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.ticket-pricing.index') }}" class="menu-link {{ request()->routeIs('admin.ticket-pricing.*') ? 'active' : '' }}">
-                                <i class="bi bi-cash menu-icon"></i>
-                                أسعار التذاكر
-                            </a>
-                        </li>
-                        @endif
                     </ul>
                 </div>
 
@@ -395,132 +387,11 @@
                                 المطاعم
                             </a>
                         </li>
-                        @if(Route::has('admin.restaurant-features.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.restaurant-features.index') }}" class="menu-link {{ request()->routeIs('admin.restaurant-features.*') ? 'active' : '' }}">
-                                <i class="bi bi-star menu-icon"></i>
-                                ميزات المطاعم
-                            </a>
-                        </li>
-                        @endif
-                        @if(Route::has('admin.restaurant-images.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.restaurant-images.index') }}" class="menu-link {{ request()->routeIs('admin.restaurant-images.*') ? 'active' : '' }}">
-                                <i class="bi bi-image menu-icon"></i>
-                                صور المطاعم
-                            </a>
-                        </li>
-                        @endif
-                        @if(Route::has('admin.restaurant-opening-hours.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.restaurant-opening-hours.index') }}" class="menu-link {{ request()->routeIs('admin.restaurant-opening-hours.*') ? 'active' : '' }}">
-                                <i class="bi bi-clock menu-icon"></i>
-                                ساعات عمل المطاعم
-                            </a>
-                        </li>
-                        @endif
                     </ul>
                 </div>
 
-                <div class="menu-section">
-                    <div class="menu-title">التراث والثقافة</div>
-                    <ul class="menu-list">
-                        <li class="menu-item">
-                            <a href="{{ route('admin.heritage-villages.index') }}" class="menu-link {{ request()->routeIs('admin.heritage-villages.*') ? 'active' : '' }}">
-                                <i class="bi bi-houses menu-icon"></i>
-                                القرى التراثية
-                            </a>
-                        </li>
-                        <li class="menu-item">
-                            <a href="{{ route('admin.village-images.index') }}" class="menu-link {{ request()->routeIs('admin.village-images.*') ? 'active' : '' }}">
-                                <i class="bi bi-images menu-icon"></i>
-                                صور القرى
-                            </a>
-                        </li>
-                        <li class="menu-item">
-                            <a href="{{ route('admin.village-attractions.index') }}" class="menu-link {{ request()->routeIs('admin.village-attractions.*') ? 'active' : '' }}">
-                                <i class="bi bi-geo-alt menu-icon"></i>
-                                معالم القرى
-                            </a>
-                        </li>
-                        <li class="menu-item">
-                            <a href="{{ route('admin.craft-demonstrations.index') }}" class="menu-link {{ request()->routeIs('admin.craft-demonstrations.*') ? 'active' : '' }}">
-                                <i class="bi bi-palette menu-icon"></i>
-                                العروض الحرفية
-                            </a>
-                        </li>
-                        @if(Route::has('admin.craft-demonstration-schedules.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.craft-demonstration-schedules.index') }}" class="menu-link {{ request()->routeIs('admin.craft-demonstration-schedules.*') ? 'active' : '' }}">
-                                <i class="bi bi-calendar-week menu-icon"></i>
-                                جدول العروض الحرفية
-                            </a>
-                        </li>
-                        @endif
-                        <li class="menu-item">
-                            <a href="{{ route('admin.traditional-activities.index') }}" class="menu-link {{ request()->routeIs('admin.traditional-activities.*') ? 'active' : '' }}">
-                                <i class="bi bi-activity menu-icon"></i>
-                                الأنشطة التقليدية
-                            </a>
-                        </li>
-                        @if(Route::has('admin.cultural-timeline-events.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.cultural-timeline-events.index') }}" class="menu-link {{ request()->routeIs('admin.cultural-timeline-events.*') ? 'active' : '' }}">
-                                <i class="bi bi-clock-history menu-icon"></i>
-                                الأحداث الثقافية الزمنية
-                            </a>
-                        </li>
-                        @endif
-                    </ul>
-                </div>
 
-                <div class="menu-section">
-                    <div class="menu-title">الورش والتسجيلات</div>
-                    <ul class="menu-list">
-                        <li class="menu-item">
-                            <a href="{{ route('admin.cultural-workshops.index') }}" class="menu-link {{ request()->routeIs('admin.cultural-workshops.*') ? 'active' : '' }}">
-                                <i class="bi bi-mortarboard menu-icon"></i>
-                                الورش الثقافية
-                            </a>
-                        </li>
-                        @if(Route::has('admin.workshop-registrations.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.workshop-registrations.index') }}" class="menu-link {{ request()->routeIs('admin.workshop-registrations.*') ? 'active' : '' }}">
-                                <i class="bi bi-person-check menu-icon"></i>
-                                تسجيلات الورش
-                            </a>
-                        </li>
-                        @endif
-                        @if(Route::has('admin.workshop-schedules.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.workshop-schedules.index') }}" class="menu-link {{ request()->routeIs('admin.workshop-schedules.*') ? 'active' : '' }}">
-                                <i class="bi bi-calendar2-week menu-icon"></i>
-                                جدول الورش
-                            </a>
-                        </li>
-                        @endif
-                    </ul>
-                </div>
 
-                <div class="menu-section">
-                    <div class="menu-title">التصوير والمواقع</div>
-                    <ul class="menu-list">
-                        <li class="menu-item">
-                            <a href="{{ route('admin.photo-spots.index') }}" class="menu-link {{ request()->routeIs('admin.photo-spots.*') ? 'active' : '' }}">
-                                <i class="bi bi-camera menu-icon"></i>
-                                مواقع التصوير
-                            </a>
-                        </li>
-                        @if(Route::has('admin.photography-tips.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.photography-tips.index') }}" class="menu-link {{ request()->routeIs('admin.photography-tips.*') ? 'active' : '' }}">
-                                <i class="bi bi-lightbulb menu-icon"></i>
-                                نصائح التصوير
-                            </a>
-                        </li>
-                        @endif
-                    </ul>
-                </div>
 
                 <div class="menu-section">
                     <div class="menu-title">التواصل والإعلانات</div>
@@ -539,45 +410,17 @@
                             </a>
                         </li>
                         @endif
-                        <li class="menu-item">
-                            <a href="{{ route('admin.emergency-contacts.index') }}" class="menu-link {{ request()->routeIs('admin.emergency-contacts.*') ? 'active' : '' }}">
-                                <i class="bi bi-telephone-plus menu-icon"></i>
-                                أرقام الطوارئ
-                            </a>
-                        </li>
                     </ul>
                 </div>
 
                 <div class="menu-section">
-                    <div class="menu-title">المواقع والسلامة</div>
+                    <div class="menu-title">المواقع والخدمات</div>
                     <ul class="menu-list">
+                        @if(Route::has('admin.locations.index'))
                         <li class="menu-item">
-                            <a href="{{ route('admin.map-locations.index') }}" class="menu-link {{ request()->routeIs('admin.map-locations.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.locations.index') }}" class="menu-link {{ request()->routeIs('admin.locations.*') ? 'active' : '' }}">
                                 <i class="bi bi-pin-map menu-icon"></i>
-                                مواقع الخريطة
-                            </a>
-                        </li>
-                        @if(Route::has('admin.location-categories.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.location-categories.index') }}" class="menu-link {{ request()->routeIs('admin.location-categories.*') ? 'active' : '' }}">
-                                <i class="bi bi-bookmark menu-icon"></i>
-                                فئات المواقع
-                            </a>
-                        </li>
-                        @endif
-                        @if(Route::has('admin.first-aid-stations.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.first-aid-stations.index') }}" class="menu-link {{ request()->routeIs('admin.first-aid-stations.*') ? 'active' : '' }}">
-                                <i class="bi bi-hospital menu-icon"></i>
-                                محطات الإسعاف الأولي
-                            </a>
-                        </li>
-                        @endif
-                        @if(Route::has('admin.health-tips.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.health-tips.index') }}" class="menu-link {{ request()->routeIs('admin.health-tips.*') ? 'active' : '' }}">
-                                <i class="bi bi-heart-pulse menu-icon"></i>
-                                نصائح صحية
+                                جميع المواقع
                             </a>
                         </li>
                         @endif

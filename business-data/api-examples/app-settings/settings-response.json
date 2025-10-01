@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "data": {
+    "app_version": "1.0.0",
+    "force_update": false,
+    "maintenance_mode": false,
+    "features": {
+      "tickets_enabled": true,
+      "workshops_enabled": true,
+      "payments_enabled": true
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "user": {
+    "id": 1,
+    "name": "New Name",
+    "phone_number": "96812345678",
+    "email": "newemail@example.com",
+    "preferred_language": "ar"
+  }
+}

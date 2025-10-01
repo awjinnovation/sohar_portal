@@ -1,0 +1,6 @@
+{
+  "success": true,
+  "message": "OTP sent successfully",
+  "expires_in": 300,
+  "otp": 123456
+}

@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "service_name": "Police",
+      "service_name_ar": "الشرطة",
+      "phone_number": "999",
+      "description": "Emergency police services",
+      "description_ar": "خدمات الشرطة الطارئة",
+      "is_active": true
+    }
+  ]
+}

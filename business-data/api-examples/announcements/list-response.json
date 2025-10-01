@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Festival Schedule Update",
+      "title_ar": "تحديث جدول المهرجان",
+      "content": "New events added for the weekend",
+      "content_ar": "فعاليات جديدة أضيفت لنهاية الأسبوع",
+      "type": "info",
+      "priority": 2,
+      "is_pinned": true,
+      "is_active": true,
+      "start_datetime": "2025-09-19T00:00:00.000000Z",
+      "end_datetime": "2025-09-26T00:00:00.000000Z"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "event_id": 1,
+      "ticket_type": "standard",
+      "price": "5.000",
+      "available_quantity": 100,
+      "benefits": "General admission",
+      "benefits_ar": "دخول عام",
+      "event": {
+        "id": 1,
+        "title": "Sohar Heritage Festival 2025"
+      }
+    }
+  ]
+}

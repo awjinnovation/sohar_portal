@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Traditional Omani Kitchen",
+      "name_ar": "المطبخ العماني التقليدي",
+      "description": "Authentic Omani cuisine",
+      "description_ar": "المأكولات العمانية الأصيلة",
+      "cuisine": "Omani",
+      "cuisine_ar": "عماني",
+      "location": "Food Court Area A",
+      "location_ar": "منطقة الطعام أ",
+      "latitude": 24.4541,
+      "longitude": 56.6240,
+      "phone": "+968 12345678",
+      "website": "https://soharfestival.om/restaurants/omani",
+      "price_range": "$$",
+      "rating": 4.5,
+      "total_ratings": 120,
+      "is_open": true,
+      "is_featured": true,
+      "is_active": true
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 20,
+    "total": 1
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "phone_number": "96812345678",
+  "otp_code": "123456",
+  "device_token": "optional_firebase_token"
+}

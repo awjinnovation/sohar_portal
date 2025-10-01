@@ -177,13 +177,21 @@
         </div>
     </div>
 
-    <!-- Festival Management -->
+    <!-- Festival & Events -->
     <div class="stats-card">
         <h2 class="section-title">
             <i class="bi bi-calendar3"></i>
-            إدارة المهرجان
+            الفعاليات والمهرجان
         </h2>
         <div class="stats-grid">
+            <div class="stat-item {{ !in_array('Event', $enabledControllers) ? 'disabled' : '' }}">
+                <i class="bi bi-calendar-event stat-icon"></i>
+                <div class="stat-label">الفعاليات</div>
+                <div class="stat-count">{{ number_format($stats['main']['events']) }}</div>
+                @if(!in_array('Event', $enabledControllers))
+                    <span class="controller-badge disabled">غير مفعل</span>
+                @endif
+            </div>
             <div class="stat-item {{ !in_array('Category', $enabledControllers) ? 'disabled' : '' }}">
                 <i class="bi bi-tags stat-icon"></i>
                 <div class="stat-label">الفئات</div>
@@ -200,14 +208,6 @@
                     <span class="controller-badge disabled">غير مفعل</span>
                 @endif
             </div>
-            <div class="stat-item {{ !in_array('TicketPricing', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-cash stat-icon"></i>
-                <div class="stat-label">أسعار التذاكر</div>
-                <div class="stat-count">{{ number_format($stats['festival']['ticket_pricing']) }}</div>
-                @if(!in_array('TicketPricing', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
             <div class="stat-item {{ !in_array('Restaurant', $enabledControllers) ? 'disabled' : '' }}">
                 <i class="bi bi-shop stat-icon"></i>
                 <div class="stat-label">المطاعم</div>
@@ -216,148 +216,52 @@
                     <span class="controller-badge disabled">غير مفعل</span>
                 @endif
             </div>
-            <div class="stat-item {{ !in_array('RestaurantFeature', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-star stat-icon"></i>
-                <div class="stat-label">ميزات المطاعم</div>
-                <div class="stat-count">{{ number_format($stats['festival']['restaurant_features']) }}</div>
-                @if(!in_array('RestaurantFeature', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('RestaurantImage', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-image stat-icon"></i>
-                <div class="stat-label">صور المطاعم</div>
-                <div class="stat-count">{{ number_format($stats['festival']['restaurant_images']) }}</div>
-                @if(!in_array('RestaurantImage', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('RestaurantOpeningHour', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-clock stat-icon"></i>
-                <div class="stat-label">ساعات عمل المطاعم</div>
-                <div class="stat-count">{{ number_format($stats['festival']['restaurant_opening_hours']) }}</div>
-                @if(!in_array('RestaurantOpeningHour', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
         </div>
     </div>
 
-    <!-- Heritage & Culture -->
+    <!-- Locations -->
     <div class="stats-card">
         <h2 class="section-title">
-            <i class="bi bi-house-heart"></i>
-            التراث والثقافة
+            <i class="bi bi-geo-alt-fill"></i>
+            المواقع والخدمات
         </h2>
         <div class="stats-grid">
-            <div class="stat-item {{ !in_array('HeritageVillage', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-houses stat-icon"></i>
-                <div class="stat-label">القرى التراثية</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['heritage_villages']) }}</div>
-                @if(!in_array('HeritageVillage', $enabledControllers))
+            <div class="stat-item {{ !in_array('Location', $enabledControllers) ? 'disabled' : '' }}">
+                <i class="bi bi-map stat-icon"></i>
+                <div class="stat-label">جميع المواقع</div>
+                <div class="stat-count">{{ number_format($stats['locations']['all_locations']) }}</div>
+                @if(!in_array('Location', $enabledControllers))
                     <span class="controller-badge disabled">غير مفعل</span>
                 @endif
             </div>
-            <div class="stat-item {{ !in_array('VillageImage', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-images stat-icon"></i>
-                <div class="stat-label">صور القرى</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['village_images']) }}</div>
-                @if(!in_array('VillageImage', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
+            <div class="stat-item">
+                <i class="bi bi-exclamation-triangle stat-icon"></i>
+                <div class="stat-label">خدمات الطوارئ</div>
+                <div class="stat-count">{{ number_format($stats['locations']['emergency']) }}</div>
             </div>
-            <div class="stat-item {{ !in_array('VillageAttraction', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-geo-alt stat-icon"></i>
-                <div class="stat-label">معالم القرى</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['village_attractions']) }}</div>
-                @if(!in_array('VillageAttraction', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
+            <div class="stat-item">
+                <i class="bi bi-gear stat-icon"></i>
+                <div class="stat-label">الخدمات</div>
+                <div class="stat-count">{{ number_format($stats['locations']['services']) }}</div>
             </div>
-            <div class="stat-item {{ !in_array('CraftDemonstration', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-palette stat-icon"></i>
-                <div class="stat-label">العروض الحرفية</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['craft_demonstrations']) }}</div>
-                @if(!in_array('CraftDemonstration', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('CraftDemonstrationSchedule', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-calendar-week stat-icon"></i>
-                <div class="stat-label">جدول العروض الحرفية</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['craft_demonstration_schedules']) }}</div>
-                @if(!in_array('CraftDemonstrationSchedule', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('TraditionalActivity', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-activity stat-icon"></i>
-                <div class="stat-label">الأنشطة التقليدية</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['traditional_activities']) }}</div>
-                @if(!in_array('TraditionalActivity', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('CulturalWorkshop', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-mortarboard stat-icon"></i>
-                <div class="stat-label">الورش الثقافية</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['cultural_workshops']) }}</div>
-                @if(!in_array('CulturalWorkshop', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('WorkshopRegistration', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-person-check stat-icon"></i>
-                <div class="stat-label">تسجيلات الورش</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['workshop_registrations']) }}</div>
-                @if(!in_array('WorkshopRegistration', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('WorkshopSchedule', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-calendar2-week stat-icon"></i>
-                <div class="stat-label">جدول الورش</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['workshop_schedules']) }}</div>
-                @if(!in_array('WorkshopSchedule', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('CulturalTimelineEvent', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-clock-history stat-icon"></i>
-                <div class="stat-label">الأحداث الثقافية الزمنية</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['cultural_timeline_events']) }}</div>
-                @if(!in_array('CulturalTimelineEvent', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('PhotoSpot', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-camera stat-icon"></i>
-                <div class="stat-label">مواقع التصوير</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['photo_spots']) }}</div>
-                @if(!in_array('PhotoSpot', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('PhotographyTip', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-lightbulb stat-icon"></i>
-                <div class="stat-label">نصائح التصوير</div>
-                <div class="stat-count">{{ number_format($stats['heritage']['photography_tips']) }}</div>
-                @if(!in_array('PhotographyTip', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
+            <div class="stat-item">
+                <i class="bi bi-heart-pulse stat-icon"></i>
+                <div class="stat-label">الإسعافات الأولية</div>
+                <div class="stat-count">{{ number_format($stats['locations']['first_aid']) }}</div>
             </div>
         </div>
     </div>
 
-    <!-- Communication -->
+
+    <!-- Communications -->
     <div class="stats-card">
         <h2 class="section-title">
             <i class="bi bi-megaphone"></i>
-            التواصل والإعلانات
+            الاتصالات
         </h2>
         <div class="stats-grid">
             <div class="stat-item {{ !in_array('Announcement', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-megaphone stat-icon"></i>
+                <i class="bi bi-broadcast stat-icon"></i>
                 <div class="stat-label">الإعلانات</div>
                 <div class="stat-count">{{ number_format($stats['communication']['announcements']) }}</div>
                 @if(!in_array('Announcement', $enabledControllers))
@@ -372,63 +276,13 @@
                     <span class="controller-badge disabled">غير مفعل</span>
                 @endif
             </div>
-            <div class="stat-item {{ !in_array('EmergencyContact', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-telephone-plus stat-icon"></i>
-                <div class="stat-label">أرقام الطوارئ</div>
-                <div class="stat-count">{{ number_format($stats['communication']['emergency_contacts']) }}</div>
-                @if(!in_array('EmergencyContact', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- Locations & Safety -->
-    <div class="stats-card">
-        <h2 class="section-title">
-            <i class="bi bi-map"></i>
-            المواقع والسلامة
-        </h2>
-        <div class="stats-grid">
-            <div class="stat-item {{ !in_array('MapLocation', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-pin-map stat-icon"></i>
-                <div class="stat-label">مواقع الخريطة</div>
-                <div class="stat-count">{{ number_format($stats['locations']['map_locations']) }}</div>
-                @if(!in_array('MapLocation', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('LocationCategory', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-bookmark stat-icon"></i>
-                <div class="stat-label">فئات المواقع</div>
-                <div class="stat-count">{{ number_format($stats['locations']['location_categories']) }}</div>
-                @if(!in_array('LocationCategory', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('FirstAidStation', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-hospital stat-icon"></i>
-                <div class="stat-label">محطات الإسعاف الأولي</div>
-                <div class="stat-count">{{ number_format($stats['locations']['first_aid_stations']) }}</div>
-                @if(!in_array('FirstAidStation', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('HealthTip', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-heart-pulse stat-icon"></i>
-                <div class="stat-label">نصائح صحية</div>
-                <div class="stat-count">{{ number_format($stats['locations']['health_tips']) }}</div>
-                @if(!in_array('HealthTip', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
         </div>
     </div>
 
     <!-- User Data -->
     <div class="stats-card">
         <h2 class="section-title">
-            <i class="bi bi-person-badge"></i>
+            <i class="bi bi-person-circle"></i>
             بيانات المستخدمين
         </h2>
         <div class="stats-grid">
@@ -449,8 +303,8 @@
                 @endif
             </div>
             <div class="stat-item {{ !in_array('OtpVerification', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-shield-check stat-icon"></i>
-                <div class="stat-label">التحقق بالرمز</div>
+                <i class="bi bi-shield-lock stat-icon"></i>
+                <div class="stat-label">رموز التحقق</div>
                 <div class="stat-count">{{ number_format($stats['user_data']['otp_verifications']) }}</div>
                 @if(!in_array('OtpVerification', $enabledControllers))
                     <span class="controller-badge disabled">غير مفعل</span>
@@ -462,7 +316,7 @@
     <!-- Settings -->
     <div class="stats-card">
         <h2 class="section-title">
-            <i class="bi bi-gear"></i>
+            <i class="bi bi-gear-fill"></i>
             الإعدادات
         </h2>
         <div class="stats-grid">
