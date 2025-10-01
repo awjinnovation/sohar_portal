@@ -524,3 +524,12 @@ More → Emergency Contacts → Select Service →
 - Language preference distribution
 - Search queries
 - Error tracking
+
+---
+
+## API Integration Reference
+
+For detailed API endpoints mapped to each screen, see:
+- [SCREENS_WITH_ENDPOINTS.md](SCREENS_WITH_ENDPOINTS.md) - Complete mapping of screens to API calls
+- [../API_DOCUMENTATION.md](../API_DOCUMENTATION.md) - Full API reference
+- [../api-examples/](../api-examples/) - Request/response examples
