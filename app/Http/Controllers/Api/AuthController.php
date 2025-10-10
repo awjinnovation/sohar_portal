@@ -25,7 +25,7 @@ class AuthController extends Controller
 
         // Generate 6-digit OTP
         $otp = rand(100000, 999999);
-
+        $otp = 123456; // For testing purposes, remove in production
         // Delete old OTPs for this phone number
         DB::table('otp_verifications')
             ->where('phone_number', $phoneNumber)

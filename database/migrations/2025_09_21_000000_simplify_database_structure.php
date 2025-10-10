@@ -17,7 +17,7 @@ return new class extends Migration
             // Already consolidated
         } else {
             Schema::table('restaurants', function (Blueprint $table) {
-                $table->json('features')->nullable()->after('cuisine_type_ar');
+                $table->json('features')->nullable()->after('cuisine_ar');
                 $table->json('images')->nullable()->after('features');
                 $table->json('opening_hours')->nullable()->after('images');
                 $table->text('menu_url')->nullable()->after('opening_hours');
