@@ -3,15 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\PublicController;
 
-// Public Routes
-Route::get('/', [PublicController::class, 'index'])->name('home');
-Route::get('/events', [PublicController::class, 'events'])->name('public.events');
-Route::get('/events/{id}', [PublicController::class, 'eventDetails'])->name('public.event.details');
-Route::get('/restaurants', [PublicController::class, 'restaurants'])->name('public.restaurants');
-Route::get('/restaurants/{id}', [PublicController::class, 'restaurantDetails'])->name('public.restaurant.details');
-Route::get('/locations', [PublicController::class, 'locations'])->name('public.locations');
+// Redirect root to admin dashboard
+Route::get('/', fn() => redirect('/admin/dashboard'));
 
 // Add fallback login route for Laravel's default auth middleware
 Route::get('/login', fn() => redirect('/admin/login'))->name('login');

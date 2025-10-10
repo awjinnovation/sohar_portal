@@ -59,10 +59,12 @@ class DatabaseSeeder extends Seeder
         // Call other seeders
         $this->call([
             RolesAndPermissionsSeeder::class,
-            
-            HeritageVillageSeeder::class,
             TestDataSeeder::class,
-            FixedApiSeeder::class,
+            // Note: Heritage-related seeders are disabled because
+            // migration 2025_09_21_000000_simplify_database_structure
+            // drops heritage_villages and related tables
+            // ComprehensiveApiSeeder::class,
+            // FixedApiSeeder::class,
         ]);
     }
 }

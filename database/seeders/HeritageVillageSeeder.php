@@ -22,7 +22,7 @@ class HeritageVillageSeeder extends Seeder
             'description_en' => "Explore Oman's rich maritime history through traditional dhow building, pearl diving demonstrations, and coastal life exhibits.",
             'description_ar' => 'استكشف تاريخ عُمان البحري الغني من خلال بناء السفن التقليدية وعروض الغوص على اللؤلؤ ومعارض الحياة الساحلية.',
             'type' => 'maritime',
-            'cover_image' => 'https://example.com/maritime-village.jpg',
+            'cover_image' => 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80',
             'opening_hours' => '9:00 AM - 10:00 PM',
             'is_active' => true
         ]);
@@ -30,7 +30,7 @@ class HeritageVillageSeeder extends Seeder
         // Add images for Maritime Village
         VillageImage::create([
             'heritage_village_id' => $maritimeVillage->id,
-            'image_url' => 'https://example.com/maritime-1.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80',
             'caption_en' => 'Traditional Dhow Building',
             'caption_ar' => 'بناء السفن التقليدية',
             'display_order' => 1,
@@ -96,7 +96,7 @@ class HeritageVillageSeeder extends Seeder
             'activity_name_ar' => 'تجربة الغوص على اللؤلؤ',
             'description_en' => 'Experience the traditional pearl diving techniques in a safe environment.',
             'description_ar' => 'جرب تقنيات الغوص التقليدية على اللؤلؤ في بيئة آمنة.',
-            'image_url' => '/images/activities/pearl-diving.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80',
             'is_interactive' => true,
             'age_recommendation' => '12+',
             'timing' => 'Every 2 hours',
@@ -109,7 +109,7 @@ class HeritageVillageSeeder extends Seeder
             'activity_name_ar' => 'التجديف التقليدي',
             'description_en' => 'Try your hand at rowing traditional Omani boats.',
             'description_ar' => 'جرب التجديف في القوارب العمانية التقليدية.',
-            'image_url' => '/images/activities/boat-rowing.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1544551763-77ef2d0cfc6c?w=800&q=80',
             'is_interactive' => true,
             'age_recommendation' => 'All ages',
             'timing' => 'Continuous',
@@ -124,7 +124,7 @@ class HeritageVillageSeeder extends Seeder
             'description_en' => 'Learn how Omani sailors navigated using stars and traditional instruments.',
             'description_ar' => 'تعلم كيف كان البحارة العمانيون يبحرون باستخدام النجوم والأدوات التقليدية.',
             'instructor_name' => 'Captain Mohammed Al-Balushi',
-            'image_url' => '/images/workshops/navigation.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=800&q=80',
             'duration_minutes' => 90,
             'max_participants' => 15,
             'price_omr' => 5.000,
@@ -139,7 +139,7 @@ class HeritageVillageSeeder extends Seeder
             'name_ar' => 'السفينة عند الغروب',
             'description_en' => 'Capture stunning photos with traditional dhows against the sunset.',
             'description_ar' => 'التقط صوراً مذهلة للسفن التقليدية مع غروب الشمس.',
-            'image_url' => '/images/spots/dhow-sunset.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1540202404-a2f29016b523?w=800&q=80',
             'best_time_for_photos' => 'Golden hour (5:30 PM - 6:30 PM)',
             'is_active' => true
         ]);
@@ -151,7 +151,7 @@ class HeritageVillageSeeder extends Seeder
             'description_en' => "Discover Oman's agricultural traditions, falaj irrigation systems, and date palm cultivation.",
             'description_ar' => 'اكتشف التقاليد الزراعية العمانية ونظم الري بالأفلاج وزراعة النخيل.',
             'type' => 'agricultural',
-            'cover_image' => 'https://example.com/agricultural-village.jpg',
+            'cover_image' => 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&q=80',
             'opening_hours' => '9:00 AM - 10:00 PM',
             'is_active' => true
         ]);
@@ -211,7 +211,7 @@ class HeritageVillageSeeder extends Seeder
             'activity_name_ar' => 'جولة في نظام الأفلاج',
             'description_en' => 'Guided tour of the traditional irrigation system.',
             'description_ar' => 'جولة مع مرشد في نظام الري التقليدي.',
-            'image_url' => '/images/activities/falaj-tour.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80',
             'is_interactive' => false,
             'age_recommendation' => 'All ages',
             'timing' => 'Every hour',
@@ -224,7 +224,7 @@ class HeritageVillageSeeder extends Seeder
             'activity_name_ar' => 'تذوق أصناف التمور التقليدية',
             'description_en' => 'Sample different varieties of Omani dates.',
             'description_ar' => 'تذوق أصناف مختلفة من التمور العمانية.',
-            'image_url' => '/images/activities/date-tasting.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1607478900766-efe13248b125?w=800&q=80',
             'is_interactive' => true,
             'age_recommendation' => 'All ages',
             'timing' => 'Continuous',
@@ -239,7 +239,7 @@ class HeritageVillageSeeder extends Seeder
             'description_en' => 'Learn about traditional Omani farming techniques and organic practices.',
             'description_ar' => 'تعلم عن تقنيات الزراعة العمانية التقليدية والممارسات العضوية.',
             'instructor_name' => 'Ahmed Al-Kindi',
-            'image_url' => '/images/workshops/farming.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&q=80',
             'duration_minutes' => 120,
             'max_participants' => 20,
             'price_omr' => 7.000,
@@ -254,7 +254,7 @@ class HeritageVillageSeeder extends Seeder
             'name_ar' => 'بستان النخيل',
             'description_en' => 'Beautiful palm grove perfect for photography.',
             'description_ar' => 'بستان نخيل جميل مثالي للتصوير.',
-            'image_url' => '/images/spots/palm-grove.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&q=80',
             'best_time_for_photos' => 'Early morning (7:00 AM - 9:00 AM)',
             'is_active' => true
         ]);
@@ -266,7 +266,7 @@ class HeritageVillageSeeder extends Seeder
             'description_en' => 'Experience the nomadic desert life, traditional hospitality, and Bedouin crafts.',
             'description_ar' => 'عش تجربة الحياة البدوية الصحراوية والضيافة التقليدية والحرف البدوية.',
             'type' => 'bedouin',
-            'cover_image' => 'https://example.com/bedouin-village.jpg',
+            'cover_image' => 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=800&q=80',
             'opening_hours' => '9:00 AM - 10:00 PM',
             'is_active' => true
         ]);
@@ -326,7 +326,7 @@ class HeritageVillageSeeder extends Seeder
             'activity_name_ar' => 'تجربة ركوب الجمال',
             'description_en' => 'Enjoy a traditional camel ride around the village.',
             'description_ar' => 'استمتع بركوب الجمال التقليدي حول القرية.',
-            'image_url' => '/images/activities/camel-riding.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80',
             'is_interactive' => true,
             'age_recommendation' => '5+',
             'timing' => 'Every 30 minutes',
@@ -339,7 +339,7 @@ class HeritageVillageSeeder extends Seeder
             'activity_name_ar' => 'مراسم القهوة العربية',
             'description_en' => 'Experience traditional Omani hospitality with coffee and dates.',
             'description_ar' => 'عش تجربة الضيافة العمانية التقليدية مع القهوة والتمر.',
-            'image_url' => '/images/activities/coffee-ceremony.jpg',
+            'image_url' => 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=800&q=80',
             'is_interactive' => true,
             'age_recommendation' => 'All ages',
             'timing' => 'Every hour',

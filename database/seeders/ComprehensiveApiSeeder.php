@@ -130,7 +130,7 @@ class ComprehensiveApiSeeder extends Seeder
                 'description_en' => 'Learn the ancient art of Omani pottery making',
                 'description_ar' => 'تعلم فن صناعة الفخار العماني القديم',
                 'instructor_name' => 'Ahmed Al Rashdi',
-                'image_url' => 'https://example.com/pottery-workshop.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800',
                 'duration_minutes' => 120,
                 'max_participants' => 20,
                 'price_omr' => 15.000,
@@ -144,7 +144,7 @@ class ComprehensiveApiSeeder extends Seeder
                 'description_en' => 'Master the beautiful art of Arabic calligraphy',
                 'description_ar' => 'أتقن فن الخط العربي الجميل',
                 'instructor_name' => 'Fatima Al Zahra',
-                'image_url' => 'https://example.com/calligraphy-workshop.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1516906736502-5ffadc120ff8?w=800',
                 'duration_minutes' => 90,
                 'max_participants' => 15,
                 'price_omr' => 10.000,
@@ -158,7 +158,7 @@ class ComprehensiveApiSeeder extends Seeder
                 'description_en' => 'Learn traditional Omani weaving techniques',
                 'description_ar' => 'تعلم تقنيات النسيج العماني التقليدي',
                 'instructor_name' => 'Maryam Al Balushi',
-                'image_url' => 'https://example.com/weaving-workshop.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=800',
                 'duration_minutes' => 180,
                 'max_participants' => 12,
                 'price_omr' => 20.000,
@@ -574,7 +574,7 @@ class ComprehensiveApiSeeder extends Seeder
             // Add images
             RestaurantImage::create([
                 'restaurant_id' => $restaurant->id,
-                'image_url' => 'https://example.com/restaurant-' . $restaurant->id . '.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80',
                 'is_primary' => true
             ]);
 

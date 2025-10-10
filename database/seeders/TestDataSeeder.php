@@ -6,9 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Restaurant;
-use App\Models\HeritageVillage;
 use App\Models\Announcement;
-use App\Models\EmergencyContact;
 
 class TestDataSeeder extends Seeder
 {
@@ -140,33 +138,8 @@ class TestDataSeeder extends Seeder
             Restaurant::create($restaurantData);
         }
 
-        // Create Heritage Villages
-        $villages = [
-            [
-                'name_en' => 'Maritime Heritage Village',
-                'name_ar' => 'قرية التراث البحري',
-                'description_en' => 'Experience the rich maritime history of Sohar',
-                'description_ar' => 'استكشف التاريخ البحري الغني لصحار',
-                'type' => 'maritime',
-                'cover_image' => 'https://example.com/maritime.jpg',
-                'opening_hours' => '9:00 AM - 10:00 PM',
-                'is_active' => true
-            ],
-            [
-                'name_en' => 'Agricultural Heritage Village',
-                'name_ar' => 'قرية التراث الزراعي',
-                'description_en' => 'Discover traditional farming methods and agricultural heritage',
-                'description_ar' => 'اكتشف طرق الزراعة التقليدية والتراث الزراعي',
-                'type' => 'agricultural',
-                'cover_image' => 'https://example.com/agricultural.jpg',
-                'opening_hours' => '9:00 AM - 10:00 PM',
-                'is_active' => true
-            ]
-        ];
-
-        foreach ($villages as $villageData) {
-            HeritageVillage::create($villageData);
-        }
+        // Heritage Villages are seeded by HeritageVillageSeeder
+        // No need to create them here to avoid duplicates
 
         // Create Announcements
         $announcements = [
@@ -199,53 +172,8 @@ class TestDataSeeder extends Seeder
             Announcement::create($announcementData);
         }
 
-        // Create Emergency Contacts
-        $contacts = [
-            [
-                'service_name' => 'Police',
-                'service_name_ar' => 'الشرطة',
-                'phone_number' => '9999',
-                'type' => 'police',
-                'is_24_hours' => true,
-                'display_order' => 1,
-                'is_active' => true
-            ],
-            [
-                'service_name' => 'Ambulance',
-                'service_name_ar' => 'الإسعاف',
-                'phone_number' => '9999',
-                'type' => 'ambulance',
-                'is_24_hours' => true,
-                'display_order' => 2,
-                'is_active' => true
-            ],
-            [
-                'service_name' => 'Festival Security',
-                'service_name_ar' => 'أمن المهرجان',
-                'phone_number' => '+968 9555 5555',
-                'type' => 'security',
-                'location' => 'Main Gate',
-                'location_ar' => 'البوابة الرئيسية',
-                'is_24_hours' => false,
-                'display_order' => 3,
-                'is_active' => true
-            ],
-            [
-                'service_name' => 'First Aid Station',
-                'service_name_ar' => 'محطة الإسعافات الأولية',
-                'phone_number' => '+968 9555 6666',
-                'type' => 'first_aid',
-                'location' => 'Near Food Court',
-                'location_ar' => 'بالقرب من ساحة الطعام',
-                'is_24_hours' => false,
-                'display_order' => 4,
-                'is_active' => true
-            ]
-        ];
-
-        foreach ($contacts as $contactData) {
-            EmergencyContact::create($contactData);
-        }
+        // Emergency contacts table was dropped by migration 2025_09_21_000000_simplify_database_structure
+        // Data migrated to 'locations' table instead
 
         echo "Test data seeded successfully!\n";
     }

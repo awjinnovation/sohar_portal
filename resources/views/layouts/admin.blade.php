@@ -6,18 +6,30 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'لوحة التحكم') - مهرجان صحار</title>
     
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
+
     <style>
         :root {
-            --primary-color: #1E3A8A;
-            --secondary-color: #F59E0B;
-            --bg-light: #F8FAFC;
-            --text-primary: #1F2937;
-            --text-secondary: #6B7280;
-            --sidebar-width: 260px;
-            --header-height: 70px;
+            --primary-color: #4A90E2;
+            --primary-light: #6BA5E8;
+            --primary-dark: #3A7BC8;
+            --secondary-color: #FFA726;
+            --secondary-light: #FFB74D;
+            --accent-color: #EF5350;
+            --bg-light: #F8F9FA;
+            --bg-lighter: #FFFFFF;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+            --border-color: #E0E6ED;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+            --sidebar-width: 280px;
+            --header-height: 75px;
         }
 
         * {
@@ -27,9 +39,12 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
             background: var(--bg-light);
             color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.7;
+            letter-spacing: -0.01em;
         }
 
         .admin-wrapper {
@@ -39,33 +54,70 @@
 
         .sidebar {
             width: var(--sidebar-width);
-            background: white;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            background: #FFFFFF;
+            box-shadow: var(--shadow-md);
             position: fixed;
             height: 100vh;
             overflow-y: auto;
             z-index: 1000;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 1px solid var(--border-color);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
         }
 
         .sidebar-header {
-            padding: 20px;
-            background: white;
+            padding: 25px 20px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
             text-align: center;
-            border-bottom: 1px solid #E5E7EB;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
         }
 
         .sidebar-logo {
-            width: 120px;
+            width: 140px;
             height: auto;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            filter: brightness(0) invert(1);
+            position: relative;
+            z-index: 1;
         }
 
         .sidebar-brand {
-            color: var(--primary-color);
-            font-size: 18px;
-            font-weight: 600;
+            color: white;
+            font-size: 19px;
+            font-weight: 700;
             text-decoration: none;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.15);
         }
 
         .sidebar-menu {
@@ -79,11 +131,12 @@
 
         .menu-title {
             color: var(--text-secondary);
-            font-size: 11px;
-            font-weight: 600;
+            font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+            padding: 0 4px;
         }
 
         .menu-item {
@@ -93,26 +146,28 @@
         .menu-link {
             display: flex;
             align-items: center;
-            padding: 12px 15px;
+            padding: 13px 16px;
             color: var(--text-primary);
             text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            margin-bottom: 5px;
-            font-size: 14px;
-            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 6px;
+            font-size: 14.5px;
+            font-weight: 600;
+            position: relative;
         }
 
         .menu-link:hover {
-            background: var(--bg-light);
+            background: linear-gradient(90deg, rgba(74, 144, 226, 0.1) 0%, rgba(74, 144, 226, 0.05) 100%);
             color: var(--primary-color);
             transform: translateX(-5px);
+            box-shadow: var(--shadow-sm);
         }
 
         .menu-link.active {
-            background: rgba(30, 58, 138, 0.1);
+            background: linear-gradient(90deg, rgba(74, 144, 226, 0.15) 0%, rgba(74, 144, 226, 0.08) 100%);
             color: var(--primary-color);
-            position: relative;
+            font-weight: 700;
         }
 
         .menu-link.active::before {
@@ -121,10 +176,11 @@
             right: 0;
             top: 50%;
             transform: translateY(-50%);
-            width: 3px;
-            height: 20px;
-            background: var(--primary-color);
-            border-radius: 3px 0 0 3px;
+            width: 4px;
+            height: 28px;
+            background: linear-gradient(180deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            border-radius: 4px 0 0 4px;
+            box-shadow: 0 0 8px rgba(74, 144, 226, 0.4);
         }
 
         .menu-icon {
@@ -148,11 +204,13 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 0 35px;
+            box-shadow: var(--shadow-sm);
             position: sticky;
             top: 0;
             z-index: 100;
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
         }
 
         .header-left {
@@ -171,9 +229,10 @@
         }
 
         .page-title {
-            font-size: 20px;
-            font-weight: 600;
+            font-size: 22px;
+            font-weight: 700;
             color: var(--text-primary);
+            letter-spacing: -0.02em;
         }
 
         .header-right {

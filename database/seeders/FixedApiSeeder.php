@@ -75,9 +75,9 @@ class FixedApiSeeder extends Seeder
                 'description_en' => 'Experience the rich cultural heritage of Sohar with traditional crafts, activities, and performances.',
                 'description_ar' => 'استمتع بالتراث الثقافي الغني لصحار مع الحرف والأنشطة والعروض التقليدية.',
                 'type' => 'maritime',
-                'cover_image' => 'https://example.com/heritage-village.jpg',
+                'cover_image' => 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80',
                 'opening_hours' => '10:00 AM - 10:00 PM',
-                'virtual_tour_url' => 'https://example.com/virtual-tour',
+                'virtual_tour_url' => 'https://virtualtour.sohar.om',
                 'is_active' => true
             ]
         );
@@ -221,7 +221,7 @@ class FixedApiSeeder extends Seeder
                 'description_en' => 'Learn pottery making',
                 'description_ar' => 'تعلم صناعة الفخار',
                 'instructor_name' => 'Ahmed Ali',
-                'image_url' => 'https://example.com/pottery.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800',
                 'duration_minutes' => 120,
                 'max_participants' => 20,
                 'price_omr' => 15.00,
@@ -235,7 +235,7 @@ class FixedApiSeeder extends Seeder
                 'description_en' => 'Arabic calligraphy basics',
                 'description_ar' => 'أساسيات الخط العربي',
                 'instructor_name' => 'Fatima Hassan',
-                'image_url' => 'https://example.com/calligraphy.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1516906736502-5ffadc120ff8?w=800',
                 'duration_minutes' => 90,
                 'max_participants' => 15,
                 'price_omr' => 10.00,
@@ -277,7 +277,7 @@ class FixedApiSeeder extends Seeder
                 'activity_name_ar' => 'الرقص التقليدي',
                 'description_en' => 'Watch traditional Omani dances',
                 'description_ar' => 'شاهد الرقصات العمانية التقليدية',
-                'image_url' => 'https://example.com/dance.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1504609773096-104ff2c73ba4?w=800&q=80',
                 'is_interactive' => true,
                 'age_recommendation' => 'All ages',
                 'timing' => '7:00 PM - 8:00 PM',
@@ -289,7 +289,7 @@ class FixedApiSeeder extends Seeder
                 'activity_name_ar' => 'رواية القصص',
                 'description_en' => 'Traditional Omani stories',
                 'description_ar' => 'قصص عمانية تقليدية',
-                'image_url' => 'https://example.com/story.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
                 'is_interactive' => false,
                 'age_recommendation' => 'Children',
                 'timing' => '5:00 PM - 6:00 PM',
@@ -314,7 +314,7 @@ class FixedApiSeeder extends Seeder
                 'name_ar' => 'نقطة تصوير البوابة الرئيسية',
                 'description_en' => 'Perfect spot for entrance photos',
                 'description_ar' => 'مكان مثالي لصور المدخل',
-                'image_url' => 'https://example.com/gate-photo.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1549480017-d76466a4b7e8?w=800&q=80',
                 'best_time_for_photos' => 'Sunset - 6:00 PM to 7:00 PM',
                 'is_active' => true
             ],
@@ -324,7 +324,7 @@ class FixedApiSeeder extends Seeder
                 'name_ar' => 'نافورة التراث',
                 'description_en' => 'Beautiful fountain area',
                 'description_ar' => 'منطقة نافورة جميلة',
-                'image_url' => 'https://example.com/fountain-photo.jpg',
+                'image_url' => 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
                 'best_time_for_photos' => 'Evening with lights',
                 'is_active' => true
             ]
