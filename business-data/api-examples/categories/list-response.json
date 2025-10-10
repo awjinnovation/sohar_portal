@@ -1,0 +1,39 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Music & Entertainment",
+      "name_ar": "الموسيقى والترفيه",
+      "description": "Live music performances and entertainment shows",
+      "description_ar": "عروض الموسيقى الحية والعروض الترفيهية",
+      "icon": "music-note",
+      "color": "#FF6B6B",
+      "events_count": 15,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "name": "Cultural Activities",
+      "name_ar": "الأنشطة الثقافية",
+      "description": "Traditional and cultural activities",
+      "description_ar": "الأنشطة التقليدية والثقافية",
+      "icon": "globe",
+      "color": "#4ECDC4",
+      "events_count": 12,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "name": "Food & Dining",
+      "name_ar": "الطعام والمأكولات",
+      "description": "Food festivals and dining experiences",
+      "description_ar": "مهرجانات الطعام وتجارب تناول الطعام",
+      "icon": "restaurant",
+      "color": "#95E1D3",
+      "events_count": 8,
+      "is_active": true
+    }
+  ],
+  "message": "Categories retrieved successfully"
+}

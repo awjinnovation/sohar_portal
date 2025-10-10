@@ -1,0 +1,48 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "type": "App\\Models\\Event",
+      "item_id": 5,
+      "item": {
+        "id": 5,
+        "title": "Traditional Music Concert",
+        "title_ar": "حفل الموسيقى التقليدية",
+        "description": "Experience traditional Omani music",
+        "description_ar": "استمتع بالموسيقى العمانية التقليدية",
+        "start_time": "2025-10-15 19:00:00",
+        "end_time": "2025-10-15 22:00:00",
+        "location": "Main Stage",
+        "location_ar": "المسرح الرئيسي",
+        "image_url": "https://example.com/images/music-concert.jpg",
+        "price": 5.000,
+        "currency": "OMR",
+        "is_featured": true
+      },
+      "added_at": "2025-10-10T10:30:00.000000Z"
+    },
+    {
+      "id": 2,
+      "type": "App\\Models\\Restaurant",
+      "item_id": 3,
+      "item": {
+        "id": 3,
+        "name": "Al Majlis Restaurant",
+        "name_ar": "مطعم المجلس",
+        "description": "Traditional Omani cuisine",
+        "description_ar": "المأكولات العمانية التقليدية",
+        "cuisine": "Omani",
+        "cuisine_ar": "عماني",
+        "location": "Zone B",
+        "location_ar": "المنطقة ب",
+        "image_url": "https://example.com/images/al-majlis.jpg",
+        "rating": 4.5,
+        "price_range": "$$",
+        "is_featured": true
+      },
+      "added_at": "2025-10-09T15:20:00.000000Z"
+    }
+  ],
+  "message": "Favorites retrieved successfully"
+}

@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "action": "added",
+  "is_favorite": true,
+  "data": {
+    "id": 1,
+    "type": "event",
+    "item_id": 5,
+    "added_at": "2025-10-10T10:30:00.000000Z"
+  },
+  "message": "Event added to favorites"
+}

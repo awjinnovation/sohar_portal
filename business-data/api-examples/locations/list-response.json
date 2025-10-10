@@ -1,0 +1,67 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Police Station",
+      "name_ar": "مركز الشرطة",
+      "type": "emergency",
+      "description": "Main police station for festival area",
+      "description_ar": "مركز الشرطة الرئيسي لمنطقة المهرجان",
+      "latitude": 24.3667,
+      "longitude": 56.7500,
+      "address": "Near Festival Main Gate",
+      "address_ar": "بالقرب من البوابة الرئيسية للمهرجان",
+      "contact_number": "+968 26840099",
+      "additional_info": {
+        "is_24_hours": true,
+        "services": "Emergency response, security"
+      },
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "name": "First Aid Station 1",
+      "name_ar": "محطة الإسعافات الأولية 1",
+      "type": "first_aid",
+      "description": "Primary first aid station",
+      "description_ar": "محطة الإسعافات الأولية الرئيسية",
+      "latitude": 24.3670,
+      "longitude": 56.7505,
+      "address": "Zone A, Near Food Court",
+      "address_ar": "المنطقة أ، بالقرب من ساحة الطعام",
+      "contact_number": "+968 26840100",
+      "additional_info": {
+        "services": "Basic medical care, emergency treatment",
+        "operating_hours": "24/7 during festival"
+      },
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "name": "Main Parking Area",
+      "name_ar": "موقف السيارات الرئيسي",
+      "type": "parking",
+      "description": "Large parking area with 500+ spaces",
+      "description_ar": "موقف سيارات كبير بأكثر من 500 مكان",
+      "latitude": 24.3650,
+      "longitude": 56.7480,
+      "address": "West side of festival ground",
+      "address_ar": "الجانب الغربي من أرض المهرجان",
+      "contact_number": null,
+      "additional_info": {
+        "capacity": 500,
+        "fee": "Free",
+        "wheelchair_accessible": true
+      },
+      "is_active": true
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 20,
+    "total": 3
+  },
+  "message": "Locations retrieved successfully"
+}

@@ -1,0 +1,42 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Police Station",
+      "name_ar": "مركز الشرطة",
+      "type": "emergency",
+      "description": "Main police station for festival area",
+      "description_ar": "مركز الشرطة الرئيسي لمنطقة المهرجان",
+      "latitude": 24.3667,
+      "longitude": 56.7500,
+      "address": "Near Festival Main Gate",
+      "address_ar": "بالقرب من البوابة الرئيسية للمهرجان",
+      "contact_number": "+968 26840099",
+      "additional_info": {
+        "is_24_hours": true
+      },
+      "is_active": true,
+      "distance": 0.05
+    },
+    {
+      "id": 2,
+      "name": "First Aid Station 1",
+      "name_ar": "محطة الإسعافات الأولية 1",
+      "type": "first_aid",
+      "description": "Primary first aid station",
+      "description_ar": "محطة الإسعافات الأولية الرئيسية",
+      "latitude": 24.3670,
+      "longitude": 56.7505,
+      "address": "Zone A, Near Food Court",
+      "address_ar": "المنطقة أ، بالقرب من ساحة الطعام",
+      "contact_number": "+968 26840100",
+      "additional_info": {
+        "services": "Basic medical care"
+      },
+      "is_active": true,
+      "distance": 0.08
+    }
+  ],
+  "message": "Nearby locations retrieved successfully"
+}

@@ -1,0 +1,31 @@
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Music & Entertainment",
+    "name_ar": "الموسيقى والترفيه",
+    "description": "Live music performances and entertainment shows",
+    "description_ar": "عروض الموسيقى الحية والعروض الترفيهية",
+    "icon": "music-note",
+    "color": "#FF6B6B",
+    "events_count": 15,
+    "events": [
+      {
+        "id": 1,
+        "title": "Traditional Music Concert",
+        "title_ar": "حفل الموسيقى التقليدية",
+        "description": "Experience traditional Omani music",
+        "description_ar": "استمتع بالموسيقى العمانية التقليدية",
+        "start_time": "2025-10-15 19:00:00",
+        "end_time": "2025-10-15 22:00:00",
+        "location": "Main Stage, Sohar Festival Ground",
+        "location_ar": "المسرح الرئيسي، أرض مهرجان صحار",
+        "image_url": "https://example.com/images/music-concert.jpg",
+        "price": 5.000,
+        "currency": "OMR",
+        "is_featured": true
+      }
+    ]
+  },
+  "message": "Category retrieved successfully"
+}
