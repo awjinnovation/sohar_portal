@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\EmergencyContactController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\MapLocationController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\AppConfigController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +26,14 @@ use App\Http\Controllers\Api\PaymentController;
 
 // Public routes - No authentication required
 Route::prefix('v1')->group(function () {
+    // App Configuration - For Flutter App
+    Route::get('/config', [AppConfigController::class, 'index']);
+    Route::get('/config/theme', [AppConfigController::class, 'theme']);
+    Route::get('/config/branding', [AppConfigController::class, 'branding']);
+    Route::get('/config/features', [AppConfigController::class, 'features']);
+    Route::get('/config/status', [AppConfigController::class, 'status']);
+    Route::get('/config/{key}', [AppConfigController::class, 'show']);
+
     // OTP Authentication
     Route::post('/auth/send-otp', [AuthController::class, 'sendOtp']);
     Route::post('/auth/verify-otp', [AuthController::class, 'verifyOtp']);
