@@ -156,7 +156,7 @@ return new class extends Migration
         // 3. Consolidate event pricing into events table
         if (!Schema::hasColumn('events', 'pricing')) {
             Schema::table('events', function (Blueprint $table) {
-                $table->json('pricing')->nullable()->after('capacity');
+                $table->json('pricing')->nullable()->after('total_tickets');
             });
 
             // Migrate ticket pricing data
