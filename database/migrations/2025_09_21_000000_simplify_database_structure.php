@@ -187,12 +187,19 @@ return new class extends Migration
         }
 
         // 4. Drop unnecessary tables
+        // Disable foreign key checks temporarily
+        $driver = DB::getDriverName();
+        if ($driver === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        } elseif ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = OFF;');
+        }
+
         $tablesToDrop = [
-            'heritage_villages',
+            'craft_demonstration_schedules',
             'village_attractions',
             'village_images',
             'craft_demonstrations',
-            'craft_demonstration_schedules',
             'traditional_activities',
             'cultural_timeline_events',
             'photo_spots',
@@ -205,11 +212,19 @@ return new class extends Migration
             'map_locations',
             'location_categories',
             'first_aid_stations',
-            'health_tips'
+            'health_tips',
+            'heritage_villages'
         ];
 
         foreach ($tablesToDrop as $table) {
             Schema::dropIfExists($table);
+        }
+
+        // Re-enable foreign key checks
+        if ($driver === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        } elseif ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = ON;');
         }
     }
 
