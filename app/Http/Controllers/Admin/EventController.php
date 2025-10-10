@@ -9,13 +9,45 @@ use Illuminate\Http\Request;
 
 class EventController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $view = $request->get('view', 'list'); // list or calendar
+
+        if ($view === 'calendar') {
+            // Get all events for calendar view
+            $events = Event::with('category')
+                ->where('is_active', true)
+                ->orderBy('start_time')
+                ->get();
+
+            // Format events for FullCalendar
+            $calendarEvents = $events->map(function($event) {
+                return [
+                    'id' => $event->id,
+                    'title' => $event->title_ar,
+                    'start' => $event->start_time->toIso8601String(),
+                    'end' => $event->end_time->toIso8601String(),
+                    'backgroundColor' => $event->is_featured ? '#FFA726' : '#4A90E2',
+                    'borderColor' => $event->is_featured ? '#FF9800' : '#3A7BC8',
+                    'extendedProps' => [
+                        'location' => $event->location_ar,
+                        'category' => $event->category->name_ar ?? '',
+                        'available_tickets' => $event->available_tickets,
+                        'total_tickets' => $event->total_tickets,
+                        'price' => $event->price . ' ' . $event->currency,
+                    ]
+                ];
+            });
+
+            return view('admin.events.index', compact('events', 'calendarEvents', 'view'));
+        }
+
+        // List view with pagination
         $events = Event::with('category')
             ->latest('start_time')
             ->paginate(10);
-        
-        return view('admin.events.index', compact('events'));
+
+        return view('admin.events.index', compact('events', 'view'));
     }
 
     public function create()

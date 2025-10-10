@@ -395,8 +395,9 @@
             </div>
             
             <nav class="sidebar-menu">
+                <!-- Dashboard -->
                 <div class="menu-section">
-                    <div class="menu-title">القائمة الرئيسية</div>
+                    <div class="menu-title">الرئيسية</div>
                     <ul class="menu-list">
                         <li class="menu-item">
                             <a href="{{ route('admin.dashboard') }}" class="menu-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
@@ -407,15 +408,10 @@
                     </ul>
                 </div>
 
+                <!-- Events & Festival Management -->
                 <div class="menu-section">
-                    <div class="menu-title">إدارة المهرجان</div>
+                    <div class="menu-title">الفعاليات والمهرجان</div>
                     <ul class="menu-list">
-                        <li class="menu-item">
-                            <a href="{{ route('admin.categories.index') }}" class="menu-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
-                                <i class="bi bi-tags menu-icon"></i>
-                                الفئات
-                            </a>
-                        </li>
                         <li class="menu-item">
                             <a href="{{ route('admin.events.index') }}" class="menu-link {{ request()->routeIs('admin.events.*') ? 'active' : '' }}">
                                 <i class="bi bi-calendar-event menu-icon"></i>
@@ -423,22 +419,44 @@
                             </a>
                         </li>
                         <li class="menu-item">
-                            <a href="{{ route('admin.event-tags.index') }}" class="menu-link {{ request()->routeIs('admin.event-tags.*') ? 'active' : '' }}">
-                                <i class="bi bi-tags-fill menu-icon"></i>
-                                وسوم الفعاليات
+                            <a href="{{ route('admin.categories.index') }}" class="menu-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
+                                <i class="bi bi-folder menu-icon"></i>
+                                فئات الفعاليات
                             </a>
                         </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.event-tags.index') }}" class="menu-link {{ request()->routeIs('admin.event-tags.*') ? 'active' : '' }}">
+                                <i class="bi bi-tags menu-icon"></i>
+                                الوسوم
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Tickets & Bookings -->
+                <div class="menu-section">
+                    <div class="menu-title">التذاكر والحجوزات</div>
+                    <ul class="menu-list">
                         <li class="menu-item">
                             <a href="{{ route('admin.tickets.index') }}" class="menu-link {{ request()->routeIs('admin.tickets.*') ? 'active' : '' }}">
                                 <i class="bi bi-ticket-perforated menu-icon"></i>
                                 التذاكر
                             </a>
                         </li>
+                        @if(Route::has('admin.payments.index'))
+                        <li class="menu-item">
+                            <a href="{{ route('admin.payments.index') }}" class="menu-link {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}">
+                                <i class="bi bi-credit-card menu-icon"></i>
+                                المدفوعات
+                            </a>
+                        </li>
+                        @endif
                     </ul>
                 </div>
 
+                <!-- Locations & Services -->
                 <div class="menu-section">
-                    <div class="menu-title">المطاعم والخدمات</div>
+                    <div class="menu-title">المواقع والخدمات</div>
                     <ul class="menu-list">
                         <li class="menu-item">
                             <a href="{{ route('admin.restaurants.index') }}" class="menu-link {{ request()->routeIs('admin.restaurants.*') ? 'active' : '' }}">
@@ -446,14 +464,20 @@
                                 المطاعم
                             </a>
                         </li>
+                        @if(Route::has('admin.locations.index'))
+                        <li class="menu-item">
+                            <a href="{{ route('admin.locations.index') }}" class="menu-link {{ request()->routeIs('admin.locations.*') ? 'active' : '' }}">
+                                <i class="bi bi-geo-alt menu-icon"></i>
+                                المواقع
+                            </a>
+                        </li>
+                        @endif
                     </ul>
                 </div>
 
-
-
-
+                <!-- Communications -->
                 <div class="menu-section">
-                    <div class="menu-title">التواصل والإعلانات</div>
+                    <div class="menu-title">الاتصالات</div>
                     <ul class="menu-list">
                         <li class="menu-item">
                             <a href="{{ route('admin.announcements.index') }}" class="menu-link {{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}">
@@ -472,40 +496,38 @@
                     </ul>
                 </div>
 
+                <!-- Users & Roles -->
                 <div class="menu-section">
-                    <div class="menu-title">المواقع والخدمات</div>
+                    <div class="menu-title">المستخدمون والصلاحيات</div>
                     <ul class="menu-list">
-                        @if(Route::has('admin.locations.index'))
                         <li class="menu-item">
-                            <a href="{{ route('admin.locations.index') }}" class="menu-link {{ request()->routeIs('admin.locations.*') ? 'active' : '' }}">
-                                <i class="bi bi-pin-map menu-icon"></i>
-                                جميع المواقع
+                            <a href="{{ route('admin.users.index') }}" class="menu-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                                <i class="bi bi-people menu-icon"></i>
+                                المستخدمون
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.roles.index') }}" class="menu-link {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
+                                <i class="bi bi-shield-lock menu-icon"></i>
+                                الأدوار والصلاحيات
+                            </a>
+                        </li>
+                        @if(Route::has('admin.otp-verifications.index'))
+                        <li class="menu-item">
+                            <a href="{{ route('admin.otp-verifications.index') }}" class="menu-link {{ request()->routeIs('admin.otp-verifications.*') ? 'active' : '' }}">
+                                <i class="bi bi-shield-check menu-icon"></i>
+                                التحقق بالرمز
                             </a>
                         </li>
                         @endif
                     </ul>
                 </div>
 
+                <!-- User Analytics (Optional) -->
+                @if(Route::has('admin.user-favorites.index') || Route::has('admin.user-interests.index'))
                 <div class="menu-section">
-                    <div class="menu-title">إدارة المستخدمين</div>
+                    <div class="menu-title">تحليلات المستخدمين</div>
                     <ul class="menu-list">
-                        <li class="menu-item has-submenu">
-                            <a href="#" class="menu-link" onclick="toggleSubmenu(this)">
-                                <i class="bi bi-people menu-icon"></i>
-                                المستخدمون
-                            </a>
-                            <ul class="submenu">
-                                <li class="menu-item">
-                                    <a href="{{ route('admin.users.index') }}" class="menu-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">جميع المستخدمين</a>
-                                </li>
-                                <li class="menu-item">
-                                    <a href="{{ route('admin.users.create') }}" class="menu-link">إضافة مستخدم جديد</a>
-                                </li>
-                                <li class="menu-item">
-                                    <a href="{{ route('admin.roles.index') }}" class="menu-link {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">أدوار المستخدمين</a>
-                                </li>
-                            </ul>
-                        </li>
                         @if(Route::has('admin.user-favorites.index'))
                         <li class="menu-item">
                             <a href="{{ route('admin.user-favorites.index') }}" class="menu-link {{ request()->routeIs('admin.user-favorites.*') ? 'active' : '' }}">
@@ -522,32 +544,18 @@
                             </a>
                         </li>
                         @endif
-                        @if(Route::has('admin.otp-verifications.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.otp-verifications.index') }}" class="menu-link {{ request()->routeIs('admin.otp-verifications.*') ? 'active' : '' }}">
-                                <i class="bi bi-shield-check menu-icon"></i>
-                                التحقق بالرمز
-                            </a>
-                        </li>
-                        @endif
-                        @if(Route::has('admin.payments.index'))
-                        <li class="menu-item">
-                            <a href="{{ route('admin.payments.index') }}" class="menu-link {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}">
-                                <i class="bi bi-credit-card menu-icon"></i>
-                                المدفوعات
-                            </a>
-                        </li>
-                        @endif
                     </ul>
                 </div>
+                @endif
 
+                <!-- Settings -->
                 <div class="menu-section">
                     <div class="menu-title">الإعدادات</div>
                     <ul class="menu-list">
                         @if(Route::has('admin.app-settings.index'))
                         <li class="menu-item">
                             <a href="{{ route('admin.app-settings.index') }}" class="menu-link {{ request()->routeIs('admin.app-settings.*') ? 'active' : '' }}">
-                                <i class="bi bi-sliders menu-icon"></i>
+                                <i class="bi bi-gear menu-icon"></i>
                                 إعدادات التطبيق
                             </a>
                         </li>
