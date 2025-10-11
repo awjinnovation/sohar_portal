@@ -7,9 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class PrivacyPolicy extends Model
 {
     protected $fillable = [
-        'language',
         'title',
+        'title_ar',
         'content',
+        'content_ar',
         'is_active',
     ];
 
@@ -20,10 +21,5 @@ class PrivacyPolicy extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
-    }
-
-    public function scopeByLanguage($query, $language = 'en')
-    {
-        return $query->where('language', $language);
     }
 }

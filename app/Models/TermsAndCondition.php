@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class TermsAndCondition extends Model
 {
     protected $fillable = [
-        'type',
-        'language',
         'title',
+        'title_ar',
         'content',
+        'content_ar',
         'is_active',
     ];
 
@@ -21,15 +21,5 @@ class TermsAndCondition extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
-    }
-
-    public function scopeByLanguage($query, $language = 'en')
-    {
-        return $query->where('language', $language);
-    }
-
-    public function scopeByType($query, $type = 'general')
-    {
-        return $query->where('type', $type);
     }
 }

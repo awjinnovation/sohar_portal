@@ -4,8 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
 
-// Redirect root to admin dashboard
+// Public Pages
 Route::get('/', fn() => redirect('/admin/dashboard'));
+Route::get('/privacy-policy', [\App\Http\Controllers\PublicPageController::class, 'privacyPolicy'])->name('public.privacy-policy');
+Route::get('/terms-and-conditions', [\App\Http\Controllers\PublicPageController::class, 'termsAndConditions'])->name('public.terms-and-conditions');
 
 // Add fallback login route for Laravel's default auth middleware
 Route::get('/login', fn() => redirect('/admin/login'))->name('login');

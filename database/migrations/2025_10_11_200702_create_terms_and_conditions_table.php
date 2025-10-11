@@ -13,15 +13,13 @@ return new class extends Migration
     {
         Schema::create('terms_and_conditions', function (Blueprint $table) {
             $table->id();
-            $table->string('type')->default('general'); // general, ticket, event, etc.
-            $table->string('language', 10)->default('en'); // en, ar, etc.
             $table->string('title');
+            $table->string('title_ar');
             $table->text('content');
+            $table->text('content_ar');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->index('type');
-            $table->index('language');
             $table->index('is_active');
         });
     }

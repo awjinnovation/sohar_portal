@@ -60,6 +60,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             TestDataSeeder::class,
+            TermsAndConditionSeeder::class,
+            PrivacyPolicySeeder::class,
             // Note: Heritage-related seeders are disabled because
             // migration 2025_09_21_000000_simplify_database_structure
             // drops heritage_villages and related tables
