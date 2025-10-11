@@ -207,22 +207,19 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="mb-3">
-                                    <label for="latitude" class="form-label">خط العرض</label>
-                                    <input type="number" step="0.00000001" class="form-control @error('latitude') is-invalid @enderror"
-                                           id="latitude" name="latitude" value="{{ old('latitude', $event->latitude) }}" min="-90" max="90">
-                                    @error('latitude')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="longitude" class="form-label">خط الطول</label>
-                                    <input type="number" step="0.00000001" class="form-control @error('longitude') is-invalid @enderror"
-                                           id="longitude" name="longitude" value="{{ old('longitude', $event->longitude) }}" min="-180" max="180">
-                                    @error('longitude')
+                                    <label for="map_location_id" class="form-label">موقع الخريطة (خط العرض والطول)</label>
+                                    <select class="form-select @error('map_location_id') is-invalid @enderror"
+                                            id="map_location_id" name="map_location_id">
+                                        <option value="">اختر الموقع على الخريطة</option>
+                                        @foreach($mapLocations as $mapLocation)
+                                        <option value="{{ $mapLocation->id }}" {{ old('map_location_id', $event->map_location_id) == $mapLocation->id ? 'selected' : '' }}>
+                                            {{ $mapLocation->name_ar }} ({{ $mapLocation->latitude }}, {{ $mapLocation->longitude }})
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                    @error('map_location_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>

@@ -11,7 +11,7 @@ class Event extends Model implements HasMedia
     use InteractsWithMedia;
     protected $fillable = [
         'title', 'title_ar', 'description', 'description_ar', 'category_id',
-        'start_time', 'end_time', 'location', 'location_ar', 'latitude', 'longitude',
+        'start_time', 'end_time', 'location', 'location_ar', 'map_location_id',
         'image_url', 'images', 'price', 'currency', 'available_tickets', 'total_tickets',
         'organizer_name', 'organizer_name_ar', 'is_featured', 'is_active', 'pricing'
     ];
@@ -19,8 +19,6 @@ class Event extends Model implements HasMedia
     protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
-        'latitude' => 'decimal:8',
-        'longitude' => 'decimal:8',
         'price' => 'decimal:3',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
@@ -31,6 +29,11 @@ class Event extends Model implements HasMedia
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function mapLocation()
+    {
+        return $this->belongsTo(MapLocation::class);
     }
 
     public function tags()

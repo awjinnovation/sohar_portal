@@ -16,7 +16,7 @@ class EventController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Event::with(['category', 'tags']);
+        $query = Event::with(['category', 'tags', 'mapLocation']);
 
         // Filter by date - check if date falls within event range
         if ($request->has('date')) {
@@ -61,7 +61,7 @@ class EventController extends Controller
      */
     public function show($id)
     {
-        $event = Event::with(['category', 'tags'])->findOrFail($id);
+        $event = Event::with(['category', 'tags', 'mapLocation'])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -74,7 +74,7 @@ class EventController extends Controller
      */
     public function byCategory($categoryId)
     {
-        $events = Event::with(['category', 'tags'])
+        $events = Event::with(['category', 'tags', 'mapLocation'])
             ->where('category_id', $categoryId)
             ->where('is_active', true)
             ->orderBy('start_time')
@@ -97,7 +97,7 @@ class EventController extends Controller
      */
     public function upcoming()
     {
-        $events = Event::with(['category', 'tags'])
+        $events = Event::with(['category', 'tags', 'mapLocation'])
             ->where('start_time', '>=', now())
             ->where('is_active', true)
             ->orderBy('start_time')
@@ -116,7 +116,7 @@ class EventController extends Controller
     public function today()
     {
         $today = Carbon::today();
-        $events = Event::with(['category', 'tags'])
+        $events = Event::with(['category', 'tags', 'mapLocation'])
             ->where(function($q) use ($today) {
                 $q->whereDate('start_time', '<=', $today)
                   ->whereDate('end_time', '>=', $today);
@@ -136,7 +136,7 @@ class EventController extends Controller
      */
     public function featured()
     {
-        $events = Event::with(['category', 'tags'])
+        $events = Event::with(['category', 'tags', 'mapLocation'])
             ->where('is_featured', true)
             ->where('is_active', true)
             ->orderBy('start_time')
@@ -192,7 +192,7 @@ class EventController extends Controller
             ->where('favoritable_type', Event::class)
             ->pluck('favoritable_id');
 
-        $events = Event::with(['category', 'tags'])
+        $events = Event::with(['category', 'tags', 'mapLocation'])
             ->whereIn('id', $favoriteIds)
             ->orderBy('start_time')
             ->paginate(20);

@@ -53,7 +53,8 @@ class EventController extends Controller
     public function create()
     {
         $categories = Category::active()->ordered()->get();
-        return view('admin.events.create', compact('categories'));
+        $mapLocations = \App\Models\MapLocation::where('is_active', true)->get();
+        return view('admin.events.create', compact('categories', 'mapLocations'));
     }
 
     public function store(Request $request)
@@ -68,8 +69,7 @@ class EventController extends Controller
             'end_time' => 'required|date|after:start_time',
             'location' => 'required|max:255',
             'location_ar' => 'nullable|max:255',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
+            'map_location_id' => 'nullable|exists:map_locations,id',
             'image_url' => 'nullable|url|max:500',
             'images' => 'nullable|json',
             'price' => 'required|numeric|min:0',
@@ -107,7 +107,8 @@ class EventController extends Controller
     public function edit(Event $event)
     {
         $categories = Category::active()->ordered()->get();
-        return view('admin.events.edit', compact('event', 'categories'));
+        $mapLocations = \App\Models\MapLocation::where('is_active', true)->get();
+        return view('admin.events.edit', compact('event', 'categories', 'mapLocations'));
     }
 
     public function update(Request $request, Event $event)
@@ -122,8 +123,7 @@ class EventController extends Controller
             'end_time' => 'required|date|after:start_time',
             'location' => 'required|max:255',
             'location_ar' => 'nullable|max:255',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
+            'map_location_id' => 'nullable|exists:map_locations,id',
             'image_url' => 'nullable|url|max:500',
             'images' => 'nullable|json',
             'price' => 'required|numeric|min:0',
