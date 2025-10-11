@@ -19,7 +19,15 @@ return new class extends Migration
             $table->dropColumn(['latitude', 'longitude']);
 
             // Add the foreign key to map_locations
-            $table->foreignId('map_location_id')->nullable()->after('location_ar')->constrained('map_locations')->onDelete('set null');
+            $table->unsignedBigInteger('map_location_id')->nullable()->after('location_ar');
+        });
+
+        // Add foreign key constraint in separate statement to avoid issues
+        Schema::table('events', function (Blueprint $table) {
+            $table->foreign('map_location_id')
+                  ->references('id')
+                  ->on('map_locations')
+                  ->onDelete('set null');
         });
     }
 
