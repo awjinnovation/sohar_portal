@@ -22,7 +22,11 @@ Route::prefix('admin')->group(function () {
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
-        
+
+        // Media Management
+        Route::post('/media/upload', [\App\Http\Controllers\Admin\MediaController::class, 'upload'])->name('admin.media.upload');
+        Route::delete('/media/delete', [\App\Http\Controllers\Admin\MediaController::class, 'delete'])->name('admin.media.delete');
+
         // Festival Management
         Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class, ['as' => 'admin']);
         Route::resource('events', \App\Http\Controllers\Admin\EventController::class, ['as' => 'admin']);
@@ -64,5 +68,9 @@ Route::prefix('admin')->group(function () {
         if (file_exists(app_path('Http/Controllers/Admin/AppSettingController.php'))) {
             Route::resource('app-settings', \App\Http\Controllers\Admin\AppSettingController::class, ['as' => 'admin']);
         }
+
+        // Legal
+        Route::resource('privacy-policies', \App\Http\Controllers\Admin\PrivacyPolicyController::class, ['as' => 'admin']);
+        Route::resource('terms-and-conditions', \App\Http\Controllers\Admin\TermsAndConditionController::class, ['as' => 'admin']);
     });
 });

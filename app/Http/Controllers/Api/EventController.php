@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\EventResource;
 use App\Models\Event;
 use App\Models\UserFavorite;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class EventController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $events->items(),
+            'data' => EventResource::collection($events->items()),
             'pagination' => [
                 'current_page' => $events->currentPage(),
                 'last_page' => $events->lastPage(),
@@ -64,7 +65,7 @@ class EventController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $event
+            'data' => new EventResource($event)
         ]);
     }
 
@@ -81,7 +82,7 @@ class EventController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $events->items(),
+            'data' => EventResource::collection($events->items()),
             'pagination' => [
                 'current_page' => $events->currentPage(),
                 'last_page' => $events->lastPage(),
@@ -105,7 +106,7 @@ class EventController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $events
+            'data' => EventResource::collection($events)
         ]);
     }
 
@@ -126,7 +127,7 @@ class EventController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $events
+            'data' => EventResource::collection($events)
         ]);
     }
 
@@ -144,7 +145,7 @@ class EventController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $events
+            'data' => EventResource::collection($events)
         ]);
     }
 
@@ -193,13 +194,12 @@ class EventController extends Controller
 
         $events = Event::with(['category', 'tags'])
             ->whereIn('id', $favoriteIds)
-            ->orderBy('event_date')
-            ->orderBy('event_time')
+            ->orderBy('start_time')
             ->paginate(20);
 
         return response()->json([
             'success' => true,
-            'data' => $events->items(),
+            'data' => EventResource::collection($events->items()),
             'pagination' => [
                 'current_page' => $events->currentPage(),
                 'last_page' => $events->lastPage(),

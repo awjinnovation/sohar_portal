@@ -3,13 +3,16 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Event extends Model
+class Event extends Model implements HasMedia
 {
+    use InteractsWithMedia;
     protected $fillable = [
         'title', 'title_ar', 'description', 'description_ar', 'category_id',
         'start_time', 'end_time', 'location', 'location_ar', 'latitude', 'longitude',
-        'image_url', 'price', 'currency', 'available_tickets', 'total_tickets',
+        'image_url', 'images', 'price', 'currency', 'available_tickets', 'total_tickets',
         'organizer_name', 'organizer_name_ar', 'is_featured', 'is_active', 'pricing'
     ];
 
@@ -21,6 +24,7 @@ class Event extends Model
         'price' => 'decimal:3',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
+        'images' => 'array',
         'pricing' => 'array'
     ];
 
@@ -57,5 +61,11 @@ class Event extends Model
     public function scopeUpcoming($query)
     {
         return $query->where('start_time', '>', now());
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('images')
+            ->useDisk('public');
     }
 }

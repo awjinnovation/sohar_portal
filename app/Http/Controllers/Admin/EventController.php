@@ -71,6 +71,7 @@ class EventController extends Controller
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'image_url' => 'nullable|url|max:500',
+            'images' => 'nullable|json',
             'price' => 'required|numeric|min:0',
             'currency' => 'nullable|in:OMR,USD,EUR',
             'available_tickets' => 'nullable|integer|min:0',
@@ -82,7 +83,12 @@ class EventController extends Controller
         ]);
 
         $validated['currency'] = $validated['currency'] ?? 'OMR';
-        
+
+        // Parse images JSON if provided
+        if (isset($validated['images'])) {
+            $validated['images'] = json_decode($validated['images'], true);
+        }
+
         Event::create($validated);
 
         return redirect()->route('admin.events.index')
@@ -119,6 +125,7 @@ class EventController extends Controller
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'image_url' => 'nullable|url|max:500',
+            'images' => 'nullable|json',
             'price' => 'required|numeric|min:0',
             'currency' => 'nullable|in:OMR,USD,EUR',
             'available_tickets' => 'nullable|integer|min:0',
@@ -130,7 +137,12 @@ class EventController extends Controller
         ]);
 
         $validated['currency'] = $validated['currency'] ?? 'OMR';
-        
+
+        // Parse images JSON if provided
+        if (isset($validated['images'])) {
+            $validated['images'] = json_decode($validated['images'], true);
+        }
+
         $event->update($validated);
 
         return redirect()->route('admin.events.index')

@@ -25,7 +25,7 @@ class RestaurantController extends Controller
             $query->where('is_family_friendly', $request->is_family_friendly);
         }
 
-        $restaurants = $query->where('status', 'active')->paginate(20);
+        $restaurants = $query->where('is_active', true)->paginate(20);
 
         return response()->json([
             'success' => true,
@@ -56,7 +56,7 @@ class RestaurantController extends Controller
         ]);
 
         $restaurants = Restaurant::with(['images', 'features'])
-            ->where('status', 'active')
+            ->where('is_active', true)
             ->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->query . '%')
                   ->orWhere('description', 'like', '%' . $request->query . '%')
@@ -82,7 +82,7 @@ class RestaurantController extends Controller
         $currentDay = strtolower(now()->format('l'));
 
         $restaurants = Restaurant::with(['images', 'features', 'openingHours'])
-            ->where('status', 'active')
+            ->where('is_active', true)
             ->whereHas('openingHours', function ($q) use ($currentDay, $currentTime) {
                 $q->where('day_of_week', $currentDay)
                   ->where('opening_time', '<=', $currentTime)

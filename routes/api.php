@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AppSettingController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\PrivacyPolicyController;
+use App\Http\Controllers\Api\TermsAndConditionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,6 +84,12 @@ Route::prefix('v1')->group(function () {
     // Tickets
     Route::get('/tickets/pricing', [TicketController::class, 'pricing']);
     Route::get('/tickets/available', [TicketController::class, 'available']);
+
+    // Legal
+    Route::get('/privacy-policy', [PrivacyPolicyController::class, 'index']);
+    Route::get('/privacy-policy/{language}', [PrivacyPolicyController::class, 'show']);
+    Route::get('/terms-and-conditions', [TermsAndConditionController::class, 'index']);
+    Route::get('/terms-and-conditions/{type}/{language}', [TermsAndConditionController::class, 'show']);
 
     // Payment cancel endpoint (called by Thawani)
     Route::post('/payments/cancel', [PaymentController::class, 'cancel']);

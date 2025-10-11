@@ -42,7 +42,7 @@
 
                                 <div class="mb-3">
                                     <label for="description_ar" class="form-label">الوصف <span class="text-danger">*</span></label>
-                                    <textarea class="form-control @error('description_ar') is-invalid @enderror" 
+                                    <textarea class="form-control @error('description_ar') is-invalid @enderror"
                                               id="description_ar" name="description_ar" rows="4" required>{{ old('description_ar', $event->description_ar) }}</textarea>
                                     @error('description_ar')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -85,7 +85,7 @@
 
                                 <div class="mb-3">
                                     <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-                                    <textarea class="form-control @error('description') is-invalid @enderror" 
+                                    <textarea class="form-control @error('description') is-invalid @enderror"
                                               id="description" name="description" rows="4" required>{{ old('description', $event->description) }}</textarea>
                                     @error('description')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -207,9 +207,85 @@
                         </div>
 
                         <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="latitude" class="form-label">خط العرض</label>
+                                    <input type="number" step="0.00000001" class="form-control @error('latitude') is-invalid @enderror"
+                                           id="latitude" name="latitude" value="{{ old('latitude', $event->latitude) }}" min="-90" max="90">
+                                    @error('latitude')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="longitude" class="form-label">خط الطول</label>
+                                    <input type="number" step="0.00000001" class="form-control @error('longitude') is-invalid @enderror"
+                                           id="longitude" name="longitude" value="{{ old('longitude', $event->longitude) }}" min="-180" max="180">
+                                    @error('longitude')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">الصورة الرئيسية</label>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div id="main-image-zone" class="border border-2 border-dashed rounded p-3 text-center mb-2" style="cursor: pointer; background: #f8f9fa; {{ old('image_url', $event->image_url) ? 'display: none;' : '' }}">
+                                        <i class="bi bi-image" style="font-size: 2rem; color: #6c757d;"></i>
+                                        <p class="mb-1 mt-2"><strong>اضغط لتحميل الصورة الرئيسية</strong></p>
+                                        <p class="text-muted small mb-0">PNG, JPG, JPEG حتى 10MB</p>
+                                        <input type="file" id="main-image-input" accept="image/*" style="display: none;">
+                                    </div>
+                                    <div id="main-image-preview" class="text-center" style="{{ old('image_url', $event->image_url) ? '' : 'display: none;' }}">
+                                        <img id="main-image-display" src="{{ old('image_url', $event->image_url) }}" class="img-fluid rounded" style="max-height: 200px;">
+                                        <button type="button" class="btn btn-sm btn-danger mt-2" id="remove-main-image">
+                                            <i class="bi bi-trash"></i> حذف الصورة
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="image_url" id="image_url" value="{{ old('image_url', $event->image_url) }}">
+                            @error('image_url')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">معرض الصور الإضافية</label>
+                            <div class="card">
+                                <div class="card-body">
+                                    <!-- Upload Zone -->
+                                    <div id="upload-zone" class="border border-2 border-dashed rounded p-4 text-center mb-3" style="cursor: pointer; background: #f8f9fa;">
+                                        <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
+                                        <p class="mb-2 mt-2"><strong>اسحب الصور هنا أو اضغط للتحميل</strong></p>
+                                        <p class="text-muted small mb-0">PNG, JPG, JPEG حتى 10MB</p>
+                                        <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+                                    </div>
+
+                                    <!-- Upload Progress -->
+                                    <div id="upload-progress" class="progress mb-3" style="display: none; height: 25px;">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
+                                    </div>
+
+                                    <!-- Gallery Preview -->
+                                    <div id="image-gallery-preview" class="row g-3">
+                                        <!-- Images will be displayed here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="images" id="images-input" value='{{ old('images', json_encode($event->images ?? [])) }}'>
+                            @error('images')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-4">
                                 <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active"
                                            value="1" {{ old('is_active', $event->is_active) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="is_active">
                                         نشط
@@ -218,7 +294,7 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured" 
+                                    <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured"
                                            value="1" {{ old('is_featured', $event->is_featured) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="is_featured">
                                         مميز
@@ -243,3 +319,192 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let images = [];
+    let mainImageUrl = '{{ old('image_url', $event->image_url) }}';
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    const mainImageZone = document.getElementById('main-image-zone');
+    const mainImageInput = document.getElementById('main-image-input');
+    const mainImagePreview = document.getElementById('main-image-preview');
+    const mainImageDisplay = document.getElementById('main-image-display');
+    const removeMainImageBtn = document.getElementById('remove-main-image');
+    const progressBar = document.getElementById('upload-progress');
+    const progressBarInner = progressBar.querySelector('.progress-bar');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    // Load existing images
+    try {
+        const existingImages = document.getElementById('images-input').value;
+        if (existingImages && existingImages !== '[]') {
+            images = JSON.parse(existingImages);
+            renderGallery();
+        }
+    } catch (e) {
+        console.error('Error parsing existing images:', e);
+    }
+
+    // Main image upload
+    mainImageZone.addEventListener('click', () => mainImageInput.click());
+
+    mainImageInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('الرجاء اختيار ملف صورة صحيح');
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            alert('حجم الملف أكبر من 10MB');
+            return;
+        }
+
+        try {
+            mainImageUrl = await uploadFile(file);
+            document.getElementById('image_url').value = mainImageUrl;
+            showMainImage();
+        } catch (error) {
+            alert('فشل تحميل الصورة');
+        }
+    });
+
+    removeMainImageBtn.addEventListener('click', () => {
+        if (confirm('هل تريد حذف الصورة الرئيسية؟')) {
+            mainImageUrl = '';
+            document.getElementById('image_url').value = '';
+            mainImageZone.style.display = 'block';
+            mainImagePreview.style.display = 'none';
+        }
+    });
+
+    function showMainImage() {
+        mainImageDisplay.src = mainImageUrl;
+        mainImageZone.style.display = 'none';
+        mainImagePreview.style.display = 'block';
+    }
+
+    // Gallery images upload
+    uploadZone.addEventListener('click', () => fileInput.click());
+
+    // File selection
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+    // Drag and drop
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.style.background = '#e9ecef';
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.style.background = '#f8f9fa';
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.style.background = '#f8f9fa';
+        handleFiles(e.dataTransfer.files);
+    });
+
+    async function handleFiles(files) {
+        if (!files.length) return;
+
+        progressBar.style.display = 'block';
+        const totalFiles = files.length;
+        let uploadedFiles = 0;
+
+        for (let file of files) {
+            if (!file.type.startsWith('image/')) {
+                alert(`${file.name} ليس ملف صورة صحيح`);
+                continue;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                alert(`${file.name} حجم الملف أكبر من 10MB`);
+                continue;
+            }
+
+            try {
+                const url = await uploadFile(file);
+                images.push(url);
+                uploadedFiles++;
+
+                // Update progress
+                const progress = (uploadedFiles / totalFiles) * 100;
+                progressBarInner.style.width = progress + '%';
+                progressBarInner.textContent = Math.round(progress) + '%';
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert(`فشل تحميل ${file.name}`);
+            }
+        }
+
+        // Hide progress bar after 1 second
+        setTimeout(() => {
+            progressBar.style.display = 'none';
+            progressBarInner.style.width = '0%';
+            progressBarInner.textContent = '0%';
+        }, 1000);
+
+        renderGallery();
+        fileInput.value = ''; // Reset input
+    }
+
+    async function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('{{ route('admin.media.upload') }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Upload failed');
+        }
+
+        const data = await response.json();
+        return data.url;
+    }
+
+    function renderGallery() {
+        const gallery = document.getElementById('image-gallery-preview');
+        gallery.innerHTML = '';
+
+        images.forEach((url, index) => {
+            const col = document.createElement('div');
+            col.className = 'col-md-3 col-sm-6';
+            col.innerHTML = `
+                <div class="card h-100 shadow-sm">
+                    <img src="${url}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="صورة ${index + 1}">
+                    <div class="card-body p-2 text-center">
+                        <button type="button" class="btn btn-sm btn-danger w-100" onclick="removeImage(${index})">
+                            <i class="bi bi-trash"></i> حذف
+                        </button>
+                    </div>
+                </div>
+            `;
+            gallery.appendChild(col);
+        });
+
+        // Update hidden input
+        document.getElementById('images-input').value = JSON.stringify(images);
+    }
+
+    window.removeImage = function(index) {
+        if (confirm('هل تريد حذف هذه الصورة؟')) {
+            images.splice(index, 1);
+            renderGallery();
+        }
+    };
+});
+</script>
+@endpush
