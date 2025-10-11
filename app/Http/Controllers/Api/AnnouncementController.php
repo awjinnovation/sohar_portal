@@ -29,12 +29,12 @@ class AnnouncementController extends Controller
     {
         $announcements = Announcement::where('is_active', true)
             ->where(function($query) {
-                $query->whereNull('start_date')
-                    ->orWhere('start_date', '<=', now());
+                $query->whereNull('start_datetime')
+                    ->orWhere('start_datetime', '<=', now());
             })
             ->where(function($query) {
-                $query->whereNull('end_date')
-                    ->orWhere('end_date', '>=', now());
+                $query->whereNull('end_datetime')
+                    ->orWhere('end_datetime', '>=', now());
             })
             ->orderBy('created_at', 'desc')
             ->get();
