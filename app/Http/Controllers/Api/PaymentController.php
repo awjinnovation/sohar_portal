@@ -71,8 +71,8 @@ class PaymentController extends Controller
                     'quantity' => $quantity
                 ]
             ],
-            'success_url' => config('app.url') . '/api/v1/payments/confirm',
-            'cancel_url' => config('app.url') . '/api/v1/payments/cancel',
+            'success_url' => config('app.url') . '/payment/success?transaction_id=' . $transactionId,
+            'cancel_url' => config('app.url') . '/payment/cancel?transaction_id=' . $transactionId,
             'metadata' => [
                 'payment_id' => $payment->id,
                 'user_id' => $user->id

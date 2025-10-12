@@ -9,6 +9,12 @@ Route::get('/', fn() => redirect('/admin/dashboard'));
 Route::get('/privacy-policy', [\App\Http\Controllers\PublicPageController::class, 'privacyPolicy'])->name('public.privacy-policy');
 Route::get('/terms-and-conditions', [\App\Http\Controllers\PublicPageController::class, 'termsAndConditions'])->name('public.terms-and-conditions');
 
+// Payment Pages
+Route::get('/payment/success', [\App\Http\Controllers\Web\PaymentController::class, 'success'])->name('payment.success');
+Route::get('/payment/cancel', [\App\Http\Controllers\Web\PaymentController::class, 'cancel'])->name('payment.cancel');
+Route::get('/payment/download/{transactionId}', [\App\Http\Controllers\Web\PaymentController::class, 'downloadTicket'])->name('payment.download');
+Route::get('/ticket/{ticketId}', [\App\Http\Controllers\Web\PaymentController::class, 'downloadSingleTicket'])->name('payment.ticket.single');
+
 // Add fallback login route for Laravel's default auth middleware
 Route::get('/login', fn() => redirect('/admin/login'))->name('login');
 
