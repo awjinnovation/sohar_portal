@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\LocaleHelper;
 use App\Models\Restaurant;
 use App\Models\UserFavorite;
 use Illuminate\Http\Request;
@@ -29,7 +30,9 @@ class RestaurantController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $restaurants->items(),
+            'data' => $restaurants->map(function($restaurant) {
+                return $this->formatRestaurant($restaurant);
+            }),
             'pagination' => [
                 'current_page' => $restaurants->currentPage(),
                 'last_page' => $restaurants->lastPage(),
@@ -45,8 +48,30 @@ class RestaurantController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $restaurant
+            'data' => $this->formatRestaurant($restaurant)
         ]);
+    }
+
+    private function formatRestaurant($restaurant)
+    {
+        return [
+            'id' => $restaurant->id,
+            'name' => LocaleHelper::getLocalizedField($restaurant, 'name'),
+            'description' => LocaleHelper::getLocalizedField($restaurant, 'description'),
+            'address' => LocaleHelper::getLocalizedField($restaurant, 'address'),
+            'cuisine' => LocaleHelper::getLocalizedField($restaurant, 'cuisine'),
+            'phone' => $restaurant->phone,
+            'email' => $restaurant->email,
+            'website' => $restaurant->website,
+            'latitude' => $restaurant->latitude ? (float) $restaurant->latitude : null,
+            'longitude' => $restaurant->longitude ? (float) $restaurant->longitude : null,
+            'rating' => $restaurant->rating ? (float) $restaurant->rating : null,
+            'price_range' => $restaurant->price_range,
+            'is_vegetarian' => (bool) $restaurant->is_vegetarian,
+            'is_halal' => (bool) $restaurant->is_halal,
+            'is_family_friendly' => (bool) $restaurant->is_family_friendly,
+            'is_active' => (bool) $restaurant->is_active,
+        ];
     }
 
     public function search(Request $request)

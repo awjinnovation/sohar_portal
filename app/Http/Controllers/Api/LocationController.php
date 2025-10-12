@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\MapLocation;
+use App\Helpers\LocaleHelper;
 use Illuminate\Http\Request;
 
 class LocationController extends Controller
@@ -160,17 +161,18 @@ class LocationController extends Controller
     }
 
     /**
-     * Format location data
+     * Format location data with locale support
      */
     private function formatLocation($location)
     {
+        $locale = LocaleHelper::getLocale();
+
         return [
             'id' => $location->id,
-            'name' => $location->name,
-            'name_ar' => $location->name_ar,
+            'name' => LocaleHelper::getLocalizedField($location, 'name'),
+            'description' => LocaleHelper::getLocalizedField($location, 'description'),
             'type' => $location->type,
-            'description' => $location->description,
-            'description_ar' => $location->description_ar,
+            'type_translation' => $location->getTypeTranslation($locale),
             'latitude' => $location->latitude,
             'longitude' => $location->longitude,
             'icon' => $location->icon,
