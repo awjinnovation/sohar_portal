@@ -9,7 +9,7 @@ use App\Models\AppSetting;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\EventTag;
-use App\Models\Location;
+use App\Models\MapLocation;
 use App\Models\Notification;
 use App\Models\OtpVerification;
 use App\Models\Payment;
@@ -36,10 +36,10 @@ class DashboardController extends Controller
                 'restaurants' => Restaurant::count(),
             ],
             'locations' => [
-                'all_locations' => Location::count(),
-                'emergency' => Location::where('type', 'emergency')->count(),
-                'services' => Location::whereIn('type', ['service', 'parking', 'restroom'])->count(),
-                'first_aid' => Location::where('type', 'first_aid')->count(),
+                'all_locations' => MapLocation::count(),
+                'emergency' => MapLocation::where('type', 'emergency')->count(),
+                'services' => MapLocation::whereIn('type', ['parking', 'restroom', 'facilities'])->count(),
+                'first_aid' => MapLocation::where('type', 'first_aid')->count(),
             ],
             'communication' => [
                 'announcements' => Announcement::count(),
