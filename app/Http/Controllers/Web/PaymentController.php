@@ -169,11 +169,14 @@ class PaymentController extends Controller
             $existingTickets = \App\Models\Ticket::where('transaction_id', $payment->transaction_id)->count();
 
             if ($existingTickets === 0) {
+                $bookingDate = $metadata['booking_date'] ?? null;
+
                 for ($i = 0; $i < $quantity; $i++) {
                     \App\Models\Ticket::create([
                         'user_id' => $payment->user_id,
                         'event_id' => $payment->payable_id,
                         'transaction_id' => $payment->transaction_id,
+                        'booking_date' => $bookingDate,
                         'ticket_type' => 'standard',
                         'status' => 'active',
                         'price' => $payment->amount / $quantity,

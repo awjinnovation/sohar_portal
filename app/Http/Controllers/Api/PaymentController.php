@@ -31,7 +31,8 @@ class PaymentController extends Controller
             'payment_type' => 'required|in:ticket,workshop',
             'payable_id' => 'required|integer',
             'quantity' => 'required_if:payment_type,ticket|integer|min:1|max:10',
-            'amount' => 'required|numeric|min:0.1'
+            'amount' => 'required|numeric|min:0.1',
+            'booking_date' => 'required_if:payment_type,ticket|date|date_format:Y-m-d'
         ]);
 
         $user = $request->user();
@@ -49,6 +50,7 @@ class PaymentController extends Controller
             'status' => 'pending',
             'metadata' => [
                 'quantity' => $request->quantity ?? 1,
+                'booking_date' => $request->booking_date,
                 'user_phone' => $user->phone_number
             ]
         ]);
@@ -337,11 +339,14 @@ class PaymentController extends Controller
         $existingTickets = Ticket::where('transaction_id', $payment->transaction_id)->count();
 
         if ($existingTickets === 0) {
+            $bookingDate = $metadata['booking_date'] ?? null;
+
             for ($i = 0; $i < $quantity; $i++) {
                 Ticket::create([
                     'user_id' => $payment->user_id,
                     'event_id' => $payment->payable_id,
                     'transaction_id' => $payment->transaction_id,
+                    'booking_date' => $bookingDate,
                     'ticket_type' => 'standard',
                     'status' => 'active',
                     'price' => $payment->amount / $quantity,
