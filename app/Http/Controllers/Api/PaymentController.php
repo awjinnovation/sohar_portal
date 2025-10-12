@@ -56,6 +56,10 @@ class PaymentController extends Controller
         // Get or create Thawani customer
         $customerId = $this->getOrCreateCustomer($user);
 
+        // Calculate unit price (if amount is total, divide by quantity to get unit price)
+        $quantity = $request->quantity ?? 1;
+        $unitAmount = (int)(($request->amount / $quantity) * 1000); // Convert to baisa
+
         // Prepare Thawani session data
         $sessionData = [
             'client_reference_id' => $transactionId,
@@ -63,8 +67,8 @@ class PaymentController extends Controller
             'products' => [
                 [
                     'name' => $request->payment_type === 'ticket' ? 'Festival Ticket' : 'Workshop Registration',
-                    'unit_amount' => (int)($request->amount * 1000), // Convert to baisa
-                    'quantity' => $request->quantity ?? 1
+                    'unit_amount' => $unitAmount,
+                    'quantity' => $quantity
                 ]
             ],
             'success_url' => config('app.url') . '/api/v1/payments/confirm',
