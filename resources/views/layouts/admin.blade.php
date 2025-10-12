@@ -684,14 +684,12 @@
                                 المطاعم
                             </a>
                         </li>
-                        @if(Route::has('admin.locations.index'))
                         <li class="menu-item">
-                            <a href="{{ route('admin.locations.index') }}" class="menu-link {{ request()->routeIs('admin.locations.*') ? 'active' : '' }}">
-                                <i class="bi bi-geo-alt menu-icon"></i>
-                                المواقع
+                            <a href="{{ route('admin.map-locations.index') }}" class="menu-link {{ request()->routeIs('admin.map-locations.*') ? 'active' : '' }}">
+                                <i class="bi bi-map menu-icon"></i>
+                                مواقع الخريطة
                             </a>
                         </li>
-                        @endif
                     </ul>
                 </div>
 

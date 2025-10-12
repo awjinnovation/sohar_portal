@@ -39,8 +39,8 @@ Route::prefix('admin')->group(function () {
         // Restaurant Management
         Route::resource('restaurants', \App\Http\Controllers\Admin\RestaurantController::class, ['as' => 'admin']);
 
-        // Locations
-        Route::resource('locations', \App\Http\Controllers\Admin\LocationController::class, ['as' => 'admin']);
+        // Map Locations
+        Route::resource('map-locations', \App\Http\Controllers\Admin\MapLocationController::class, ['as' => 'admin']);
 
 
 

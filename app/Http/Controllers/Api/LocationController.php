@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Location;
+use App\Models\MapLocation;
 use Illuminate\Http\Request;
 
 class LocationController extends Controller
@@ -13,7 +13,7 @@ class LocationController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Location::where('is_active', true);
+        $query = MapLocation::where('is_active', true);
 
         // Search by name
         if ($request->has('search')) {
@@ -53,7 +53,7 @@ class LocationController extends Controller
      */
     public function byType($type)
     {
-        $locations = Location::where('type', $type)
+        $locations = MapLocation::where('type', $type)
                              ->where('is_active', true)
                              ->get();
 
@@ -114,7 +114,7 @@ class LocationController extends Controller
         $radius = $request->input('radius', 1); // default 1km
 
         // Haversine formula for distance calculation
-        $locations = Location::selectRaw("
+        $locations = MapLocation::selectRaw("
                 *,
                 (6371 * acos(cos(radians(?))
                 * cos(radians(latitude))
@@ -143,7 +143,7 @@ class LocationController extends Controller
      */
     public function show($id)
     {
-        $location = Location::find($id);
+        $location = MapLocation::find($id);
 
         if (!$location) {
             return response()->json([
@@ -173,10 +173,8 @@ class LocationController extends Controller
             'description_ar' => $location->description_ar,
             'latitude' => $location->latitude,
             'longitude' => $location->longitude,
-            'address' => $location->address,
-            'address_ar' => $location->address_ar,
-            'contact_number' => $location->contact_number,
-            'additional_info' => $location->additional_info,
+            'icon' => $location->icon,
+            'color' => $location->color,
             'is_active' => $location->is_active,
         ];
     }
