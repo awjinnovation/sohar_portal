@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Ticket extends Model
 {
     protected $fillable = [
-        'event_id', 'user_id', 'booking_date', 'quantity', 'ticket_type', 'status', 'price', 'currency',
+        'event_id', 'user_id', 'transaction_id', 'booking_date', 'quantity', 'ticket_type', 'status', 'price', 'currency',
         'holder_name', 'seat_number', 'qr_code', 'purchase_date', 'used_at'
     ];
 
@@ -26,6 +26,11 @@ class Ticket extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function payment()
+    {
+        return $this->belongsTo(Payment::class, 'transaction_id', 'transaction_id');
     }
 
     public function scopeActive($query)

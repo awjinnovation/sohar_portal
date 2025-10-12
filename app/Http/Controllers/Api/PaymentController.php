@@ -333,16 +333,24 @@ class PaymentController extends Controller
         $metadata = $payment->metadata;
         $quantity = $metadata['quantity'] ?? 1;
 
-        for ($i = 0; $i < $quantity; $i++) {
-            Ticket::create([
-                'user_id' => $payment->user_id,
-                'ticket_type' => 'general',
-                'ticket_number' => 'TKT' . strtoupper(Str::random(8)),
-                'qr_code' => Str::uuid(),
-                'purchase_date' => now(),
-                'status' => 'active',
-                'payment_id' => $payment->id
-            ]);
+        // Check if tickets already created
+        $existingTickets = Ticket::where('transaction_id', $payment->transaction_id)->count();
+
+        if ($existingTickets === 0) {
+            for ($i = 0; $i < $quantity; $i++) {
+                Ticket::create([
+                    'user_id' => $payment->user_id,
+                    'event_id' => $payment->payable_id,
+                    'transaction_id' => $payment->transaction_id,
+                    'ticket_type' => 'general',
+                    'status' => 'active',
+                    'price' => $payment->amount / $quantity,
+                    'currency' => $payment->currency,
+                    'holder_name' => $payment->user->name,
+                    'qr_code' => Str::uuid(),
+                    'purchase_date' => now()
+                ]);
+            }
         }
     }
 

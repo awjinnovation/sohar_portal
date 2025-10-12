@@ -133,9 +133,7 @@ class PaymentController extends Controller
             ->where('status', 'completed')
             ->firstOrFail();
 
-        $tickets = $payment->user->tickets()
-            ->where('payment_id', $payment->id)
-            ->get();
+        $tickets = \App\Models\Ticket::where('transaction_id', $transactionId)->get();
 
         return view('payment.download', [
             'payment' => $payment,
@@ -168,18 +166,19 @@ class PaymentController extends Controller
             $quantity = $metadata['quantity'] ?? 1;
 
             // Check if tickets already created
-            $existingTickets = \App\Models\Ticket::where('payment_id', $payment->id)->count();
+            $existingTickets = \App\Models\Ticket::where('transaction_id', $payment->transaction_id)->count();
 
             if ($existingTickets === 0) {
                 for ($i = 0; $i < $quantity; $i++) {
                     \App\Models\Ticket::create([
                         'user_id' => $payment->user_id,
                         'event_id' => $payment->payable_id,
-                        'payment_id' => $payment->id,
+                        'transaction_id' => $payment->transaction_id,
                         'ticket_type' => 'general',
                         'status' => 'active',
                         'price' => $payment->amount / $quantity,
                         'currency' => $payment->currency,
+                        'holder_name' => $payment->user->name,
                         'qr_code' => \Str::uuid(),
                         'purchase_date' => now()
                     ]);
