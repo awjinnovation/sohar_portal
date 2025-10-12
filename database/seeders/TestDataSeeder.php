@@ -7,11 +7,15 @@ use App\Models\Category;
 use App\Models\Event;
 use App\Models\Restaurant;
 use App\Models\Announcement;
+use App\Models\MapLocation;
 
 class TestDataSeeder extends Seeder
 {
     public function run(): void
     {
+        // Seed map locations first
+        $this->call(MapLocationSeeder::class);
+
         // Create Categories
         $categories = [
             [
@@ -53,6 +57,8 @@ class TestDataSeeder extends Seeder
         // Create Events
         $musicCategory = Category::where('name', 'Music & Concerts')->first();
         $culturalCategory = Category::where('name', 'Cultural Events')->first();
+        $soharFort = MapLocation::where('name', 'Sohar Fort')->first();
+        $heritageVillage = MapLocation::where('name', 'Sohar Heritage Village')->first();
 
         $events = [
             [
@@ -65,6 +71,13 @@ class TestDataSeeder extends Seeder
                 'end_time' => now()->addDays(5)->setTime(23, 0),
                 'location' => 'Main Stage, Sohar Fort',
                 'location_ar' => 'المسرح الرئيسي، قلعة صحار',
+                'map_location_id' => $soharFort?->id,
+                'image_url' => 'https://picsum.photos/seed/concert-sohar/800/600',
+                'images' => [
+                    'https://picsum.photos/seed/concert1/800/600',
+                    'https://picsum.photos/seed/concert2/800/600',
+                    'https://picsum.photos/seed/concert3/800/600',
+                ],
                 'price' => 0,
                 'currency' => 'OMR',
                 'available_tickets' => 5000,
@@ -84,6 +97,14 @@ class TestDataSeeder extends Seeder
                 'end_time' => now()->addDays(14)->setTime(22, 0),
                 'location' => 'Heritage Village',
                 'location_ar' => 'القرية التراثية',
+                'map_location_id' => $heritageVillage?->id,
+                'image_url' => 'https://picsum.photos/seed/crafts-heritage/800/600',
+                'images' => [
+                    'https://picsum.photos/seed/crafts1/800/600',
+                    'https://picsum.photos/seed/crafts2/800/600',
+                    'https://picsum.photos/seed/crafts3/800/600',
+                    'https://picsum.photos/seed/crafts4/800/600',
+                ],
                 'price' => 2.000,
                 'currency' => 'OMR',
                 'available_tickets' => 1000,

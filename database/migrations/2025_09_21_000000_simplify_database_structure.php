@@ -209,7 +209,7 @@ return new class extends Migration
             'restaurant_opening_hours',
             'ticket_pricing',
             'emergency_contacts',
-            'map_locations',
+            // 'map_locations', // Keep this table for event locations
             'location_categories',
             'first_aid_stations',
             'health_tips',

@@ -11,7 +11,7 @@ class RestaurantController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Restaurant::with(['images', 'features', 'openingHours']);
+        $query = Restaurant::query();
 
         if ($request->has('cuisine')) {
             $query->where('cuisine', $request->cuisine);
@@ -41,7 +41,7 @@ class RestaurantController extends Controller
 
     public function show($id)
     {
-        $restaurant = Restaurant::with(['images', 'features', 'openingHours'])->findOrFail($id);
+        $restaurant = Restaurant::findOrFail($id);
 
         return response()->json([
             'success' => true,
