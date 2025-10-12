@@ -106,7 +106,7 @@ class PaymentController extends Controller
                     'success' => true,
                     'payment_id' => $payment->id,
                     'session_id' => $sessionInfo['data']['session_id'],
-                    'checkout_url' => $this->thawaniUrl . '/checkout/' . $sessionInfo['data']['session_id'] . '?key=' . $this->publishableKey,
+                    'checkout_url' => $this->thawaniUrl . '/pay/' . $sessionInfo['data']['session_id'] . '?key=' . $this->publishableKey,
                     'expires_at' => $sessionInfo['data']['expires_at'] ?? null
                 ]);
             } else {

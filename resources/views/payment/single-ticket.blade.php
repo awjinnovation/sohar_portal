@@ -6,335 +6,239 @@
     <title>Ticket #{{ $ticket->id }} - Sohar Festival</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
+            background: #f5f5f5;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .ticket-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
         }
         .ticket-container {
-            max-width: 800px;
-            margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            height: 400px;
+        }
+        .ticket-left {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .ticket-right {
+            width: 400px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
             overflow: hidden;
         }
-        .ticket-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            position: relative;
-        }
-        .logo-container {
-            margin-bottom: 20px;
-        }
-        .logo-container img {
-            max-width: 150px;
-            height: auto;
-            filter: brightness(0) invert(1);
-        }
-        .ticket-header::after {
+        .ticket-right::before {
             content: '';
             position: absolute;
-            bottom: -20px;
-            left: 0;
-            right: 0;
-            height: 40px;
+            width: 200%;
+            height: 200%;
+            background: url('{{ asset("sohar_fastival_logo_no_bg.png") }}') center/contain no-repeat;
+            opacity: 0.1;
+            transform: rotate(-15deg);
+        }
+        .logo {
+            max-width: 120px;
+            margin-bottom: 20px;
+        }
+        .ticket-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .qr-container {
             background: white;
-            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-        }
-        .ticket-body {
-            padding: 60px 40px 40px;
-        }
-        .qr-section {
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             text-align: center;
-            margin: 40px 0;
-            padding: 30px;
-            background: #f8f9fa;
-            border-radius: 15px;
+            position: relative;
+            z-index: 1;
         }
-        .qr-code {
-            background: white;
-            border: 5px solid #667eea;
-            border-radius: 15px;
-            display: inline-block;
-            padding: 15px;
-            margin: 0 auto 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        .qr-container h4 {
+            color: #333;
+            margin-top: 15px;
+            font-size: 16px;
         }
-        .qr-code img {
-            display: block;
+        .ticket-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
         }
-        .ticket-details {
-            margin-top: 30px;
+        .info-item {
+            display: flex;
+            flex-direction: column;
         }
-        .detail-row {
+        .info-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .info-value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+        }
+        .ticket-footer {
+            border-top: 2px dashed #e0e0e0;
+            padding-top: 20px;
             display: flex;
             justify-content: space-between;
-            padding: 15px 0;
-            border-bottom: 2px dashed #e0e0e0;
+            align-items: center;
         }
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-        .detail-label {
+        .ticket-id {
+            font-size: 14px;
             color: #666;
+        }
+        .status-badge {
+            background: #2ecc71;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
             font-weight: 600;
+            font-size: 14px;
+        }
+        .actions {
+            margin-top: 20px;
             display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
         }
-        .detail-value {
-            color: #333;
-            font-weight: 700;
-            text-align: right;
-        }
-        .btn-download {
+        .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            padding: 15px 40px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 16px;
             color: white;
-            width: 100%;
-            margin-top: 20px;
-            cursor: pointer;
         }
-        .btn-download:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        .actions-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .btn-print {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
         }
         @media print {
             body {
                 background: white;
                 padding: 0;
             }
-            .actions-row, .alert {
+            .actions {
                 display: none !important;
+            }
+            .ticket-wrapper {
+                max-width: 100%;
             }
             .ticket-container {
                 box-shadow: none;
+                page-break-inside: avoid;
             }
         }
-        .ticket-status {
-            display: inline-block;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 14px;
-            background: #2ecc71;
-            color: white;
-        }
-        .watermark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 80px;
-            font-weight: bold;
-            color: rgba(0,0,0,0.03);
-            pointer-events: none;
-            z-index: 1;
+        @media (max-width: 768px) {
+            .ticket-container {
+                flex-direction: column;
+                height: auto;
+            }
+            .ticket-right {
+                width: 100%;
+                padding: 30px;
+            }
+            .ticket-info {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="ticket-container" id="ticketContainer">
-        <div class="watermark">SOHAR FESTIVAL</div>
-        <div class="ticket-header">
-            <div class="logo-container">
-                <img src="{{ asset('sohar_fastival_logo_no_bg.png') }}" alt="Sohar Festival Logo">
+    <div class="ticket-wrapper">
+        <div class="ticket-container">
+            <div class="ticket-left">
+                <div>
+                    <img src="{{ asset('sohar_fastival_logo_no_bg.png') }}" alt="Logo" class="logo">
+                    <div class="ticket-title">{{ $ticket->event->title ?? 'Event Ticket' }}</div>
+
+                    <div class="ticket-info">
+                        <div class="info-item">
+                            <span class="info-label">Date & Time</span>
+                            <span class="info-value">{{ $ticket->event->start_time->format('d M Y, h:i A') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Holder</span>
+                            <span class="info-value">{{ $ticket->holder_name }}</span>
+                        </div>
+                        @if($ticket->event->mapLocation)
+                        <div class="info-item">
+                            <span class="info-label">Location</span>
+                            <span class="info-value">{{ $ticket->event->mapLocation->name }}</span>
+                        </div>
+                        @endif
+                        <div class="info-item">
+                            <span class="info-label">Type</span>
+                            <span class="info-value text-uppercase">{{ $ticket->ticket_type }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ticket-footer">
+                    <span class="ticket-id">Ticket #{{ $ticket->id }} | {{ $ticket->transaction_id }}</span>
+                    <span class="status-badge">{{ strtoupper($ticket->status) }}</span>
+                </div>
             </div>
-            <h1 class="mt-2 mb-2">Sohar Festival 2025</h1>
-            <div class="ticket-status">VALID TICKET</div>
+
+            <div class="ticket-right">
+                <div class="qr-container">
+                    {!! QrCode::size(250)->generate($ticket->qr_code) !!}
+                    <h4>Scan to Enter</h4>
+                </div>
+            </div>
         </div>
 
-        <div class="ticket-body">
-            <div class="qr-section">
-                <div class="qr-code">
-                    {!! QrCode::size(200)->generate($ticket->qr_code) !!}
-                </div>
-                <h5>Scan this code at the entrance</h5>
-                <p class="text-muted mb-0 font-monospace small">{{ $ticket->qr_code }}</p>
-            </div>
-
-            <div class="ticket-details">
-                @if($ticket->event)
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-calendar-event text-primary"></i>
-                        Event
-                    </span>
-                    <span class="detail-value">{{ $ticket->event->title }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-clock text-primary"></i>
-                        Date & Time
-                    </span>
-                    <span class="detail-value">{{ $ticket->event->start_time->format('d M Y, h:i A') }}</span>
-                </div>
-
-                @if($ticket->event->mapLocation)
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-geo-alt text-primary"></i>
-                        Location
-                    </span>
-                    <span class="detail-value">{{ $ticket->event->mapLocation->name }}</span>
-                </div>
-                @endif
-                @endif
-
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-person text-primary"></i>
-                        Ticket Holder
-                    </span>
-                    <span class="detail-value">{{ $ticket->user->name }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-tag text-primary"></i>
-                        Ticket Type
-                    </span>
-                    <span class="detail-value text-uppercase">{{ $ticket->ticket_type }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-hash text-primary"></i>
-                        Ticket ID
-                    </span>
-                    <span class="detail-value">#{{ $ticket->id }}</span>
-                </div>
-
-                @if($ticket->payment)
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-receipt text-primary"></i>
-                        Transaction ID
-                    </span>
-                    <span class="detail-value">{{ $ticket->payment->transaction_id }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-currency-exchange text-primary"></i>
-                        Price Paid
-                    </span>
-                    <span class="detail-value">{{ $ticket->price }} {{ $ticket->currency }}</span>
-                </div>
-                @endif
-
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-calendar-check text-primary"></i>
-                        Purchase Date
-                    </span>
-                    <span class="detail-value">{{ $ticket->purchase_date->format('d M Y, h:i A') }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="bi bi-check-circle text-primary"></i>
-                        Status
-                    </span>
-                    <span class="detail-value">
-                        <span class="badge bg-success">{{ strtoupper($ticket->status) }}</span>
-                    </span>
-                </div>
-            </div>
-
-            <div class="actions-row">
-                <button class="btn-download btn-print" onclick="window.print()">
-                    <i class="bi bi-printer"></i> Print
-                </button>
-                <button class="btn-download" onclick="downloadTicket()">
-                    <i class="bi bi-download"></i> Download Image
-                </button>
-            </div>
-
-            <div class="alert alert-info mt-4 mb-0">
-                <i class="bi bi-info-circle"></i>
-                <small><strong>Important:</strong> This ticket is valid for one-time entry only. Screenshot or save this ticket for entry at the festival.</small>
-            </div>
+        <div class="actions">
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print Ticket
+            </button>
+            <a href="{{ route('payment.download', $ticket->transaction_id) }}" class="btn btn-secondary">
+                <i class="bi bi-list"></i> View All Tickets
+            </a>
         </div>
     </div>
 
     <script>
-        function downloadTicket() {
-            const ticketContainer = document.getElementById('ticketContainer');
-            const downloadBtn = document.querySelector('.actions-row');
-            const alert = document.querySelector('.alert');
-
-            // Hide buttons and alert temporarily
-            downloadBtn.style.display = 'none';
-            alert.style.display = 'none';
-
-            html2canvas(ticketContainer, {
-                scale: 2,
-                backgroundColor: '#ffffff',
-                logging: false,
-                useCORS: true
-            }).then(canvas => {
-                // Restore buttons and alert
-                downloadBtn.style.display = 'grid';
-                alert.style.display = 'block';
-
-                // Convert to blob and download
-                canvas.toBlob(function(blob) {
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = 'sohar_festival_ticket_{{ $ticket->id }}_{{ $ticket->qr_code }}.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                });
-            });
-        }
-
-        // Track single ticket view
+        // Track ticket view
         if (typeof gtag !== 'undefined') {
             gtag('event', 'ticket_view', {
                 ticket_id: '{{ $ticket->id }}',
                 event_name: '{{ $ticket->event->title ?? "Unknown" }}'
             });
         }
-
-        // Prevent right-click to add some security
-        document.addEventListener('contextmenu', function(e) {
-            if (e.target.closest('.qr-code') || e.target.closest('.ticket-container')) {
-                e.preventDefault();
-                return false;
-            }
-        });
-
-        // Prevent screenshot shortcuts (basic deterrent)
-        document.addEventListener('keyup', function(e) {
-            if (e.key == 'PrintScreen') {
-                navigator.clipboard.writeText('');
-                alert('Screenshots are discouraged. Please use the Download button to save your ticket.');
-            }
-        });
     </script>
 </body>
 </html>
