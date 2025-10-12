@@ -342,7 +342,7 @@ class PaymentController extends Controller
                     'user_id' => $payment->user_id,
                     'event_id' => $payment->payable_id,
                     'transaction_id' => $payment->transaction_id,
-                    'ticket_type' => 'general',
+                    'ticket_type' => 'standard',
                     'status' => 'active',
                     'price' => $payment->amount / $quantity,
                     'currency' => $payment->currency,
