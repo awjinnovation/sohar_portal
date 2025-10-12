@@ -23,71 +23,77 @@ class PaymentController extends Controller
      */
     public function success(Request $request)
     {
-        $sessionId = $request->query('session_id');
         $transactionId = $request->query('transaction_id');
 
-        // Try to find payment by transaction_id first (from URL parameter)
-        $payment = null;
-        if ($transactionId) {
-            $payment = Payment::where('transaction_id', $transactionId)->first();
+        if (!$transactionId) {
+            return view('payment.error', [
+                'message' => 'Transaction ID is required'
+            ]);
         }
 
-        // If session_id provided, verify with Thawani
-        if ($sessionId) {
-            try {
-                // Verify payment with Thawani
+        // Find payment by transaction_id
+        $payment = Payment::where('transaction_id', $transactionId)->first();
+
+        if (!$payment) {
+            return view('payment.error', [
+                'message' => 'Payment not found'
+            ]);
+        }
+
+        try {
+            // If payment already completed, just show success page
+            if ($payment->status === 'completed') {
+                return view('payment.success', [
+                    'payment' => $payment,
+                    'sessionData' => $payment->thawani_response ?? [],
+                    'transactionId' => $payment->transaction_id
+                ]);
+            }
+
+            // Verify payment with Thawani using session_id from payment object
+            if ($payment->thawani_session_id) {
                 $response = Http::withHeaders([
                     'thawani-api-key' => $this->secretKey
-                ])->get($this->thawaniUrl . '/api/v1/checkout/session/' . $sessionId);
+                ])->get($this->thawaniUrl . '/api/v1/checkout/session/' . $payment->thawani_session_id);
 
                 if ($response->successful()) {
                     $sessionData = $response->json()['data'];
 
-                    // Find payment by session ID if not found by transaction_id
-                    if (!$payment) {
-                        $payment = Payment::where('thawani_session_id', $sessionId)->first();
-                    }
+                    // Update payment status if paid
+                    if ($sessionData['payment_status'] === 'paid') {
+                        $payment->update([
+                            'status' => 'completed',
+                            'paid_at' => now(),
+                            'thawani_response' => $sessionData,
+                            'payment_method' => $sessionData['payment_method'] ?? 'card'
+                        ]);
 
-                    if ($payment) {
-                        // Update payment status if paid
-                        if ($sessionData['payment_status'] === 'paid' && $payment->status !== 'completed') {
-                            $payment->update([
-                                'status' => 'completed',
-                                'paid_at' => now(),
-                                'thawani_response' => $sessionData
-                            ]);
-
-                            // Create tickets if needed
-                            $this->processPayment($payment);
-                        }
+                        // Create tickets if needed
+                        $this->processPayment($payment);
 
                         return view('payment.success', [
                             'payment' => $payment,
                             'sessionData' => $sessionData,
                             'transactionId' => $payment->transaction_id
                         ]);
+                    } else {
+                        return view('payment.error', [
+                            'message' => 'Payment was not completed. Status: ' . $sessionData['payment_status']
+                        ]);
                     }
                 }
-            } catch (\Exception $e) {
-                return view('payment.error', [
-                    'message' => 'An error occurred while processing your payment',
-                    'error' => $e->getMessage()
-                ]);
             }
-        }
 
-        // If payment found by transaction_id but no session verification
-        if ($payment && $payment->status === 'completed') {
-            return view('payment.success', [
-                'payment' => $payment,
-                'sessionData' => $payment->thawani_response ?? [],
-                'transactionId' => $payment->transaction_id
+            return view('payment.error', [
+                'message' => 'Unable to verify payment with Thawani'
+            ]);
+
+        } catch (\Exception $e) {
+            return view('payment.error', [
+                'message' => 'An error occurred while processing your payment',
+                'error' => $e->getMessage()
             ]);
         }
-
-        return view('payment.error', [
-            'message' => 'Invalid payment session or payment not found'
-        ]);
     }
 
     /**
@@ -95,20 +101,17 @@ class PaymentController extends Controller
      */
     public function cancel(Request $request)
     {
-        $sessionId = $request->query('session_id');
         $transactionId = $request->query('transaction_id');
 
-        $payment = null;
-
-        // Try to find by transaction_id first
-        if ($transactionId) {
-            $payment = Payment::where('transaction_id', $transactionId)->first();
+        if (!$transactionId) {
+            return view('payment.cancel', [
+                'sessionId' => null,
+                'payment' => null
+            ]);
         }
 
-        // Then try to find by session_id
-        if (!$payment && $sessionId) {
-            $payment = Payment::where('thawani_session_id', $sessionId)->first();
-        }
+        // Find payment by transaction_id
+        $payment = Payment::where('transaction_id', $transactionId)->first();
 
         // Update payment status to cancelled if it's still pending
         if ($payment && $payment->status === 'pending') {
@@ -116,7 +119,7 @@ class PaymentController extends Controller
         }
 
         return view('payment.cancel', [
-            'sessionId' => $sessionId,
+            'sessionId' => $payment->thawani_session_id ?? null,
             'payment' => $payment
         ]);
     }
