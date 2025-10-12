@@ -139,10 +139,10 @@
                             <span class="text-muted"><i class="bi bi-clock"></i> Date</span>
                             <strong>{{ $ticket->event->start_time->format('d M Y, h:i A') }}</strong>
                         </div>
-                        @if($ticket->event->map_location)
+                        @if($ticket->event->mapLocation)
                         <div class="info-item">
                             <span class="text-muted"><i class="bi bi-geo-alt"></i> Location</span>
-                            <strong>{{ $ticket->event->map_location->name }}</strong>
+                            <strong>{{ $ticket->event->mapLocation->name }}</strong>
                         </div>
                         @endif
                         @endif

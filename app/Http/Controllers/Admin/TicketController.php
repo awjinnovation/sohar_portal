@@ -11,7 +11,7 @@ class TicketController extends Controller
 {
     public function index()
     {
-        $tickets = Ticket::with(['event', 'pricingTiers'])->latest()->paginate(20);
+        $tickets = Ticket::with(['event', 'user'])->latest()->paginate(20);
         return view('admin.tickets.index', compact('tickets'));
     }
 
@@ -45,7 +45,7 @@ class TicketController extends Controller
 
     public function show(Ticket $ticket)
     {
-        $ticket->load(['event', 'pricingTiers']);
+        $ticket->load(['event', 'user', 'payment']);
         return view('admin.tickets.show', compact('ticket'));
     }
 

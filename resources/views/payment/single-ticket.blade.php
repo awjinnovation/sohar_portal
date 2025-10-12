@@ -157,13 +157,13 @@
                     <span class="detail-value">{{ $ticket->event->start_time->format('d M Y, h:i A') }}</span>
                 </div>
 
-                @if($ticket->event->map_location)
+                @if($ticket->event->mapLocation)
                 <div class="detail-row">
                     <span class="detail-label">
                         <i class="bi bi-geo-alt text-primary"></i>
                         Location
                     </span>
-                    <span class="detail-value">{{ $ticket->event->map_location->name }}</span>
+                    <span class="detail-value">{{ $ticket->event->mapLocation->name }}</span>
                 </div>
                 @endif
                 @endif

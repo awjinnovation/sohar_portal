@@ -146,7 +146,7 @@ class PaymentController extends Controller
      */
     public function downloadSingleTicket($ticketId)
     {
-        $ticket = \App\Models\Ticket::with(['event.map_location', 'user', 'payment'])
+        $ticket = \App\Models\Ticket::with(['event.mapLocation', 'user', 'payment'])
             ->where('id', $ticketId)
             ->where('status', 'active')
             ->firstOrFail();
