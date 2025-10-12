@@ -9,13 +9,11 @@
                 <label class="form-label fw-semibold">النوع <span class="text-danger">*</span></label>
                 <select name="type" class="form-select @error('type') is-invalid @enderror" required>
                     <option value="">-- اختر النوع --</option>
-                    <option value="entertainment" {{ old('type', isset($mapLocation) ? $mapLocation->type : '') == 'entertainment' ? 'selected' : '' }}>🎪 ترفيه</option>
-                    <option value="food" {{ old('type', isset($mapLocation) ? $mapLocation->type : '') == 'food' ? 'selected' : '' }}>🍽️ طعام</option>
-                    <option value="facilities" {{ old('type', isset($mapLocation) ? $mapLocation->type : '') == 'facilities' ? 'selected' : '' }}>🏢 مرافق</option>
-                    <option value="parking" {{ old('type', isset($mapLocation) ? $mapLocation->type : '') == 'parking' ? 'selected' : '' }}>🅿️ مواقف</option>
-                    <option value="emergency" {{ old('type', isset($mapLocation) ? $mapLocation->type : '') == 'emergency' ? 'selected' : '' }}>🚨 طوارئ</option>
-                    <option value="first_aid" {{ old('type', isset($mapLocation) ? $mapLocation->type : '') == 'first_aid' ? 'selected' : '' }}>⚕️ إسعافات أولية</option>
-                    <option value="restroom" {{ old('type', isset($mapLocation) ? $mapLocation->type : '') == 'restroom' ? 'selected' : '' }}>🚻 دورات مياه</option>
+                    @foreach(\App\Models\MapLocation::getTypes() as $key => $type)
+                        <option value="{{ $key }}" {{ old('type', isset($mapLocation) ? $mapLocation->type : '') == $key ? 'selected' : '' }}>
+                            {{ $type['ar'] }} ({{ $type['en'] }})
+                        </option>
+                    @endforeach
                 </select>
                 @error('type')
                     <div class="invalid-feedback">{{ $message }}</div>

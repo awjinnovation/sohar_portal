@@ -41,7 +41,7 @@ class MapLocationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'name_ar' => 'required|string|max:255',
-            'type' => 'required|in:entertainment,food,facilities,parking,emergency,first_aid,restroom',
+            'type' => 'required|in:stage,restaurant,parking,info,shopping,restroom,facilities,entertainment,food,emergency,first_aid,heritage,fort,beach,venue',
             'description' => 'required|string',
             'description_ar' => 'required|string',
             'latitude' => 'required|numeric|between:-90,90',
@@ -74,7 +74,7 @@ class MapLocationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'name_ar' => 'required|string|max:255',
-            'type' => 'required|in:entertainment,food,facilities,parking,emergency,first_aid,restroom',
+            'type' => 'required|in:stage,restaurant,parking,info,shopping,restroom,facilities,entertainment,food,emergency,first_aid,heritage,fort,beach,venue',
             'description' => 'required|string',
             'description_ar' => 'required|string',
             'latitude' => 'required|numeric|between:-90,90',

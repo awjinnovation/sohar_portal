@@ -35,13 +35,11 @@
                     <label class="form-label fw-semibold">النوع</label>
                     <select name="type" class="form-select">
                         <option value="">الكل</option>
-                        <option value="entertainment" {{ request('type') == 'entertainment' ? 'selected' : '' }}>ترفيه</option>
-                        <option value="food" {{ request('type') == 'food' ? 'selected' : '' }}>طعام</option>
-                        <option value="facilities" {{ request('type') == 'facilities' ? 'selected' : '' }}>مرافق</option>
-                        <option value="parking" {{ request('type') == 'parking' ? 'selected' : '' }}>مواقف</option>
-                        <option value="emergency" {{ request('type') == 'emergency' ? 'selected' : '' }}>طوارئ</option>
-                        <option value="first_aid" {{ request('type') == 'first_aid' ? 'selected' : '' }}>إسعافات</option>
-                        <option value="restroom" {{ request('type') == 'restroom' ? 'selected' : '' }}>دورات مياه</option>
+                        @foreach(\App\Models\MapLocation::getTypes() as $key => $type)
+                            <option value="{{ $key }}" {{ request('type') == $key ? 'selected' : '' }}>
+                                {{ $type['ar'] }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end gap-2">

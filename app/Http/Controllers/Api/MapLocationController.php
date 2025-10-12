@@ -11,10 +11,18 @@ class MapLocationController extends Controller
     public function index()
     {
         $locations = MapLocation::where('is_active', true)->get();
-
+            
         return response()->json([
             'success' => true,
             'data' => $locations
+        ]);
+    }
+
+    public function types()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => MapLocation::getTypes()
         ]);
     }
 

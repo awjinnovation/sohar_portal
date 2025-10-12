@@ -59,12 +59,13 @@ Route::prefix('v1')->group(function () {
     Route::get('/restaurants/{id}', [RestaurantController::class, 'show']);
 
     // Map Locations (for events and venues)
-    Route::get('/map-locations', [\App\Http\Controllers\Api\MapLocationController::class, 'index']);
+    Route::get('/map-locations/types', [\App\Http\Controllers\Api\MapLocationController::class, 'types']);
     Route::get('/map-locations/entertainment', [\App\Http\Controllers\Api\MapLocationController::class, 'entertainment']);
     Route::get('/map-locations/food', [\App\Http\Controllers\Api\MapLocationController::class, 'food']);
     Route::get('/map-locations/facilities', [\App\Http\Controllers\Api\MapLocationController::class, 'facilities']);
     Route::get('/map-locations/parking', [\App\Http\Controllers\Api\MapLocationController::class, 'parking']);
     Route::get('/map-locations/category/{category}', [\App\Http\Controllers\Api\MapLocationController::class, 'byCategory']);
+    Route::get('/map-locations', [\App\Http\Controllers\Api\MapLocationController::class, 'index']);
 
     // Locations (unified locations table)
     Route::get('/locations', [LocationController::class, 'index']);
