@@ -144,10 +144,10 @@ class PaymentController extends Controller
     /**
      * Download single ticket
      */
-    public function downloadSingleTicket($ticketId)
+    public function downloadSingleTicket($qrCode)
     {
         $ticket = \App\Models\Ticket::with(['event.mapLocation', 'user', 'payment'])
-            ->where('id', $ticketId)
+            ->where('qr_code', $qrCode)
             ->where('status', 'active')
             ->firstOrFail();
 

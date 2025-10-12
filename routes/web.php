@@ -13,7 +13,7 @@ Route::get('/terms-and-conditions', [\App\Http\Controllers\PublicPageController:
 Route::get('/payment/success', [\App\Http\Controllers\Web\PaymentController::class, 'success'])->name('payment.success');
 Route::get('/payment/cancel', [\App\Http\Controllers\Web\PaymentController::class, 'cancel'])->name('payment.cancel');
 Route::get('/payment/download/{transactionId}', [\App\Http\Controllers\Web\PaymentController::class, 'downloadTicket'])->name('payment.download');
-Route::get('/ticket/{ticketId}', [\App\Http\Controllers\Web\PaymentController::class, 'downloadSingleTicket'])->name('payment.ticket.single');
+Route::get('/ticket/{qrCode}', [\App\Http\Controllers\Web\PaymentController::class, 'downloadSingleTicket'])->name('payment.ticket.single');
 
 // Add fallback login route for Laravel's default auth middleware
 Route::get('/login', fn() => redirect('/admin/login'))->name('login');

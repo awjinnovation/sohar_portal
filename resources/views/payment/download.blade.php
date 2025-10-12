@@ -169,7 +169,7 @@
                     </div>
 
                     <div class="text-center no-print">
-                        <a href="{{ route('payment.ticket.single', $ticket->id) }}" class="btn-download-ticket" target="_blank">
+                        <a href="{{ route('payment.ticket.single', $ticket->qr_code) }}" class="btn-download-ticket" target="_blank">
                             <i class="bi bi-file-pdf"></i> Download This Ticket
                         </a>
                     </div>

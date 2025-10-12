@@ -6,6 +6,7 @@
     <title>Ticket #{{ $ticket->id }} - Sohar Festival</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @page {
             size: A4 landscape;
@@ -204,11 +205,19 @@
                             <span class="info-label">Type</span>
                             <span class="info-value text-uppercase">{{ $ticket->ticket_type }}</span>
                         </div>
+                        <div class="info-item">
+                            <span class="info-label">Purchase Date</span>
+                            <span class="info-value">{{ $ticket->purchase_date->format('d M Y') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Amount Paid</span>
+                            <span class="info-value">{{ $ticket->price }} {{ $ticket->currency }}</span>
+                        </div>
                     </div>
                 </div>
 
                 <div class="ticket-footer">
-                    <span class="ticket-id">Ticket #{{ $ticket->id }} | {{ $ticket->transaction_id }}</span>
+                    <span class="ticket-id">{{ $ticket->transaction_id }}</span>
                     <span class="status-badge">{{ strtoupper($ticket->status) }}</span>
                 </div>
             </div>
@@ -222,8 +231,8 @@
         </div>
 
         <div class="actions">
-            <button class="btn btn-primary" onclick="window.print()">
-                <i class="bi bi-printer"></i> Print Ticket
+            <button class="btn btn-primary" onclick="downloadTicket()">
+                <i class="bi bi-download"></i> Download Image
             </button>
             <a href="{{ route('payment.download', $ticket->transaction_id) }}" class="btn btn-secondary">
                 <i class="bi bi-list"></i> View All Tickets
@@ -232,6 +241,38 @@
     </div>
 
     <script>
+        function downloadTicket() {
+            const ticketContainer = document.querySelector('.ticket-container');
+            const actions = document.querySelector('.actions');
+
+            // Hide actions temporarily
+            actions.style.display = 'none';
+
+            html2canvas(ticketContainer, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                logging: false,
+                useCORS: true,
+                width: ticketContainer.offsetWidth,
+                height: ticketContainer.offsetHeight
+            }).then(canvas => {
+                // Restore actions
+                actions.style.display = 'flex';
+
+                // Convert to blob and download
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'sohar_festival_ticket_{{ $ticket->id }}.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                });
+            });
+        }
+
         // Track ticket view
         if (typeof gtag !== 'undefined') {
             gtag('event', 'ticket_view', {
