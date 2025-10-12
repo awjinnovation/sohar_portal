@@ -49,7 +49,8 @@ class RestaurantController extends Controller
 
     public function show(Restaurant $restaurant)
     {
-        $restaurant->load(["images", "openingHours", "features"]);
+        // Load media instead of relationships
+        $restaurant->load('media');
         return view("admin.restaurants.show", compact("restaurant"));
     }
 

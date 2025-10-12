@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Restaurant extends Model
+class Restaurant extends Model implements HasMedia
 {
+    use InteractsWithMedia;
     protected $fillable = [
         'name', 'name_ar', 'description', 'description_ar', 'cuisine', 'cuisine_ar',
         'location', 'location_ar', 'latitude', 'longitude', 'rating', 'total_ratings',
@@ -42,5 +45,20 @@ class Restaurant extends Model
     public function scopeOpen($query)
     {
         return $query->where('is_open', true);
+    }
+
+    /**
+     * Register media collections
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('images')
+            ->useFallbackUrl('/images/placeholder-restaurant.jpg')
+            ->useFallbackPath(public_path('/images/placeholder-restaurant.jpg'));
+
+        $this->addMediaCollection('main')
+            ->singleFile()
+            ->useFallbackUrl('/images/placeholder-restaurant.jpg')
+            ->useFallbackPath(public_path('/images/placeholder-restaurant.jpg'));
     }
 }
