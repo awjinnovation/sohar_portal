@@ -18,6 +18,7 @@ class User extends Authenticatable
         'email',
         'password',
         'phone_number',
+        'thawani_customer_id',
         'otp_secret',
         'phone_verified_at',
         'device_token',

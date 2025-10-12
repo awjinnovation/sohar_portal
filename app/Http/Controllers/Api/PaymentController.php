@@ -53,6 +53,9 @@ class PaymentController extends Controller
             ]
         ]);
 
+        // Get or create Thawani customer
+        $customerId = $this->getOrCreateCustomer($user);
+
         // Prepare Thawani session data
         $sessionData = [
             'client_reference_id' => $transactionId,
@@ -69,9 +72,13 @@ class PaymentController extends Controller
             'metadata' => [
                 'payment_id' => $payment->id,
                 'user_id' => $user->id
-            ],
-            'customer_id' => (string)$user->id
+            ]
         ];
+
+        // Only add customer_id if we successfully created/found one
+        if ($customerId) {
+            $sessionData['customer_id'] = $customerId;
+        }
 
         try {
             // Create Thawani checkout session
@@ -351,5 +358,44 @@ class PaymentController extends Controller
         // Increment participant count
         \App\Models\CulturalWorkshop::find($payment->payable_id)
             ->increment('current_participants');
+    }
+
+    /**
+     * Get or create Thawani customer
+     */
+    private function getOrCreateCustomer($user)
+    {
+        // Check if user has thawani_customer_id stored
+        if ($user->thawani_customer_id) {
+            return $user->thawani_customer_id;
+        }
+
+        try {
+            // Create customer in Thawani
+            $customerData = [
+                'client_customer_id' => (string)$user->id,
+                'phone' => $user->phone_number ?? '',
+                'email' => $user->email ?? '',
+            ];
+
+            $response = Http::withHeaders([
+                'thawani-api-key' => $this->secretKey,
+                'Content-Type' => 'application/json'
+            ])->post($this->thawaniUrl . '/api/v1/customers', $customerData);
+
+            if ($response->successful()) {
+                $customerId = $response->json()['data']['id'];
+
+                // Store customer ID in user record
+                $user->update(['thawani_customer_id' => $customerId]);
+
+                return $customerId;
+            }
+        } catch (\Exception $e) {
+            // Log error but continue without customer_id
+            \Log::warning('Failed to create Thawani customer: ' . $e->getMessage());
+        }
+
+        return null;
     }
 }
