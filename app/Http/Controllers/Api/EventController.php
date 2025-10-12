@@ -208,4 +208,58 @@ class EventController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Check ticket availability for a specific date
+     */
+    public function checkAvailability(Request $request, $id)
+    {
+        $request->validate([
+            'date' => 'required|date|date_format:Y-m-d',
+            'quantity' => 'nullable|integer|min:1'
+        ]);
+
+        $event = Event::findOrFail($id);
+        $date = $request->input('date');
+        $quantity = $request->input('quantity', 1);
+
+        $availableTickets = $event->getAvailableTicketsForDate($date);
+        $canBook = $event->canBookForDate($date, $quantity);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'event_id' => $event->id,
+                'event_title' => $event->title,
+                'date' => $date,
+                'requested_quantity' => $quantity,
+                'available_tickets' => $availableTickets,
+                'is_unlimited' => $availableTickets === -1,
+                'is_sold_out' => $availableTickets === 0,
+                'can_book' => $canBook,
+                'total_capacity_per_day' => $event->total_tickets,
+            ]
+        ]);
+    }
+
+    /**
+     * Get daily availability for an event
+     */
+    public function dailyAvailability($id)
+    {
+        $event = Event::findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'event_id' => $event->id,
+                'event_title' => $event->title,
+                'start_date' => $event->start_time->format('Y-m-d'),
+                'end_date' => $event->end_time->format('Y-m-d'),
+                'total_capacity_per_day' => $event->total_tickets,
+                'is_unlimited' => $event->hasUnlimitedTickets(),
+                'availability' => $event->getDailyAvailability()
+            ]
+        ]);
+    }
 }

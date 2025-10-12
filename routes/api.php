@@ -44,6 +44,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/events/featured', [EventController::class, 'featured']);
     Route::get('/events/search', [EventController::class, 'search']);
     Route::get('/events/category/{categoryId}', [EventController::class, 'byCategory']);
+    Route::get('/events/{id}/availability', [EventController::class, 'checkAvailability']);
+    Route::get('/events/{id}/daily-availability', [EventController::class, 'dailyAvailability']);
     Route::get('/events/{id}', [EventController::class, 'show']);
 
     // Categories
