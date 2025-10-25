@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\RestaurantController;
 use App\Http\Controllers\Api\TicketController;
+use App\Http\Controllers\Api\TicketValidationController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\PaymentController;
@@ -145,4 +146,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/favorites/restaurants', [FavoriteController::class, 'restaurants']);
     Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
     Route::delete('/favorites/{id}', [FavoriteController::class, 'destroy']);
+
+    // QR Code Validation - Staff Only (requires special authentication)
+    Route::prefix('tickets')->group(function () {
+        Route::post('/validate', [TicketValidationController::class, 'validate']);
+        Route::post('/{ticket}/mark-used', [TicketValidationController::class, 'markAsUsed']);
+        Route::get('/validation-history', [TicketValidationController::class, 'validationHistory']);
+    });
 });
