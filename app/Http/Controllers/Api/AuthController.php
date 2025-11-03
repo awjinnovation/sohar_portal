@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendOtpSms;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,8 +42,9 @@ class AuthController extends Controller
             'updated_at' => now()
         ]);
 
-        // TODO: Send actual SMS via SMS gateway
-        // For development, we'll return the OTP in response (remove in production)
+        // Send OTP via SMS
+        $message = "Your OTP code for Sohar Festival is: {$otp}. Valid for 5 minutes.";
+        SendOtpSms::dispatch($phoneNumber, $message);
 
         return response()->json([
             'success' => true,
