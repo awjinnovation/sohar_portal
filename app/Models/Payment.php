@@ -12,14 +12,17 @@ class Payment extends Model
     protected $fillable = [
         'user_id',
         'transaction_id',
-        'thawani_session_id',
+        'thawani_session_id', // Keep for backward compatibility
+        'bank_muscat_order_id',
+        'bank_muscat_tid',
         'payment_type',
         'payable_id',
         'payable_type',
         'amount',
         'currency',
         'status',
-        'thawani_response',
+        'thawani_response', // Keep for backward compatibility
+        'bank_muscat_response',
         'metadata',
         'payment_method',
         'paid_at'
@@ -27,6 +30,7 @@ class Payment extends Model
 
     protected $casts = [
         'thawani_response' => 'array',
+        'bank_muscat_response' => 'array',
         'metadata' => 'array',
         'paid_at' => 'datetime'
     ];

@@ -5,25 +5,22 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Ticket;
+use App\Services\BankMuscatPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
 {
-    private $thawaniUrl;
-    private $secretKey;
-    private $publishableKey;
+    private BankMuscatPaymentService $bankMuscatService;
 
-    public function __construct()
+    public function __construct(BankMuscatPaymentService $bankMuscatService)
     {
-        $this->thawaniUrl = config('services.thawani.url', 'https://uatcheckout.thawani.om');
-        $this->secretKey = config('services.thawani.secret_key');
-        $this->publishableKey = config('services.thawani.publishable_key');
+        $this->bankMuscatService = $bankMuscatService;
     }
 
     /**
-     * Initialize payment session with Thawani
+     * Initialize payment session with Bank Muscat
      */
     public function initialize(Request $request)
     {
@@ -55,72 +52,29 @@ class PaymentController extends Controller
             ]
         ]);
 
-        // Get or create Thawani customer
-        $customerId = $this->getOrCreateCustomer($user);
-
-        // Calculate unit price (if amount is total, divide by quantity to get unit price)
-        $quantity = $request->quantity ?? 1;
-        $unitAmount = (int)(($request->amount / $quantity) * 1000); // Convert to baisa
-
-        // Prepare Thawani session data
-        $sessionData = [
-            'client_reference_id' => $transactionId,
-            'mode' => 'payment',
-            'products' => [
-                [
-                    'name' => $request->payment_type === 'ticket' ? 'Festival Ticket' : 'Workshop Registration',
-                    'unit_amount' => $unitAmount,
-                    'quantity' => $quantity
-                ]
-            ],
-            'success_url' => config('app.url') . '/payment/success?transaction_id=' . $transactionId,
-            'cancel_url' => config('app.url') . '/payment/cancel?transaction_id=' . $transactionId,
-            'metadata' => [
-                'payment_id' => $payment->id,
-                'user_id' => $user->id
-            ]
-        ];
-
-        // Only add customer_id if we successfully created/found one
-        if ($customerId) {
-            $sessionData['customer_id'] = $customerId;
-        }
-
         try {
-            // Create Thawani checkout session
-            $response = Http::withHeaders([
-                'thawani-api-key' => $this->secretKey,
-                'Content-Type' => 'application/json'
-            ])->post($this->thawaniUrl . '/api/v1/checkout/session', $sessionData);
+            // Prepare payment data for Bank Muscat
+            $paymentData = $this->bankMuscatService->preparePaymentData($payment);
 
-            if ($response->successful()) {
-                $sessionInfo = $response->json();
+            // Generate encrypted request
+            $encryptedData = $this->bankMuscatService->generateEncryptedRequest($paymentData);
 
-                // Update payment with Thawani session ID
-                $payment->update([
-                    'thawani_session_id' => $sessionInfo['data']['session_id'],
-                    'thawani_response' => $sessionInfo
-                ]);
+            // Store Bank Muscat TID in payment record
+            $payment->update([
+                'bank_muscat_tid' => $paymentData['tid'],
+                'bank_muscat_order_id' => $paymentData['order_id']
+            ]);
 
-                return response()->json([
-                    'success' => true,
-                    'payment_id' => $payment->id,
-                    'session_id' => $sessionInfo['data']['session_id'],
-                    'checkout_url' => $this->thawaniUrl . '/pay/' . $sessionInfo['data']['session_id'] . '?key=' . $this->publishableKey,
-                    'expires_at' => $sessionInfo['data']['expires_at'] ?? null
-                ]);
-            } else {
-                $payment->update([
-                    'status' => 'failed',
-                    'thawani_response' => $response->json()
-                ]);
+            return response()->json([
+                'success' => true,
+                'payment_id' => $payment->id,
+                'transaction_id' => $payment->transaction_id,
+                'encrypted_data' => $encryptedData,
+                'access_code' => $this->bankMuscatService->getAccessCode(),
+                'gateway_url' => $this->bankMuscatService->getGatewayUrl(),
+                'redirect_required' => true
+            ]);
 
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to initialize payment session',
-                    'error' => $response->json()
-                ], 400);
-            }
         } catch (\Exception $e) {
             $payment->update(['status' => 'failed']);
 
@@ -133,66 +87,29 @@ class PaymentController extends Controller
     }
 
     /**
-     * Confirm payment after redirect from Thawani
+     * Confirm payment after redirect from Bank Muscat
      */
     public function confirm(Request $request)
     {
         $request->validate([
-            'session_id' => 'required|string'
+            'transaction_id' => 'required|string'
         ]);
 
         try {
-            // Get session details from Thawani
-            $response = Http::withHeaders([
-                'thawani-api-key' => $this->secretKey
-            ])->get($this->thawaniUrl . '/api/v1/checkout/session/' . $request->session_id);
+            // Find payment by transaction ID
+            $payment = Payment::where('transaction_id', $request->transaction_id)->firstOrFail();
 
-            if ($response->successful()) {
-                $sessionData = $response->json()['data'];
+            // Return current payment status
+            return response()->json([
+                'success' => $payment->status === 'completed',
+                'message' => $payment->status === 'completed' ? 'Payment successful' : 'Payment not completed',
+                'payment_id' => $payment->id,
+                'transaction_id' => $payment->transaction_id,
+                'status' => $payment->status,
+                'amount' => $payment->amount,
+                'currency' => $payment->currency
+            ]);
 
-                // Find payment by session ID
-                $payment = Payment::where('thawani_session_id', $request->session_id)->firstOrFail();
-
-                if ($sessionData['payment_status'] === 'paid') {
-                    // Update payment status
-                    $payment->update([
-                        'status' => 'completed',
-                        'paid_at' => now(),
-                        'thawani_response' => $sessionData,
-                        'payment_method' => $sessionData['payment_method'] ?? 'card'
-                    ]);
-
-                    // Handle post-payment logic based on payment type
-                    if ($payment->payment_type === 'ticket') {
-                        $this->createTickets($payment);
-                    } elseif ($payment->payment_type === 'workshop') {
-                        $this->registerWorkshop($payment);
-                    }
-
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Payment successful',
-                        'payment_id' => $payment->id,
-                        'transaction_id' => $payment->transaction_id
-                    ]);
-                } else {
-                    $payment->update([
-                        'status' => 'failed',
-                        'thawani_response' => $sessionData
-                    ]);
-
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Payment was not completed',
-                        'status' => $sessionData['payment_status']
-                    ], 400);
-                }
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to verify payment session'
-                ], 400);
-            }
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -235,27 +152,27 @@ class PaymentController extends Controller
     /**
      * Check payment status
      */
-    public function checkStatus($sessionId)
+    public function checkStatus($transactionId)
     {
         try {
-            $response = Http::withHeaders([
-                'thawani-api-key' => $this->secretKey
-            ])->get($this->thawaniUrl . '/api/v1/checkout/session/' . $sessionId);
+            $payment = Payment::where('transaction_id', $transactionId)->first();
 
-            if ($response->successful()) {
-                $sessionData = $response->json()['data'];
-
-                return response()->json([
-                    'success' => true,
-                    'payment_status' => $sessionData['payment_status'],
-                    'session_data' => $sessionData
-                ]);
-            } else {
+            if (!$payment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to check payment status'
-                ], 400);
+                    'message' => 'Payment not found'
+                ], 404);
             }
+
+            return response()->json([
+                'success' => true,
+                'payment_status' => $payment->status,
+                'transaction_id' => $payment->transaction_id,
+                'amount' => $payment->amount,
+                'currency' => $payment->currency,
+                'payment_data' => $payment->bank_muscat_response
+            ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -266,42 +183,60 @@ class PaymentController extends Controller
     }
 
     /**
-     * Handle Thawani webhook
+     * Handle Bank Muscat webhook/callback
+     * This is called by Bank Muscat after payment processing
      */
     public function webhook(Request $request)
     {
-        // Verify webhook signature if provided by Thawani
-        // TODO: Implement webhook signature verification
+        try {
+            // Get encrypted response from Bank Muscat
+            $encResponse = $request->input('encResp');
 
-        $data = $request->all();
+            if (!$encResponse) {
+                return response()->json(['success' => false, 'message' => 'No response data'], 400);
+            }
 
-        if (isset($data['session_id']) && isset($data['payment_status'])) {
-            $payment = Payment::where('thawani_session_id', $data['session_id'])->first();
+            // Decrypt the response
+            $responseData = $this->bankMuscatService->decryptResponse($encResponse);
 
-            if ($payment) {
-                if ($data['payment_status'] === 'paid' && $payment->status !== 'completed') {
-                    $payment->update([
-                        'status' => 'completed',
-                        'paid_at' => now(),
-                        'thawani_response' => $data
-                    ]);
+            // Find payment by order_id (transaction_id)
+            $payment = Payment::where('transaction_id', $responseData['order_id'] ?? '')->first();
 
-                    // Handle post-payment logic
-                    if ($payment->payment_type === 'ticket') {
-                        $this->createTickets($payment);
-                    } elseif ($payment->payment_type === 'workshop') {
-                        $this->registerWorkshop($payment);
-                    }
-                } elseif (in_array($data['payment_status'], ['cancelled', 'failed'])) {
-                    $payment->update([
-                        'status' => $data['payment_status'],
-                        'thawani_response' => $data
-                    ]);
+            if (!$payment) {
+                return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
+            }
+
+            // Validate the response
+            if (!$this->bankMuscatService->validateResponse($responseData, $payment)) {
+                return response()->json(['success' => false, 'message' => 'Invalid payment response'], 400);
+            }
+
+            // Get payment status
+            $status = $this->bankMuscatService->getPaymentStatus($responseData);
+
+            // Update payment record
+            $payment->update([
+                'status' => $status,
+                'bank_muscat_response' => $responseData,
+                'payment_method' => $responseData['payment_mode'] ?? 'card',
+                'paid_at' => $status === 'completed' ? now() : null
+            ]);
+
+            // Handle post-payment logic if successful
+            if ($status === 'completed' && $payment->status !== 'completed') {
+                if ($payment->payment_type === 'ticket') {
+                    $this->createTickets($payment);
+                } elseif ($payment->payment_type === 'workshop') {
+                    $this->registerWorkshop($payment);
                 }
             }
-        }
 
-        return response()->json(['success' => true]);
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+            \Log::error('Bank Muscat webhook error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -377,42 +312,4 @@ class PaymentController extends Controller
             ->increment('current_participants');
     }
 
-    /**
-     * Get or create Thawani customer
-     */
-    private function getOrCreateCustomer($user)
-    {
-        // Check if user has thawani_customer_id stored
-        if ($user->thawani_customer_id) {
-            return $user->thawani_customer_id;
-        }
-
-        try {
-            // Create customer in Thawani
-            $customerData = [
-                'client_customer_id' => (string)$user->id,
-                'phone' => $user->phone_number ?? '',
-                'email' => $user->email ?? '',
-            ];
-
-            $response = Http::withHeaders([
-                'thawani-api-key' => $this->secretKey,
-                'Content-Type' => 'application/json'
-            ])->post($this->thawaniUrl . '/api/v1/customers', $customerData);
-
-            if ($response->successful()) {
-                $customerId = $response->json()['data']['id'];
-
-                // Store customer ID in user record
-                $user->update(['thawani_customer_id' => $customerId]);
-
-                return $customerId;
-            }
-        } catch (\Exception $e) {
-            // Log error but continue without customer_id
-            \Log::warning('Failed to create Thawani customer: ' . $e->getMessage());
-        }
-
-        return null;
-    }
 }

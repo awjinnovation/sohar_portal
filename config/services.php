@@ -41,4 +41,10 @@ return [
         'publishable_key' => env('THAWANI_PUBLISHABLE_KEY'),
     ],
 
+    'bank_muscat' => [
+        'gateway_url' => env('BANK_MUSCAT_GATEWAY_URL', 'https://services.bng.gov.om:8989/transaction.do?command=initiateTransaction'),
+        'access_code' => env('BANK_MUSCAT_ACCESS_CODE'),
+        'working_key' => env('BANK_MUSCAT_WORKING_KEY'),
+        'merchant_id' => env('BANK_MUSCAT_MERCHANT_ID'),
+    ]
 ];

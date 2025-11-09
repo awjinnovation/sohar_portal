@@ -31,7 +31,7 @@ class SendOtpSms implements ShouldQueue
         try {
             $url = "https://www.ismartsms.net/iBulkSMS/HttpWS/SMSDynamicAPI.aspx";
             $url .= "?UserId=hus_sm123";
-            $url .= "&Password=L!ilcg40";
+            $url .= "&Password=L2ilcg40";
             $url .= "&Language=0";
             $url .= "&Lang=0";
             $url .= "&FLashSMS=N";

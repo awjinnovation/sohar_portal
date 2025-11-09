@@ -4,91 +4,105 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Services\BankMuscatPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
 class PaymentController extends Controller
 {
-    private $thawaniUrl;
-    private $secretKey;
+    private BankMuscatPaymentService $bankMuscatService;
 
-    public function __construct()
+    public function __construct(BankMuscatPaymentService $bankMuscatService)
     {
-        $this->thawaniUrl = config('services.thawani.url', 'https://uatcheckout.thawani.om');
-        $this->secretKey = config('services.thawani.secret_key');
+        $this->bankMuscatService = $bankMuscatService;
     }
 
     /**
-     * Payment success page - User is redirected here after successful payment
+     * Payment success page - User is redirected here after successful payment from Bank Muscat
      */
     public function success(Request $request)
     {
-        $transactionId = $request->query('transaction_id');
-
-        if (!$transactionId) {
-            return view('payment.error', [
-                'message' => 'Transaction ID is required'
-            ]);
-        }
-
-        // Find payment by transaction_id
-        $payment = Payment::where('transaction_id', $transactionId)->first();
-
-        if (!$payment) {
-            return view('payment.error', [
-                'message' => 'Payment not found'
-            ]);
-        }
-
         try {
-            // If payment already completed, just show success page
-            if ($payment->status === 'completed') {
-                return view('payment.success', [
-                    'payment' => $payment,
-                    'sessionData' => $payment->thawani_response ?? [],
-                    'transactionId' => $payment->transaction_id
-                ]);
-            }
+            // Bank Muscat sends encrypted response
+            $encResponse = $request->input('encResp');
 
-            // Verify payment with Thawani using session_id from payment object
-            if ($payment->thawani_session_id) {
-                $response = Http::withHeaders([
-                    'thawani-api-key' => $this->secretKey
-                ])->get($this->thawaniUrl . '/api/v1/checkout/session/' . $payment->thawani_session_id);
+            if (!$encResponse) {
+                // If no encrypted response, check for transaction_id in query string
+                $transactionId = $request->query('transaction_id');
 
-                if ($response->successful()) {
-                    $sessionData = $response->json()['data'];
+                if ($transactionId) {
+                    $payment = Payment::where('transaction_id', $transactionId)->first();
 
-                    // Update payment status if paid
-                    if ($sessionData['payment_status'] === 'paid') {
-                        $payment->update([
-                            'status' => 'completed',
-                            'paid_at' => now(),
-                            'thawani_response' => $sessionData,
-                            'payment_method' => $sessionData['payment_method'] ?? 'card'
-                        ]);
-
-                        // Create tickets if needed
-                        $this->processPayment($payment);
-
+                    if ($payment && $payment->status === 'completed') {
                         return view('payment.success', [
                             'payment' => $payment,
-                            'sessionData' => $sessionData,
+                            'sessionData' => $payment->bank_muscat_response ?? [],
                             'transactionId' => $payment->transaction_id
-                        ]);
-                    } else {
-                        return view('payment.error', [
-                            'message' => 'Payment was not completed. Status: ' . $sessionData['payment_status']
                         ]);
                     }
                 }
+
+                return view('payment.error', [
+                    'message' => 'No payment response received'
+                ]);
             }
 
-            return view('payment.error', [
-                'message' => 'Unable to verify payment with Thawani'
+            // Decrypt the response from Bank Muscat
+            $responseData = $this->bankMuscatService->decryptResponse($encResponse);
+
+            // Find payment by order_id (transaction_id)
+            $payment = Payment::where('transaction_id', $responseData['order_id'] ?? '')->first();
+
+            if (!$payment) {
+                return view('payment.error', [
+                    'message' => 'Payment not found'
+                ]);
+            }
+
+            // Validate the response
+            if (!$this->bankMuscatService->validateResponse($responseData, $payment)) {
+                return view('payment.error', [
+                    'message' => 'Security Error. Illegal access detected'
+                ]);
+            }
+
+            // Get payment status
+            $status = $this->bankMuscatService->getPaymentStatus($responseData);
+
+            // Update payment record
+            $payment->update([
+                'status' => $status,
+                'bank_muscat_response' => $responseData,
+                'payment_method' => $responseData['payment_mode'] ?? 'card',
+                'paid_at' => $status === 'completed' ? now() : null
             ]);
 
+            // Handle different statuses
+            if ($status === 'completed') {
+                // Create tickets if needed
+                $this->processPayment($payment);
+
+                return view('payment.success', [
+                    'payment' => $payment,
+                    'sessionData' => $responseData,
+                    'transactionId' => $payment->transaction_id
+                ]);
+            } elseif ($status === 'cancelled') {
+                return view('payment.cancel', [
+                    'sessionId' => null,
+                    'payment' => $payment,
+                    'message' => 'Payment has been aborted'
+                ]);
+            } else {
+                return view('payment.error', [
+                    'message' => 'Payment has failed. Please try again.',
+                    'status' => $responseData['order_status'] ?? 'unknown'
+                ]);
+            }
+
         } catch (\Exception $e) {
+            \Log::error('Payment success page error: ' . $e->getMessage());
+
             return view('payment.error', [
                 'message' => 'An error occurred while processing your payment',
                 'error' => $e->getMessage()
@@ -101,27 +115,65 @@ class PaymentController extends Controller
      */
     public function cancel(Request $request)
     {
-        $transactionId = $request->query('transaction_id');
+        try {
+            // Bank Muscat sends encrypted response even for cancellation
+            $encResponse = $request->input('encResp');
 
-        if (!$transactionId) {
+            if ($encResponse) {
+                // Decrypt the response
+                $responseData = $this->bankMuscatService->decryptResponse($encResponse);
+
+                // Find payment by order_id
+                $payment = Payment::where('transaction_id', $responseData['order_id'] ?? '')->first();
+
+                if ($payment) {
+                    $status = $this->bankMuscatService->getPaymentStatus($responseData);
+
+                    $payment->update([
+                        'status' => $status,
+                        'bank_muscat_response' => $responseData
+                    ]);
+
+                    return view('payment.cancel', [
+                        'sessionId' => null,
+                        'payment' => $payment,
+                        'message' => $responseData['status_message'] ?? 'Payment cancelled'
+                    ]);
+                }
+            }
+
+            // Fallback to query parameter
+            $transactionId = $request->query('transaction_id');
+
+            if (!$transactionId) {
+                return view('payment.cancel', [
+                    'sessionId' => null,
+                    'payment' => null
+                ]);
+            }
+
+            // Find payment by transaction_id
+            $payment = Payment::where('transaction_id', $transactionId)->first();
+
+            // Update payment status to cancelled if it's still pending
+            if ($payment && $payment->status === 'pending') {
+                $payment->update(['status' => 'cancelled']);
+            }
+
             return view('payment.cancel', [
                 'sessionId' => null,
-                'payment' => null
+                'payment' => $payment
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Payment cancel page error: ' . $e->getMessage());
+
+            return view('payment.cancel', [
+                'sessionId' => null,
+                'payment' => null,
+                'message' => 'Payment cancelled'
             ]);
         }
-
-        // Find payment by transaction_id
-        $payment = Payment::where('transaction_id', $transactionId)->first();
-
-        // Update payment status to cancelled if it's still pending
-        if ($payment && $payment->status === 'pending') {
-            $payment->update(['status' => 'cancelled']);
-        }
-
-        return view('payment.cancel', [
-            'sessionId' => $payment->thawani_session_id ?? null,
-            'payment' => $payment
-        ]);
     }
 
     /**

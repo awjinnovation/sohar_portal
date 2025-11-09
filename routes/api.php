@@ -103,7 +103,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/terms-and-conditions', [TermsAndConditionController::class, 'index']);
     Route::get('/terms-and-conditions/{type}/{language}', [TermsAndConditionController::class, 'show']);
 
-    // Payment cancel endpoint (called by Thawani)
+    // Payment cancel endpoint (called by Bank Muscat)
     Route::post('/payments/cancel', [PaymentController::class, 'cancel']);
 });
 
@@ -135,9 +135,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Payments
     Route::post('/payments/initialize', [PaymentController::class, 'initialize']);
     Route::post('/payments/confirm', [PaymentController::class, 'confirm']);
-    Route::get('/payments/status/{sessionId}', [PaymentController::class, 'checkStatus']);
+    Route::get('/payments/status/{transactionId}', [PaymentController::class, 'checkStatus']);
     Route::post('/payments/webhook', [PaymentController::class, 'webhook'])->withoutMiddleware('auth:sanctum');
-    Route::get('/payments/history', [PaymentController::class, 'history']);
+    Route::get('/payments/history', [PaymentController::class, 'myTransactions']);
     Route::get('/payments/{id}', [PaymentController::class, 'show']);
 
     // Favorites
