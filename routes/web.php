@@ -10,8 +10,11 @@ Route::get('/privacy-policy', [\App\Http\Controllers\PublicPageController::class
 Route::get('/terms-and-conditions', [\App\Http\Controllers\PublicPageController::class, 'termsAndConditions'])->name('public.terms-and-conditions');
 
 // Payment Pages
+Route::get('/payment/redirect/{transaction_id}', [\App\Http\Controllers\Web\PaymentController::class, 'redirectToGateway'])->name('payment.redirect');
 Route::get('/payment/success', [\App\Http\Controllers\Web\PaymentController::class, 'success'])->name('payment.success');
+Route::post('/payment/success', [\App\Http\Controllers\Web\PaymentController::class, 'success'])->name('payment.success.post');
 Route::get('/payment/cancel', [\App\Http\Controllers\Web\PaymentController::class, 'cancel'])->name('payment.cancel');
+Route::post('/payment/cancel', [\App\Http\Controllers\Web\PaymentController::class, 'cancel'])->name('payment.cancel.post');
 Route::get('/payment/download/{transactionId}', [\App\Http\Controllers\Web\PaymentController::class, 'downloadTicket'])->name('payment.download');
 Route::get('/ticket/{qrCode}', [\App\Http\Controllers\Web\PaymentController::class, 'downloadSingleTicket'])->name('payment.ticket.single');
 

@@ -18,6 +18,36 @@ class PaymentController extends Controller
     }
 
     /**
+     * Redirect to Bank Muscat payment gateway with auto-submit form
+     */
+    public function redirectToGateway($transactionId)
+    {
+        // Find payment by transaction_id
+        $payment = Payment::where('transaction_id', $transactionId)->firstOrFail();
+
+        // Prepare payment data
+        $paymentData = $this->bankMuscatService->preparePaymentData($payment);
+
+        // Generate encrypted request
+        $encryptedData = $this->bankMuscatService->generateEncryptedRequest($paymentData);
+
+        // Update payment with Bank Muscat TID if not already set
+        if (!$payment->bank_muscat_tid) {
+            $payment->update([
+                'bank_muscat_tid' => $paymentData['tid'],
+                'bank_muscat_order_id' => $paymentData['order_id']
+            ]);
+        }
+
+        // Return HTML page with auto-submit form
+        return response()->view('payment.redirect', [
+            'gatewayUrl' => $this->bankMuscatService->getGatewayUrl(),
+            'encRequest' => $encryptedData,
+            'accessCode' => $this->bankMuscatService->getAccessCode()
+        ]);
+    }
+
+    /**
      * Payment success page - User is redirected here after successful payment from Bank Muscat
      */
     public function success(Request $request)

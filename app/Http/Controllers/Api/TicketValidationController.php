@@ -17,7 +17,7 @@ class TicketValidationController extends Controller
      * Validate a QR code and return ticket information
      * POST /api/v1/tickets/validate
      */
-    public function validate(ValidateQrCodeRequest $request): JsonResponse
+    public function validateQrCode(ValidateQrCodeRequest $request): JsonResponse
     {
         $qrCode = $request->input('qr_code');
 

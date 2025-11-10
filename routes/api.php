@@ -149,7 +149,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // QR Code Validation - Staff Only (requires special authentication)
     Route::prefix('tickets')->group(function () {
-        Route::post('/validate', [TicketValidationController::class, 'validate']);
+        Route::post('/validate', [TicketValidationController::class, 'validateQrCode']);
         Route::post('/{ticket}/mark-used', [TicketValidationController::class, 'markAsUsed']);
         Route::get('/validation-history', [TicketValidationController::class, 'validationHistory']);
     });

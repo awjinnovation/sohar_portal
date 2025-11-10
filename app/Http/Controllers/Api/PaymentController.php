@@ -65,10 +65,14 @@ class PaymentController extends Controller
                 'bank_muscat_order_id' => $paymentData['order_id']
             ]);
 
+            // Generate a redirect URL for the payment form page
+            $redirectUrl = route('payment.redirect', ['transaction_id' => $payment->transaction_id]);
+
             return response()->json([
                 'success' => true,
                 'payment_id' => $payment->id,
                 'transaction_id' => $payment->transaction_id,
+                'checkout_url' => $redirectUrl,
                 'encrypted_data' => $encryptedData,
                 'access_code' => $this->bankMuscatService->getAccessCode(),
                 'gateway_url' => $this->bankMuscatService->getGatewayUrl(),
