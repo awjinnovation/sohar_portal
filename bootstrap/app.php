@@ -12,6 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Register custom CSRF middleware to exclude payment callbacks
+        $middleware->validateCsrfTokens(except: [
+            '/payment/success',
+            '/payment/cancel',
+        ]);
+
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
