@@ -80,18 +80,6 @@ Route::prefix('v1')->group(function () {
     Route::get('/locations/nearby', [LocationController::class, 'nearby']);
     Route::get('/locations/{id}', [LocationController::class, 'show']);
 
-    // Heritage & culture (read-only content)
-    Route::get('/heritage-villages', [\App\Http\Controllers\Api\HeritageVillageController::class, 'index']);
-    Route::get('/heritage-villages/{id}', [\App\Http\Controllers\Api\HeritageVillageController::class, 'show']);
-    Route::get('/village-attractions', [\App\Http\Controllers\Api\VillageAttractionController::class, 'index']);
-    Route::get('/village-attractions/{id}', [\App\Http\Controllers\Api\VillageAttractionController::class, 'show']);
-    Route::get('/traditional-activities', [\App\Http\Controllers\Api\TraditionalActivityController::class, 'index']);
-    Route::get('/traditional-activities/{id}', [\App\Http\Controllers\Api\TraditionalActivityController::class, 'show']);
-    Route::get('/craft-demonstrations', [\App\Http\Controllers\Api\CraftDemonstrationController::class, 'index']);
-    Route::get('/craft-demonstrations/{id}', [\App\Http\Controllers\Api\CraftDemonstrationController::class, 'show']);
-    Route::get('/photo-spots', [\App\Http\Controllers\Api\PhotoSpotController::class, 'index']);
-    Route::get('/photo-spots/{id}', [\App\Http\Controllers\Api\PhotoSpotController::class, 'show']);
-
     // Announcements
     Route::get('/announcements', [AnnouncementController::class, 'index']);
     Route::get('/announcements/active', [AnnouncementController::class, 'active']);
@@ -137,7 +125,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/tickets/{id}/transfer', [TicketController::class, 'transfer']);
 
     // Notifications
-    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications', [NotificationController::class, 'myNotifications']);
     Route::get('/notifications/unread', [NotificationController::class, 'unread']);
     Route::post('/notifications/{id}/mark-read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);

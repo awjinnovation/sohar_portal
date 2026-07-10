@@ -10,8 +10,8 @@ class HeritageVillageController extends Controller
 {
     public function index()
     {
-        $villages = HeritageVillage::with(['images', 'attractions'])
-            ->where('status', 'active')
+        $villages = HeritageVillage::where('is_active', true)
+            ->orderByDesc('is_featured')
             ->get();
 
         return response()->json([
@@ -22,8 +22,7 @@ class HeritageVillageController extends Controller
 
     public function show($id)
     {
-        $village = HeritageVillage::with(['images', 'attractions'])
-            ->findOrFail($id);
+        $village = HeritageVillage::findOrFail($id);
 
         return response()->json([
             'success' => true,

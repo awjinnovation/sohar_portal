@@ -101,19 +101,42 @@ class RestaurantController extends Controller
         ]);
     }
 
+    public function featured()
+    {
+        $restaurants = Restaurant::where('is_active', true)
+            ->where('is_featured', true)
+            ->get()
+            ->map(fn ($r) => $this->formatRestaurant($r));
+
+        return response()->json([
+            'success' => true,
+            'data' => $restaurants,
+        ]);
+    }
+
+    public function byCuisine(Request $request)
+    {
+        $cuisine = $request->query('cuisine') ?? $request->query('type');
+
+        $restaurants = Restaurant::where('is_active', true)
+            ->when($cuisine, fn ($q) => $q->where('cuisine', 'like', "%{$cuisine}%"))
+            ->get()
+            ->map(fn ($r) => $this->formatRestaurant($r));
+
+        return response()->json([
+            'success' => true,
+            'data' => $restaurants,
+        ]);
+    }
+
     public function openNow()
     {
-        $currentTime = now()->format('H:i:s');
-        $currentDay = strtolower(now()->format('l'));
-
-        $restaurants = Restaurant::with(['images', 'features', 'openingHours'])
-            ->where('is_active', true)
-            ->whereHas('openingHours', function ($q) use ($currentDay, $currentTime) {
-                $q->where('day_of_week', $currentDay)
-                  ->where('opening_time', '<=', $currentTime)
-                  ->where('closing_time', '>=', $currentTime);
-            })
-            ->get();
+        // Opening hours now live in a JSON column; use the is_open flag which
+        // is maintained alongside it (the per-day relation table was dropped).
+        $restaurants = Restaurant::where('is_active', true)
+            ->where('is_open', true)
+            ->get()
+            ->map(fn ($r) => $this->formatRestaurant($r));
 
         return response()->json([
             'success' => true,

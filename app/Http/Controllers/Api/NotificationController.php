@@ -2,12 +2,30 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\LocaleHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
+    /**
+     * Localize a notification's title/body to the request locale.
+     */
+    private function localize($n): array
+    {
+        return [
+            'id' => $n->id,
+            'title' => LocaleHelper::getLocalizedField($n, 'title'),
+            'body' => LocaleHelper::getLocalizedField($n, 'body'),
+            'type' => $n->type,
+            'data' => $n->data,
+            'is_read' => (bool) $n->is_read,
+            'read_at' => $n->read_at,
+            'created_at' => $n->created_at,
+        ];
+    }
+
     public function public()
     {
         $notifications = Notification::where('is_public', true)
@@ -30,7 +48,7 @@ class NotificationController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $notifications->items(),
+            'data' => collect($notifications->items())->map(fn ($n) => $this->localize($n)),
             'pagination' => [
                 'current_page' => $notifications->currentPage(),
                 'last_page' => $notifications->lastPage(),

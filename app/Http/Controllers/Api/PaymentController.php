@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Ticket;
-use App\Models\TicketPricing;
 use App\Services\BankMuscatPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,14 +38,25 @@ class PaymentController extends Controller
         $user = $request->user();
         $quantity = $request->quantity ?? 1;
         $ticketType = $request->ticket_type ?? 'standard';
+        $bookingDate = $request->booking_date;
 
         // Guard against overselling before we ever send the user to the gateway.
-        $pricing = $this->resolvePricing($request->payable_id, $ticketType);
-        if (!$pricing || $pricing->available_quantity < $quantity) {
+        // Availability is derived per-day from the events table (total_tickets
+        // minus tickets already booked for that date); there is no separate
+        // inventory table in the simplified schema.
+        $event = Event::find($request->payable_id);
+        if (!$event || !$event->is_active) {
             return response()->json([
                 'success' => false,
-                'message' => 'Not enough tickets available for the selected event',
-                'available' => $pricing->available_quantity ?? 0,
+                'message' => 'Event not found or not available',
+            ], 404);
+        }
+
+        if (!$event->canBookForDate($bookingDate, $quantity)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not enough tickets available for the selected date',
+                'available' => max(0, $event->getAvailableTicketsForDate($bookingDate)),
             ], 422);
         }
 
@@ -312,9 +323,10 @@ class PaymentController extends Controller
     /**
      * Create tickets after successful payment.
      *
-     * Runs in a transaction so that ticket creation and the inventory
-     * decrement succeed or fail together, and locks the pricing row to
-     * prevent two concurrent payments from overselling the same stock.
+     * Runs in a transaction for atomicity + idempotency. Availability is
+     * derived from the tickets table (each active ticket carries quantity = 1
+     * for its booking_date), so creating the rows implicitly reduces
+     * availability — there is no separate inventory column to decrement.
      */
     private function createTickets($payment)
     {
@@ -330,23 +342,6 @@ class PaymentController extends Controller
                 return;
             }
 
-            // Decrement inventory under a row lock. Payment has already been
-            // taken, so we always honour the tickets, but we floor at zero and
-            // log if we detect the event was oversold.
-            $pricing = $this->resolvePricing($payment->payable_id, $ticketType, true);
-            if ($pricing) {
-                if ($pricing->available_quantity < $quantity) {
-                    Log::warning('Ticket inventory oversold', [
-                        'transaction_id' => $payment->transaction_id,
-                        'event_id' => $payment->payable_id,
-                        'requested' => $quantity,
-                        'available' => $pricing->available_quantity,
-                    ]);
-                }
-                $pricing->available_quantity = max(0, $pricing->available_quantity - $quantity);
-                $pricing->save();
-            }
-
             for ($i = 0; $i < $quantity; $i++) {
                 // qr_code is intentionally left empty so the Ticket model sets
                 // it to the human-readable ticket_number (TKT-YYYY-NNNNNN),
@@ -356,6 +351,7 @@ class PaymentController extends Controller
                     'event_id' => $payment->payable_id,
                     'transaction_id' => $payment->transaction_id,
                     'booking_date' => $bookingDate,
+                    'quantity' => 1,
                     'ticket_type' => $ticketType,
                     'status' => 'active',
                     'price' => $payment->amount / $quantity,
@@ -365,26 +361,6 @@ class PaymentController extends Controller
                 ]);
             }
         });
-    }
-
-    /**
-     * Resolve the TicketPricing row for an event + ticket type.
-     *
-     * Falls back to the first pricing row for the event when the requested
-     * type is not found. Pass $lock = true to acquire a FOR UPDATE row lock
-     * (only valid inside a transaction).
-     */
-    private function resolvePricing(int $eventId, string $ticketType, bool $lock = false): ?TicketPricing
-    {
-        $base = TicketPricing::where('event_id', $eventId);
-
-        $typed = (clone $base)->where('ticket_type', $ticketType);
-        if ($lock) {
-            $typed->lockForUpdate();
-            $base->lockForUpdate();
-        }
-
-        return $typed->first() ?? $base->first();
     }
 
 }

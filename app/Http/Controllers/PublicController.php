@@ -72,7 +72,8 @@ class PublicController extends Controller
 
     public function eventDetails($id)
     {
-        $event = Event::active()->with(['category', 'ticketPricing'])->findOrFail($id);
+        // ticket_pricing table was dropped; pricing now lives in events.pricing JSON.
+        $event = Event::active()->with(['category'])->findOrFail($id);
 
         // Parse pricing from JSON if stored in pricing field (pricing is already cast to array in model)
         $pricing = $event->pricing ?: [];
