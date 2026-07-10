@@ -46,5 +46,14 @@ return [
         'access_code' => env('BANK_MUSCAT_ACCESS_CODE'),
         'working_key' => env('BANK_MUSCAT_WORKING_KEY'),
         'merchant_id' => env('BANK_MUSCAT_MERCHANT_ID'),
-    ]
+        // Optional comma-separated IP allowlist for the payment webhook.
+        // Leave blank to allow all (e.g. local dev); set in production.
+        'webhook_ips' => array_filter(array_map('trim', explode(',', (string) env('BANK_MUSCAT_WEBHOOK_IPS', '')))),
+    ],
+
+    'ismartsms' => [
+        'url' => env('ISMARTSMS_URL', 'https://www.ismartsms.net/iBulkSMS/HttpWS/SMSDynamicAPI.aspx'),
+        'user_id' => env('ISMARTSMS_USER_ID'),
+        'password' => env('ISMARTSMS_PASSWORD'),
+    ],
 ];

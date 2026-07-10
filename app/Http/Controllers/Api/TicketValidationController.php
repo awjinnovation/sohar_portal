@@ -93,9 +93,14 @@ class TicketValidationController extends Controller
             ], 400);
         }
 
-        // Mark ticket as used
+        // Mark ticket as used. The validator is always the authenticated staff
+        // member (identified by name + id) — never free-text client input — so
+        // the audit trail cannot be spoofed.
+        $staff = $request->user();
+        $validatedBy = $staff ? sprintf('%s (#%d)', $staff->name, $staff->id) : 'unknown';
+
         $ticket->markAsUsed(
-            $request->input('validated_by'),
+            $validatedBy,
             $request->input('location'),
             $request->input('validation_notes')
         );

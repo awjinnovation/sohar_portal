@@ -13,10 +13,14 @@ BANK_MUSCAT_GATEWAY_URL=https://spayuattrns.bmtest.om/transaction.do?command=ini
 # Production Environment (switch to this when going live)
 # BANK_MUSCAT_GATEWAY_URL=https://services.bng.gov.om:8989/transaction.do?command=initiateTransaction
 
-BANK_MUSCAT_ACCESS_CODE=AVSH00MK65AS84HSSA
-BANK_MUSCAT_WORKING_KEY=5EBA54489E7EA0A0CAAA6F166864CB7F
-BANK_MUSCAT_MERCHANT_ID=4158
+BANK_MUSCAT_ACCESS_CODE=<set in .env — do not commit>
+BANK_MUSCAT_WORKING_KEY=<set in .env — do not commit>
+BANK_MUSCAT_MERCHANT_ID=<set in .env — do not commit>
 ```
+
+> ⚠️ **Never commit real credentials.** Keep the access code, working key and
+> merchant id in `.env` only (which is git-ignored). If any real value was ever
+> committed, rotate it with Bank Muscat before going live.
 
 ### Gateway URLs
 - **Test/UAT**: `https://spayuattrns.bmtest.om/transaction.do?command=initiateTransaction`

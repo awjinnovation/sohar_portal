@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Ticket;
+use App\Models\TicketPricing;
 use App\Services\BankMuscatPaymentService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PaymentController extends Controller
@@ -25,14 +27,28 @@ class PaymentController extends Controller
     public function initialize(Request $request)
     {
         $request->validate([
-            'payment_type' => 'required|in:ticket,workshop',
+            'payment_type' => 'required|in:ticket',
             'payable_id' => 'required|integer',
-            'quantity' => 'required_if:payment_type,ticket|integer|min:1|max:10',
+            'quantity' => 'required|integer|min:1|max:10',
+            'ticket_type' => 'nullable|string',
             'amount' => 'required|numeric|min:0.1',
-            'booking_date' => 'required_if:payment_type,ticket|date|date_format:Y-m-d'
+            'booking_date' => 'required|date|date_format:Y-m-d'
         ]);
 
         $user = $request->user();
+        $quantity = $request->quantity ?? 1;
+        $ticketType = $request->ticket_type ?? 'standard';
+
+        // Guard against overselling before we ever send the user to the gateway.
+        $pricing = $this->resolvePricing($request->payable_id, $ticketType);
+        if (!$pricing || $pricing->available_quantity < $quantity) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not enough tickets available for the selected event',
+                'available' => $pricing->available_quantity ?? 0,
+            ], 422);
+        }
+
         $transactionId = 'TXN' . strtoupper(Str::random(10));
 
         // Create payment record
@@ -41,12 +57,13 @@ class PaymentController extends Controller
             'transaction_id' => $transactionId,
             'payment_type' => $request->payment_type,
             'payable_id' => $request->payable_id,
-            'payable_type' => $request->payment_type === 'ticket' ? 'App\\Models\\Ticket' : 'App\\Models\\CulturalWorkshop',
+            'payable_type' => 'App\\Models\\Ticket',
             'amount' => $request->amount,
             'currency' => 'OMR',
             'status' => 'pending',
             'metadata' => [
-                'quantity' => $request->quantity ?? 1,
+                'quantity' => $quantity,
+                'ticket_type' => $ticketType,
                 'booking_date' => $request->booking_date,
                 'user_phone' => $user->phone_number
             ]
@@ -128,20 +145,23 @@ class PaymentController extends Controller
      */
     public function cancel(Request $request)
     {
-        // Get session ID from query parameter or request
-        $sessionId = $request->query('session_id') ?? $request->input('session_id');
+        // Bank Muscat / the app identify the payment by our transaction id
+        // (also accepted as order_id, which mirrors the transaction id).
+        $transactionId = $request->query('transaction_id')
+            ?? $request->input('transaction_id')
+            ?? $request->input('order_id');
 
-        if (!$sessionId) {
+        if (!$transactionId) {
             return response()->json([
                 'success' => false,
-                'message' => 'Session ID is required'
+                'message' => 'Transaction ID is required'
             ], 400);
         }
 
-        // Find payment by session ID
-        $payment = Payment::where('thawani_session_id', $sessionId)->first();
+        // Find payment by transaction id; only pending payments can be cancelled.
+        $payment = Payment::where('transaction_id', $transactionId)->first();
 
-        if ($payment) {
+        if ($payment && $payment->status === 'pending') {
             $payment->update([
                 'status' => 'cancelled'
             ]);
@@ -193,6 +213,15 @@ class PaymentController extends Controller
     public function webhook(Request $request)
     {
         try {
+            // Defense-in-depth: if an IP allowlist is configured, reject callers
+            // that are not on it. The encrypted payload is still the primary
+            // integrity check, but this blocks casual probing of the endpoint.
+            $allowedIps = config('services.bank_muscat.webhook_ips', []);
+            if (!empty($allowedIps) && !in_array($request->ip(), $allowedIps, true)) {
+                Log::warning('Rejected payment webhook from unlisted IP', ['ip' => $request->ip()]);
+                return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+            }
+
             // Get encrypted response from Bank Muscat
             $encResponse = $request->input('encResp');
 
@@ -218,6 +247,10 @@ class PaymentController extends Controller
             // Get payment status
             $status = $this->bankMuscatService->getPaymentStatus($responseData);
 
+            // Capture whether this payment had already been completed BEFORE we
+            // overwrite the record, so we only fulfil tickets once (idempotency).
+            $wasCompleted = $payment->status === 'completed';
+
             // Update payment record
             $payment->update([
                 'status' => $status,
@@ -226,21 +259,31 @@ class PaymentController extends Controller
                 'paid_at' => $status === 'completed' ? now() : null
             ]);
 
-            // Handle post-payment logic if successful
-            if ($status === 'completed' && $payment->status !== 'completed') {
-                if ($payment->payment_type === 'ticket') {
-                    $this->createTickets($payment);
-                } elseif ($payment->payment_type === 'workshop') {
-                    $this->registerWorkshop($payment);
-                }
+            // Handle post-payment logic if successful (first completion only)
+            if ($status === 'completed' && !$wasCompleted && $payment->payment_type === 'ticket') {
+                $this->createTickets($payment);
             }
 
             return response()->json(['success' => true]);
 
         } catch (\Exception $e) {
-            \Log::error('Bank Muscat webhook error: ' . $e->getMessage());
+            Log::error('Bank Muscat webhook error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Get a single payment/transaction belonging to the authenticated user.
+     */
+    public function show(Request $request, $id)
+    {
+        $payment = Payment::where('user_id', $request->user()->id)
+            ->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $payment,
+        ]);
     }
 
     /**
@@ -267,53 +310,81 @@ class PaymentController extends Controller
     }
 
     /**
-     * Create tickets after successful payment
+     * Create tickets after successful payment.
+     *
+     * Runs in a transaction so that ticket creation and the inventory
+     * decrement succeed or fail together, and locks the pricing row to
+     * prevent two concurrent payments from overselling the same stock.
      */
     private function createTickets($payment)
     {
         $metadata = $payment->metadata;
         $quantity = $metadata['quantity'] ?? 1;
+        $ticketType = $metadata['ticket_type'] ?? 'standard';
+        $bookingDate = $metadata['booking_date'] ?? null;
 
-        // Check if tickets already created
-        $existingTickets = Ticket::where('transaction_id', $payment->transaction_id)->count();
+        DB::transaction(function () use ($payment, $quantity, $ticketType, $bookingDate) {
+            // Idempotency: never create tickets twice for the same payment.
+            $existingTickets = Ticket::where('transaction_id', $payment->transaction_id)->count();
+            if ($existingTickets > 0) {
+                return;
+            }
 
-        if ($existingTickets === 0) {
-            $bookingDate = $metadata['booking_date'] ?? null;
+            // Decrement inventory under a row lock. Payment has already been
+            // taken, so we always honour the tickets, but we floor at zero and
+            // log if we detect the event was oversold.
+            $pricing = $this->resolvePricing($payment->payable_id, $ticketType, true);
+            if ($pricing) {
+                if ($pricing->available_quantity < $quantity) {
+                    Log::warning('Ticket inventory oversold', [
+                        'transaction_id' => $payment->transaction_id,
+                        'event_id' => $payment->payable_id,
+                        'requested' => $quantity,
+                        'available' => $pricing->available_quantity,
+                    ]);
+                }
+                $pricing->available_quantity = max(0, $pricing->available_quantity - $quantity);
+                $pricing->save();
+            }
 
             for ($i = 0; $i < $quantity; $i++) {
+                // qr_code is intentionally left empty so the Ticket model sets
+                // it to the human-readable ticket_number (TKT-YYYY-NNNNNN),
+                // which is the format the scanner/validator expects.
                 Ticket::create([
                     'user_id' => $payment->user_id,
                     'event_id' => $payment->payable_id,
                     'transaction_id' => $payment->transaction_id,
                     'booking_date' => $bookingDate,
-                    'ticket_type' => 'standard',
+                    'ticket_type' => $ticketType,
                     'status' => 'active',
                     'price' => $payment->amount / $quantity,
                     'currency' => $payment->currency,
                     'holder_name' => $payment->user->name,
-                    'qr_code' => Str::uuid(),
                     'purchase_date' => now()
                 ]);
             }
-        }
+        });
     }
 
     /**
-     * Register for workshop after successful payment
+     * Resolve the TicketPricing row for an event + ticket type.
+     *
+     * Falls back to the first pricing row for the event when the requested
+     * type is not found. Pass $lock = true to acquire a FOR UPDATE row lock
+     * (only valid inside a transaction).
      */
-    private function registerWorkshop($payment)
+    private function resolvePricing(int $eventId, string $ticketType, bool $lock = false): ?TicketPricing
     {
-        // Create workshop registration
-        \DB::table('workshop_registrations')->insert([
-            'user_id' => $payment->user_id,
-            'workshop_id' => $payment->payable_id,
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+        $base = TicketPricing::where('event_id', $eventId);
 
-        // Increment participant count
-        \App\Models\CulturalWorkshop::find($payment->payable_id)
-            ->increment('current_participants');
+        $typed = (clone $base)->where('ticket_type', $ticketType);
+        if ($lock) {
+            $typed->lockForUpdate();
+            $base->lockForUpdate();
+        }
+
+        return $typed->first() ?? $base->first();
     }
 
 }

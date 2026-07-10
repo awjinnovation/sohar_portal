@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Models\TicketPricing;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -133,6 +134,56 @@ class TicketController extends Controller
             'success' => true,
             'qr_code' => 'data:image/png;base64,' . $qrCode,
             'ticket_number' => $ticket->ticket_number
+        ]);
+    }
+
+    /**
+     * Transfer an active ticket to another registered user by phone number.
+     */
+    public function transfer(Request $request, $id)
+    {
+        $request->validate([
+            'phone_number' => 'required|string',
+            'holder_name' => 'nullable|string|max:255',
+        ]);
+
+        $ticket = Ticket::where('user_id', $request->user()->id)->findOrFail($id);
+
+        // Only active, unused tickets can be transferred.
+        if ($ticket->status !== 'active' || $ticket->check_in_count > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only unused, active tickets can be transferred',
+            ], 400);
+        }
+
+        $recipient = User::where('phone_number', $request->phone_number)->first();
+        if (!$recipient) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No registered user found for this phone number',
+            ], 404);
+        }
+
+        if ($recipient->id === $request->user()->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The ticket already belongs to you',
+            ], 400);
+        }
+
+        $ticket->update([
+            'user_id' => $recipient->id,
+            'holder_name' => $request->holder_name ?? $recipient->name,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ticket transferred successfully',
+            'data' => [
+                'ticket_number' => $ticket->ticket_number,
+                'transferred_to' => $recipient->name,
+            ],
         ]);
     }
 }

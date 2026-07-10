@@ -24,9 +24,15 @@ class AuthController extends Controller
 
         $phoneNumber = $request->phone_number;
 
-        // Generate 6-digit OTP
-        $otp = rand(100000, 999999);
-        $otp = 123456; // For testing purposes, remove in production
+        // Generate 6-digit OTP.
+        // In non-production environments a fixed OTP can be enabled via the
+        // OTP_TEST_CODE env var to ease manual testing; it is NEVER honoured
+        // in production, where a fresh random code is always used.
+        $otp = random_int(100000, 999999);
+        if (!app()->environment('production') && env('OTP_TEST_CODE')) {
+            $otp = (string) env('OTP_TEST_CODE');
+        }
+
         // Delete old OTPs for this phone number
         DB::table('otp_verifications')
             ->where('phone_number', $phoneNumber)
@@ -50,8 +56,8 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'OTP sent successfully',
             'expires_in' => 300, // 5 minutes in seconds
-            // Remove this in production
-            'otp' => app()->environment('local') ? $otp : null
+            // Only exposed in local/testing to aid development, never in production.
+            'otp' => app()->environment('production') ? null : $otp
         ]);
     }
 

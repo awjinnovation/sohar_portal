@@ -29,17 +29,26 @@ class SendOtpSms implements ShouldQueue
     public function handle(): void
     {
         try {
-            $url = "https://www.ismartsms.net/iBulkSMS/HttpWS/SMSDynamicAPI.aspx";
-            $url .= "?UserId=hus_sm123";
-            $url .= "&Password=L2ilcg40";
-            $url .= "&Language=0";
-            $url .= "&Lang=0";
-            $url .= "&FLashSMS=N";
-            $url .= "&PushDateTime=" . date('m/d/Y h:i:s', strtotime(now()));
-            $url .= "&MobileNo=" . $this->phone;
-            $url .= "&Message=" . urlencode($this->message);
+            $userId = config('services.ismartsms.user_id');
+            $password = config('services.ismartsms.password');
 
-            $response = Http::get($url);
+            if (!$userId || !$password) {
+                Log::error('SMS not sent: iSmartSMS credentials are not configured', [
+                    'phone' => $this->phone,
+                ]);
+                return;
+            }
+
+            $response = Http::get(config('services.ismartsms.url'), [
+                'UserId' => $userId,
+                'Password' => $password,
+                'Language' => 0,
+                'Lang' => 0,
+                'FLashSMS' => 'N',
+                'PushDateTime' => date('m/d/Y h:i:s'),
+                'MobileNo' => $this->phone,
+                'Message' => $this->message,
+            ]);
 
             if ($response->successful()) {
                 Log::info('SMS sent successfully', [

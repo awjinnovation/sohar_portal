@@ -35,16 +35,9 @@ class HeritageVillage extends Model
         return $this->hasMany(TraditionalActivity::class, 'heritage_village_id');
     }
 
-    public function culturalWorkshops()
-    {
-        return $this->hasMany(CulturalWorkshop::class, 'heritage_village_id');
-    }
-    
-    // Alias for culturalWorkshops for backward compatibility
-    public function workshops()
-    {
-        return $this->culturalWorkshops();
-    }
+    // NOTE: The cultural-workshops subsystem was removed (tables dropped in the
+    // 2025_09_21 migration). The related model, controller and relationships
+    // were deleted along with it.
 
     public function photoSpots()
     {
