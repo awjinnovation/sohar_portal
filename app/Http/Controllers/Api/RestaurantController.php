@@ -59,14 +59,21 @@ class RestaurantController extends Controller
             'name' => LocaleHelper::getLocalizedField($restaurant, 'name'),
             'description' => LocaleHelper::getLocalizedField($restaurant, 'description'),
             'address' => LocaleHelper::getLocalizedField($restaurant, 'address'),
+            'location' => LocaleHelper::getLocalizedField($restaurant, 'location'),
             'cuisine' => LocaleHelper::getLocalizedField($restaurant, 'cuisine'),
+            'image' => $restaurant->image_url,
+            'image_url' => $restaurant->image_url,
+            'images' => $restaurant->images,
             'phone' => $restaurant->phone,
             'email' => $restaurant->email,
             'website' => $restaurant->website,
             'latitude' => $restaurant->latitude ? (float) $restaurant->latitude : null,
             'longitude' => $restaurant->longitude ? (float) $restaurant->longitude : null,
             'rating' => $restaurant->rating ? (float) $restaurant->rating : null,
+            'total_ratings' => $restaurant->total_ratings,
             'price_range' => $restaurant->price_range,
+            'is_open' => (bool) $restaurant->is_open,
+            'is_featured' => (bool) $restaurant->is_featured,
             'is_vegetarian' => (bool) $restaurant->is_vegetarian,
             'is_halal' => (bool) $restaurant->is_halal,
             'is_family_friendly' => (bool) $restaurant->is_family_friendly,
@@ -80,24 +87,20 @@ class RestaurantController extends Controller
             'query' => 'required|string|min:2'
         ]);
 
-        $restaurants = Restaurant::with(['images', 'features'])
-            ->where('is_active', true)
-            ->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->query . '%')
-                  ->orWhere('description', 'like', '%' . $request->query . '%')
-                  ->orWhere('cuisine', 'like', '%' . $request->query . '%');
+        $q = $request->query('query');
+        $restaurants = Restaurant::where('is_active', true)
+            ->where(function ($builder) use ($q) {
+                $builder->where('name', 'like', "%{$q}%")
+                    ->orWhere('name_ar', 'like', "%{$q}%")
+                    ->orWhere('description', 'like', "%{$q}%")
+                    ->orWhere('cuisine', 'like', "%{$q}%");
             })
-            ->paginate(20);
+            ->get()
+            ->map(fn ($r) => $this->formatRestaurant($r));
 
         return response()->json([
             'success' => true,
-            'data' => $restaurants->items(),
-            'pagination' => [
-                'current_page' => $restaurants->currentPage(),
-                'last_page' => $restaurants->lastPage(),
-                'per_page' => $restaurants->perPage(),
-                'total' => $restaurants->total()
-            ]
+            'data' => $restaurants,
         ]);
     }
 
