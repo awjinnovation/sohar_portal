@@ -2,104 +2,111 @@
 
 @section('title', 'تعديل المستخدم')
 @section('page-title', 'تعديل المستخدم')
+@section('page-subtitle', $user->name)
+@php
+    $pageIcon = 'person-gear';
+    $breadcrumbs = ['المنظمة' => null, 'المستخدمون' => route('admin.users.index'), 'تعديل' => null];
+    $checkedRoles = old('roles', $userRoles);
+    $isSelf = $user->is(auth()->user());
+@endphp
+@section('page-actions')
+    @can('manage users')
+        <a href="{{ route('admin.users.show', $user) }}" class="btn"><i class="bi bi-eye"></i> {{ __('عرض') }}</a>
+    @endcan
+    <a href="{{ route('admin.users.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">تعديل معلومات المستخدم</h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ route('admin.users.update', $user) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        
+    @include('admin.partials.alerts')
+
+    <form action="{{ route('admin.users.update', $user) }}" method="POST">
+        @csrf
+        @method('PUT')
+        <div class="row g-4">
+            <div class="col-xl-8">
+                @if($canEditIdentity)
+                    <x-admin.card title="تعديل معلومات المستخدم" icon="person-vcard" subtitle="الاسم والبريد وكلمة المرور مشتركة في جميع الجهات">
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="name" class="form-label">الاسم الكامل <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                       id="name" name="name" value="{{ old('name', $user->name) }}" required>
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="email" class="form-label">البريد الإلكتروني <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control @error('email') is-invalid @enderror" 
-                                       id="email" name="email" value="{{ old('email', $user->email) }}" dir="ltr" required>
-                                @error('email')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <x-admin.form-field col="col-md-6" name="name" id="name" label="الاسم الكامل" :value="old('name', $user->name)" required autocomplete="name" />
+                            <x-admin.form-field col="col-md-6" name="email" id="email" type="email" label="البريد الإلكتروني" :value="old('email', $user->email)" dir="ltr" autocomplete="email" />
                         </div>
-                        
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="password" class="form-label">كلمة المرور الجديدة</label>
-                                <input type="password" class="form-control @error('password') is-invalid @enderror" 
-                                       id="password" name="password" dir="ltr">
-                                <small class="text-muted">اتركه فارغاً إذا كنت لا تريد تغيير كلمة المرور</small>
-                                @error('password')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            <x-admin.form-field col="col-md-6" name="password" id="password" type="password" label="كلمة المرور الجديدة" dir="ltr"
+                                help="اتركه فارغاً إذا كنت لا تريد تغيير كلمة المرور" autocomplete="new-password" />
+                            <x-admin.form-field col="col-md-6" name="password_confirmation" id="password_confirmation" type="password" label="تأكيد كلمة المرور الجديدة" dir="ltr" autocomplete="new-password" />
+                        </div>
+                    </x-admin.card>
+                @else
+                    <div class="alert alert-warning d-flex gap-3 align-items-start">
+                        <i class="bi bi-shield-lock fs-5"></i>
+                        <div>{{ __('هذا المستخدم مرتبط بجهات أخرى؛ يمكنك تعديل أدواره في هذه الجهة فقط.') }}</div>
+                    </div>
+                    <x-admin.card>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="avatar">{{ mb_substr($user->name, 0, 1) }}</span>
+                            <div style="min-width: 0">
+                                <div class="cell-title">{{ $user->name }}</div>
+                                <div class="cell-sub"><span class="ltr">{{ $user->email ?? $user->phone_number ?? '-' }}</span></div>
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="password_confirmation" class="form-label">تأكيد كلمة المرور الجديدة</label>
-                                <input type="password" class="form-control" 
-                                       id="password_confirmation" name="password_confirmation" dir="ltr">
+                        </div>
+                    </x-admin.card>
+                @endif
+
+                <x-admin.card title="الأدوار" icon="shield-lock" subtitle="تُطبَّق على هذه الجهة فقط؛ أدوار المستخدم في الجهات الأخرى لا تتغير">
+                    <div class="row g-2">
+                        @foreach($roles as $role)
+                            <div class="col-md-6 col-xxl-4">
+                                <label class="toggle-row" for="role_{{ $role->id }}">
+                                    <span class="tr-text">
+                                        <span class="tr-label d-block"><span class="ltr">{{ $role->name }}</span></span>
+                                        <span class="tr-desc d-block">{{ __(':count صلاحية', ['count' => $role->permissions->count()]) }}</span>
+                                    </span>
+                                    <span class="switch">
+                                        <input type="checkbox" role="switch" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}"
+                                               @checked(in_array($role->name, $checkedRoles))>
+                                        <span class="track"></span>
+                                    </span>
+                                </label>
                             </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label class="form-label">الأدوار <span class="text-danger">*</span></label>
-                            <div class="border rounded p-3">
-                                <div class="row">
-                                    @foreach($roles as $role)
-                                    <div class="col-md-4 mb-2">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" 
-                                                   name="roles[]" value="{{ $role->name }}" 
-                                                   id="role_{{ $role->id }}"
-                                                   {{ in_array($role->name, old('roles', $userRoles)) ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="role_{{ $role->id }}">
-                                                {{ ucfirst($role->name) }}
-                                            </label>
-                                        </div>
-                                    </div>
-                                    @endforeach
-                                </div>
+                        @endforeach
+                    </div>
+                    @error('roles')
+                        <div class="invalid-feedback d-block mt-2">{{ $message }}</div>
+                    @enderror
+                </x-admin.card>
+            </div>
+
+            <div class="col-xl-4">
+                <x-admin.card title="معلومات المستخدم" icon="info-circle">
+                    <dl class="dl">
+                        <dt>{{ __('تاريخ التسجيل') }}</dt><dd><span class="num ltr">{{ $user->created_at->format('Y-m-d H:i') }}</span></dd>
+                        <dt>{{ __('آخر تحديث') }}</dt><dd><span class="num ltr">{{ $user->updated_at->format('Y-m-d H:i') }}</span></dd>
+                        <dt>{{ __('الأدوار الحالية') }}</dt>
+                        <dd>
+                            <div class="d-flex flex-wrap gap-1">
+                                @forelse($userRoles as $roleName)
+                                    <span class="pill pill-brand pill-sm">{{ $roleName }}</span>
+                                @empty
+                                    <span class="text-muted">—</span>
+                                @endforelse
                             </div>
-                            @error('roles')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
+                        </dd>
+                    </dl>
+                    @if(auth()->user()->isSuperAdmin())
+                        <div class="mt-3">
+                            <x-admin.toggle name="is_super_admin" id="is_super_admin" :hidden="true" label="مدير المنصة (Super Admin)"
+                                :description="$isSelf ? 'لا يمكنك تغيير هذه الصلاحية لحسابك' : 'صلاحية كاملة على جميع الجهات'"
+                                :checked="old('is_super_admin', $user->is_super_admin)" :disabled="$isSelf" />
                         </div>
-                        
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle ms-2"></i>
-                            <strong>معلومات المستخدم:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>تاريخ التسجيل: {{ $user->created_at->format('Y-m-d H:i') }}</li>
-                                <li>آخر تحديث: {{ $user->updated_at->format('Y-m-d H:i') }}</li>
-                            </ul>
+                    @endif
+                    <x-slot:footer>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1" data-busy><i class="bi bi-check-lg"></i> {{ __('حفظ التغييرات') }}</button>
+                            <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">{{ __('إلغاء') }}</a>
                         </div>
-                        
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
-                                    رجوع
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg"></i>
-                                حفظ التغييرات
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    </x-slot:footer>
+                </x-admin.card>
             </div>
         </div>
-    </div>
-</div>
+    </form>
 @endsection

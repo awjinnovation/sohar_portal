@@ -1,79 +1,32 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Cancelled - Sohar Festival</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .cancel-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 600px;
-            width: 100%;
-            overflow: hidden;
-        }
-        .cancel-header {
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-            color: white;
-            padding: 40px 20px;
-            text-align: center;
-        }
-        .cancel-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-            animation: shake 0.5s ease-out;
-        }
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
-        }
-        .cancel-body {
-            padding: 40px;
-            text-align: center;
-        }
-    </style>
-</head>
-<body>
-    <div class="cancel-card">
-        <div class="cancel-header">
-            <i class="bi bi-x-circle-fill cancel-icon"></i>
-            <h1>Payment Cancelled</h1>
-            <p class="mb-0">Your payment has been cancelled</p>
+@extends('layouts.public')
+@php
+    $lang = \App\View\PublicPage::locale($brand ?? null);
+    $isAr = $lang === 'ar';
+    $t = fn ($ar, $en) => $isAr ? $ar : $en;
+    $failed = ($payment->status ?? null) === 'failed';
+@endphp
+@section('title', $failed ? $t('فشل الدفع', 'Payment failed') : $t('تم إلغاء الدفع', 'Payment cancelled'))
+@section('band-sub', $t('حالة الدفع', 'Payment status'))
+
+@section('content')
+    <section class="s-card">
+        <div class="result">
+            <div class="result-ico {{ $failed ? 'ko' : 'warn' }}"><i class="bi bi-{{ $failed ? 'x-lg' : 'slash-circle' }}"></i></div>
+            <h1>{{ $failed ? $t('فشل الدفع', 'Payment failed') : $t('تم إلغاء الدفع', 'Payment cancelled') }}</h1>
+            <p>{{ $t('لم يتم خصم أي مبلغ من حسابك.', 'No money has been taken from your account.') }}</p>
+            @if($payment)
+                <x-admin.money :minor="(int) $payment->amount_minor" :currency="$payment->currency" size="lg" class="muted" />
+            @endif
         </div>
+        @if($payment)
+            <dl class="rows">
+                <div><dt>{{ $t('رقم العملية', 'Transaction ID') }}</dt><dd class="mono ltr">{{ $payment->transaction_id }}</dd></div>
+                <div><dt>{{ $t('الحالة', 'Status') }}</dt><dd>
+                    <span class="pill {{ $failed ? 'pill-error' : 'pill-neutral' }}">@if($failed)<i class="bi bi-x-circle-fill"></i>@else<span class="dot"></span>@endif{{ $failed ? $t('فشلت', 'Failed') : $t('ملغاة', 'Cancelled') }}</span>
+                </dd></div>
+            </dl>
+        @endif
+    </section>
 
-        <div class="cancel-body">
-            <p class="lead">No charges have been made to your account.</p>
-
-            <div class="alert alert-warning mt-4">
-                <i class="bi bi-info-circle"></i>
-                <small>If you experienced any issues during the payment process, please try again or contact our support team.</small>
-            </div>
-
-            <div class="mt-4">
-                <p class="text-muted">Return to the app to try again</p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Track cancelled payment
-        if (typeof gtag !== 'undefined') {
-            gtag('event', 'checkout_cancelled', {
-                session_id: '{{ $sessionId ?? "unknown" }}'
-            });
-        }
-    </script>
-</body>
-</html>
+    <div class="note info"><i class="bi bi-info-circle"></i><div>{{ $t('إذا واجهت مشكلة أثناء الدفع، عُد إلى التطبيق وحاول مرة أخرى أو تواصل مع الدعم.', 'If something went wrong, go back to the app and try again, or contact support.') }}</div></div>
+@endsection

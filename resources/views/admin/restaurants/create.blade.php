@@ -2,220 +2,77 @@
 
 @section('title', 'إضافة مطعم جديد')
 @section('page-title', 'إضافة مطعم جديد')
+@php
+    $pageIcon = 'cup-hot';
+    $breadcrumbs = ['المحتوى' => null, 'المطاعم والأكشاك' => route('admin.restaurants.index'), 'إضافة مطعم' => null];
+    $priceOptions = ['$' => '$ - اقتصادي', '$$' => '$$ - متوسط', '$$$' => '$$$ - مرتفع', '$$$$' => '$$$$ - فاخر'];
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.restaurants.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">معلومات المطعم الجديد</h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ route('admin.restaurants.store') }}" method="POST">
-                        @csrf
-                        
-                        <ul class="nav nav-tabs mb-4" role="tablist">
-                            <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#arabic-content">
-                                    <i class="bi bi-translate"></i> العربية
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#english-content">
-                                    <i class="bi bi-globe"></i> English
-                                </a>
-                            </li>
-                        </ul>
+    @include('admin.partials.alerts')
 
-                        <div class="tab-content">
-                            <div class="tab-pane fade show active" id="arabic-content">
-                                <div class="mb-3">
-    <label for="name_ar" class="form-label">اسم المطعم <span class="text-danger">*</span></label>
-    <input type="text" class="form-control @error('name_ar') is-invalid @enderror" 
-           id="name_ar" name="name_ar" value="{{ old('name_ar') }}" required>
-    @error('name_ar')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-                                <div class="mb-3">
-    <label for="description_ar" class="form-label">الوصف <span class="text-danger">*</span></label>
-    <textarea class="form-control @error('description_ar') is-invalid @enderror" 
-              id="description_ar" name="description_ar" rows="3" required>{{ old('description_ar') }}</textarea>
-    @error('description_ar')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-                                <div class="mb-3">
-    <label for="cuisine_ar" class="form-label">نوع المطبخ <span class="text-danger">*</span></label>
-    <input type="text" class="form-control @error('cuisine_ar') is-invalid @enderror" 
-           id="cuisine_ar" name="cuisine_ar" value="{{ old('cuisine_ar') }}" required>
-    @error('cuisine_ar')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-                                <div class="mb-3">
-    <label for="location_ar" class="form-label">الموقع <span class="text-danger">*</span></label>
-    <input type="text" class="form-control @error('location_ar') is-invalid @enderror" 
-           id="location_ar" name="location_ar" value="{{ old('location_ar') }}" required>
-    @error('location_ar')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-                            </div>
-
-                            <div class="tab-pane fade" id="english-content">
-                                <div class="mb-3">
-    <label for="name" class="form-label">Restaurant Name <span class="text-danger">*</span></label>
-    <input type="text" class="form-control @error('name') is-invalid @enderror" 
-           id="name" name="name" value="{{ old('name') }}" required>
-    @error('name')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-                                <div class="mb-3">
-    <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-    <textarea class="form-control @error('description') is-invalid @enderror" 
-              id="description" name="description" rows="3" required>{{ old('description') }}</textarea>
-    @error('description')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-                                <div class="mb-3">
-    <label for="cuisine" class="form-label">Cuisine Type <span class="text-danger">*</span></label>
-    <input type="text" class="form-control @error('cuisine') is-invalid @enderror" 
-           id="cuisine" name="cuisine" value="{{ old('cuisine') }}" required>
-    @error('cuisine')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
-                                <div class="mb-3">
-    <label for="location" class="form-label">Location <span class="text-danger">*</span></label>
-    <input type="text" class="form-control @error('location') is-invalid @enderror" 
-           id="location" name="location" value="{{ old('location') }}" required>
-    @error('location')
-        <div class="invalid-feedback">{{ $message }}</div>
-    @enderror
-</div>
+    <form action="{{ route('admin.restaurants.store') }}" method="POST">
+        @csrf
+        <div class="row g-4">
+            <div class="col-xl-8">
+                <x-admin.card title="معلومات المطعم" icon="translate" subtitle="يظهر النص العربي أو الإنجليزي حسب لغة المستخدم">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="ar-tab" data-bs-toggle="tab" data-bs-target="#arabic-content" type="button" role="tab">{{ __('العربية') }}</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="en-tab" data-bs-toggle="tab" data-bs-target="#english-content" type="button" role="tab">English</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content border border-top-0 p-3">
+                        <div class="tab-pane fade show active" id="arabic-content" role="tabpanel">
+                            <x-admin.form-field name="name_ar" id="name_ar" label="اسم المطعم" :value="old('name_ar')" required />
+                            <x-admin.form-field name="description_ar" id="description_ar" label="الوصف" type="textarea" rows="3" :value="old('description_ar')" required />
+                            <div class="row">
+                                <x-admin.form-field col="col-md-6" name="cuisine_ar" id="cuisine_ar" label="نوع المطبخ" :value="old('cuisine_ar')" required />
+                                <x-admin.form-field col="col-md-6" name="location_ar" id="location_ar" label="الموقع" :value="old('location_ar')" required />
                             </div>
                         </div>
-
-                        <hr class="my-4">
-                        
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="price_range" class="form-label">مستوى السعر <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('price_range') is-invalid @enderror" 
-                                            id="price_range" name="price_range" required>
-                                        <option value="">اختر المستوى</option>
-                                        <option value="$">$ - اقتصادي</option>
-                                        <option value="$$">$$ - متوسط</option>
-                                        <option value="$$$">$$$ - مرتفع</option>
-                                        <option value="$$$$">$$$$ - فاخر</option>
-                                    </select>
-                                    @error('price_range')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="phone" class="form-label">الهاتف</label>
-                                    <input type="text" class="form-control @error('phone') is-invalid @enderror" 
-                                           id="phone" name="phone" value="{{ old('phone') }}">
-                                    @error('phone')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="website" class="form-label">الموقع الإلكتروني</label>
-                                    <input type="url" class="form-control @error('website') is-invalid @enderror" 
-                                           id="website" name="website" value="{{ old('website') }}">
-                                    @error('website')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                        <div class="tab-pane fade" id="english-content" role="tabpanel" dir="ltr">
+                            <x-admin.form-field name="name" id="name" label="Restaurant Name" :value="old('name')" required />
+                            <x-admin.form-field name="description" id="description" label="Description" type="textarea" rows="3" :value="old('description')" required />
+                            <div class="row">
+                                <x-admin.form-field col="col-md-6" name="cuisine" id="cuisine" label="Cuisine Type" :value="old('cuisine')" required />
+                                <x-admin.form-field col="col-md-6" name="location" id="location" label="Location" :value="old('location')" required />
                             </div>
                         </div>
+                    </div>
+                </x-admin.card>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="latitude" class="form-label">خط العرض</label>
-                                    <input type="number" step="0.00000001" class="form-control @error('latitude') is-invalid @enderror" 
-                                           id="latitude" name="latitude" value="{{ old('latitude') }}" min="-90" max="90">
-                                    @error('latitude')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="longitude" class="form-label">خط الطول</label>
-                                    <input type="number" step="0.00000001" class="form-control @error('longitude') is-invalid @enderror" 
-                                           id="longitude" name="longitude" value="{{ old('longitude') }}" min="-180" max="180">
-                                    @error('longitude')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                        </div>
+                <x-admin.card title="التواصل والموقع" icon="telephone">
+                    <div class="row">
+                        <x-admin.form-field col="col-md-6" name="phone" id="phone" label="الهاتف" dir="ltr" :value="old('phone')" />
+                        <x-admin.form-field col="col-md-6" name="website" id="website" label="الموقع الإلكتروني" type="url" dir="ltr" placeholder="https://" :value="old('website')" />
+                        <x-admin.form-field col="col-md-6" name="latitude" id="latitude" label="خط العرض" type="number" step="0.00000001" min="-90" max="90" dir="ltr" :value="old('latitude')" />
+                        <x-admin.form-field col="col-md-6" name="longitude" id="longitude" label="خط الطول" type="number" step="0.00000001" min="-180" max="180" dir="ltr" :value="old('longitude')" />
+                    </div>
+                    <x-admin.form-field name="image_url" id="image_url" label="رابط الصورة" type="url" dir="ltr" placeholder="https://" :value="old('image_url')"
+                        help="رابط صورة الغلاف التي تظهر في قائمة المطاعم." />
+                </x-admin.card>
+            </div>
 
-                        <div class="mb-3">
-                            <label for="image_url" class="form-label">رابط الصورة</label>
-                            <input type="url" class="form-control @error('image_url') is-invalid @enderror" 
-                                   id="image_url" name="image_url" value="{{ old('image_url') }}">
-                            @error('image_url')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+            <div class="col-xl-4">
+                <x-admin.card title="الإعدادات" icon="sliders">
+                    <x-admin.form-field name="price_range" id="price_range" label="مستوى السعر" type="select" placeholder="اختر المستوى" :options="$priceOptions" :value="old('price_range')" required />
+                    <x-admin.toggle name="is_active" id="is_active" label="نشط" description="يظهر للزوار في التطبيق" :checked="old('is_active', true)" />
+                    <x-admin.toggle name="is_featured" id="is_featured" label="مميز" description="يظهر في أعلى القائمة" :checked="old('is_featured')" />
+                    <x-admin.toggle name="is_open" id="is_open" label="مفتوح الآن" :checked="old('is_open', true)" />
+                    <x-slot:footer>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1" data-busy><i class="bi bi-check-lg"></i> {{ __('حفظ المطعم') }}</button>
+                            <a href="{{ route('admin.restaurants.index') }}" class="btn btn-secondary">{{ __('إلغاء') }}</a>
                         </div>
-
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
-                                           value="1" {{ old('is_active', true) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_active">
-                                        نشط
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured" 
-                                           value="1" {{ old('is_featured') ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_featured">
-                                        مميز
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="is_open" name="is_open" 
-                                           value="1" {{ old('is_open', true) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_open">
-                                        مفتوح الآن
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('admin.restaurants.index') }}" class="btn btn-secondary">
-                                رجوع
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg"></i>
-                                حفظ المطعم
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    </x-slot:footer>
+                </x-admin.card>
             </div>
         </div>
-    </div>
-</div>
+    </form>
 @endsection

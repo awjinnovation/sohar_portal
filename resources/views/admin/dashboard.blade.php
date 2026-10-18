@@ -2,333 +2,276 @@
 
 @section('title', 'لوحة التحكم')
 @section('page-title', 'لوحة التحكم')
+@php
+    // $stats (counts), $walletStats and $m (KPIs/series/recent) come from
+    // DashboardController → App\Services\Admin\DashboardMetrics.
+    $w = $walletStats ?? [];
+    $user = auth()->user();
+    $hour = (int) now($brand?->setting('tenant.timezone') ?: config('app.timezone'))->format('G');
+    $greeting = $hour < 12 ? __('صباح الخير') : __('مساء الخير');
+    $revDelta = $m['revenue_yesterday'] > 0 ? round(($m['revenue_today'] - $m['revenue_yesterday']) * 100 / $m['revenue_yesterday']) : null;
+    $txIcons = [
+        'topup' => ['cash-coin', 'tone-success'], 'ticket_purchase' => ['ticket-perforated', 'tone-brand'], 'vendor_payment' => ['shop-window', 'tone-neutral'],
+        'deposit_hold' => ['lock', 'tone-info'], 'deposit_release' => ['unlock', 'tone-success'], 'deposit_forfeit' => ['slash-circle', 'tone-neutral'],
+        'refund' => ['arrow-counterclockwise', 'tone-warning'], 'refund_reversal' => ['arrow-clockwise', 'tone-success'],
+        'points_redemption' => ['stars', 'tone-points'], 'adjustment' => ['sliders', 'tone-neutral'],
+    ];
+    $can = fn ($ability) => $user?->can($ability);
+    $link = fn ($route) => \Illuminate\Support\Facades\Route::has($route) ? route($route) : null;
+@endphp
+@section('page-subtitle', __(':greeting، :name — ملخص نشاط :tenant اليوم', ['greeting' => $greeting, 'name' => $user->name ?? '', 'tenant' => $brand?->localizedName(app()->getLocale()) ?? config('app.name')]))
+@section('page-actions')
+    @if($can('manage events') && $link('admin.events.create'))
+        <a href="{{ route('admin.events.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> {{ __('فعالية جديدة') }}</a>
+    @endif
+    @if($can('manage announcements') && $link('admin.announcements.create'))
+        <a href="{{ route('admin.announcements.create') }}" class="btn"><i class="bi bi-megaphone"></i> {{ __('إعلان') }}</a>
+    @endif
+@endsection
 
 @section('content')
-<style>
-    .stats-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        transition: all 0.3s ease;
-    }
+    @include('admin.partials.alerts')
 
-    .stats-card:hover {
-        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        transform: translateY(-2px);
-    }
-
-    .section-title {
-        color: var(--primary-color);
-        font-size: 18px;
-        font-weight: 600;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid var(--primary-color);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 15px;
-    }
-
-    .stat-item {
-        background: var(--bg-light);
-        border-radius: 8px;
-        padding: 15px;
-        transition: all 0.3s ease;
-        border: 1px solid #E5E7EB;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-item:hover {
-        background: white;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        transform: scale(1.02);
-    }
-
-    .stat-item.disabled {
-        opacity: 0.5;
-        background: #F3F4F6;
-    }
-
-    .stat-item.disabled .stat-count {
-        color: #9CA3AF;
-    }
-
-    .stat-label {
-        color: var(--text-secondary);
-        font-size: 13px;
-        margin-bottom: 8px;
-        font-weight: 500;
-    }
-
-    .stat-count {
-        color: var(--primary-color);
-        font-size: 24px;
-        font-weight: 700;
-    }
-
-    .stat-icon {
-        position: absolute;
-        top: 15px;
-        left: 15px;
-        font-size: 20px;
-        color: var(--secondary-color);
-        opacity: 0.3;
-    }
-
-    .main-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-
-    .main-stat-card {
-        background: linear-gradient(135deg, var(--primary-color) 0%, #2563EB 100%);
-        color: white;
-        border-radius: 12px;
-        padding: 25px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .main-stat-card::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        animation: pulse 3s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% { transform: scale(0.8); opacity: 0.5; }
-        50% { transform: scale(1.2); opacity: 0.3; }
-    }
-
-    .main-stat-card .stat-label {
-        color: rgba(255,255,255,0.9);
-        font-size: 14px;
-        margin-bottom: 10px;
-    }
-
-    .main-stat-card .stat-count {
-        color: white;
-        font-size: 32px;
-        font-weight: 700;
-    }
-
-    .main-stat-icon {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        font-size: 48px;
-        color: rgba(255,255,255,0.2);
-    }
-
-    .controller-badge {
-        display: inline-block;
-        padding: 3px 8px;
-        border-radius: 12px;
-        font-size: 10px;
-        font-weight: 600;
-        margin-right: 5px;
-        background: #10B981;
-        color: white;
-    }
-
-    .controller-badge.disabled {
-        background: #EF4444;
-    }
-</style>
-
-<div class="container-fluid p-0">
-    <!-- Main Statistics -->
-    <div class="main-stats">
-        <div class="main-stat-card">
-            <i class="bi bi-people-fill main-stat-icon"></i>
-            <div class="stat-label">المستخدمين</div>
-            <div class="stat-count">{{ number_format($stats['main']['users']) }}</div>
-        </div>
-        <div class="main-stat-card" style="background: linear-gradient(135deg, #F59E0B 0%, #F97316 100%);">
-            <i class="bi bi-calendar-event-fill main-stat-icon"></i>
-            <div class="stat-label">الفعاليات</div>
-            <div class="stat-count">{{ number_format($stats['main']['events']) }}</div>
-        </div>
-        <div class="main-stat-card" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-            <i class="bi bi-ticket-perforated-fill main-stat-icon"></i>
-            <div class="stat-label">التذاكر</div>
-            <div class="stat-count">{{ number_format($stats['main']['tickets']) }}</div>
-        </div>
-        <div class="main-stat-card" style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);">
-            <i class="bi bi-credit-card-fill main-stat-icon"></i>
-            <div class="stat-label">المدفوعات</div>
-            <div class="stat-count">{{ number_format($stats['main']['payments']) }}</div>
-        </div>
+    {{-- KPI tiles --}}
+    <div class="stat-grid">
+        <x-admin.stat-tile label="إيرادات اليوم" :money="$m['revenue_today']" icon="graph-up-arrow" tone="brand" :href="$can('view payments') ? $link('admin.payments.index') : null">
+            @if($revDelta !== null)
+                <span class="pill pill-sm {{ $revDelta >= 0 ? 'pill-success' : 'pill-neutral' }}"><i class="bi bi-arrow-{{ $revDelta >= 0 ? 'up' : 'down' }}"></i><span class="num">{{ abs($revDelta) }}%</span></span> {{ __('مقارنة بالأمس') }}
+            @else
+                {{ __('مدفوعات مكتملة (تذاكر وشحن)') }}
+            @endif
+        </x-admin.stat-tile>
+        <x-admin.stat-tile label="التذاكر المباعة اليوم" :value="$m['tickets_today']" icon="ticket-perforated" tone="accent" :href="$can('manage tickets') ? $link('admin.tickets.index') : null"
+            :hint="__('الإجمالي :total · مستخدمة :used', ['total' => number_format($m['tickets_total']), 'used' => number_format($m['tickets_used'])])" />
+        <x-admin.stat-tile label="شحن المحافظ اليوم" :money="$m['topups_today']" icon="wallet2" tone="success" :href="$can('manage wallets') ? $link('admin.wallets.index') : null"
+            :hint="__(':count عملية شحن', ['count' => number_format($m['topups_count_today'])])" />
+        <x-admin.stat-tile label="طلبات استرداد معلّقة" :value="$m['refunds_pending']" icon="arrow-counterclockwise" :tone="$m['refunds_pending'] ? 'warning' : 'neutral'" :href="$can('manage refunds') ? $link('admin.refund-requests.index') : null">
+            <x-admin.money :minor="$m['refunds_pending_minor']" tone="muted" /> {{ __('بانتظار المراجعة') }}
+        </x-admin.stat-tile>
+        <x-admin.stat-tile label="التجار النشطون" :value="$m['vendors_active']" icon="shop-window" tone="info" :href="$can('manage vendors') ? $link('admin.vendors.index') : null"
+            :hint="__('من أصل :count تاجر', ['count' => number_format($m['vendors_total'])])" />
     </div>
 
-    <!-- Festival & Events -->
-    <div class="stats-card">
-        <h2 class="section-title">
-            <i class="bi bi-calendar3"></i>
-            الفعاليات والمهرجان
-        </h2>
-        <div class="stats-grid">
-            <div class="stat-item {{ !in_array('Event', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-calendar-event stat-icon"></i>
-                <div class="stat-label">الفعاليات</div>
-                <div class="stat-count">{{ number_format($stats['main']['events']) }}</div>
-                @if(!in_array('Event', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
+    <div class="row g-4">
+        {{-- Trends --}}
+        <div class="col-xl-8">
+            <x-admin.card title="النشاط خلال 14 يومًا" icon="bar-chart" subtitle="المدفوعات المكتملة يوميًا بتوقيت المنظمة">
+                <x-slot:actions>
+                    <div class="segmented" role="tablist" data-chart-switch>
+                        <button type="button" class="active" data-series="ticket_revenue">{{ __('مبيعات التذاكر') }}</button>
+                        <button type="button" data-series="topups">{{ __('شحن المحافظ') }}</button>
+                        <button type="button" data-series="tickets">{{ __('عدد التذاكر') }}</button>
+                    </div>
+                </x-slot:actions>
+                <div class="chart-box"><canvas id="trendChart" aria-label="{{ __('رسم بياني للنشاط اليومي') }}" role="img"></canvas></div>
+                <details class="mt-3 small">
+                    <summary class="text-muted">{{ __('عرض البيانات كجدول') }}</summary>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm">
+                            <thead><tr><th>{{ __('اليوم') }}</th><th>{{ __('مبيعات التذاكر') }}</th><th>{{ __('شحن المحافظ') }}</th><th>{{ __('التذاكر') }}</th></tr></thead>
+                            <tbody>
+                            @foreach($m['series']['labels'] as $i => $label)
+                                <tr><td class="num">{{ $label }}</td><td><x-admin.money :minor="$m['series']['ticket_revenue'][$i]" /></td><td><x-admin.money :minor="$m['series']['topups'][$i]" /></td><td class="num">{{ $m['series']['tickets'][$i] }}</td></tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            </x-admin.card>
+        </div>
+
+        {{-- Wallet overview --}}
+        <div class="col-xl-4">
+            <div class="wallet-card mb-4">
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="wc-label">{{ __('إجمالي أرصدة المحافظ') }}</span>
+                    <i class="bi bi-wallet2 fs-5 opacity-75"></i>
+                </div>
+                <div class="mt-1"><x-admin.money :minor="(int) ($w['balances'] ?? 0)" size="hero" /></div>
+                <div class="wc-row">
+                    <span class="wc-chip"><i class="bi bi-lock"></i> {{ __('تأمينات محجوزة') }} <x-admin.money :minor="(int) ($w['held_deposits'] ?? 0)" /></span>
+                    <span class="wc-chip"><i class="bi bi-shop"></i> {{ __('مبيعات التجار اليوم') }} <x-admin.money :minor="(int) ($w['vendor_sales_today'] ?? 0)" /></span>
+                </div>
             </div>
-            <div class="stat-item {{ !in_array('Category', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-tags stat-icon"></i>
-                <div class="stat-label">الفئات</div>
-                <div class="stat-count">{{ number_format($stats['festival']['categories']) }}</div>
-                @if(!in_array('Category', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
+
+            <x-admin.card title="طلبات الاسترداد" icon="arrow-counterclockwise" :flush="true">
+                @if($can('manage refunds') && $link('admin.refund-requests.index'))
+                    <x-slot:actions><a href="{{ route('admin.refund-requests.index') }}" class="btn btn-link btn-sm">{{ __('عرض الكل') }} <i class="bi bi-chevron-left dir-icon"></i></a></x-slot:actions>
                 @endif
-            </div>
-            <div class="stat-item {{ !in_array('EventTag', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-tag stat-icon"></i>
-                <div class="stat-label">وسوم الفعاليات</div>
-                <div class="stat-count">{{ number_format($stats['festival']['event_tags']) }}</div>
-                @if(!in_array('EventTag', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
+                @if($m['pending_refunds_list']->isEmpty())
+                    <x-admin.empty-state icon="check2-circle" title="لا توجد طلبات معلّقة" text="ستظهر هنا طلبات استرداد الرصيد الجديدة." />
+                @else
+                    <ul class="tx-list">
+                        @foreach($m['pending_refunds_list'] as $rr)
+                            <li class="tx-item">
+                                <span class="tx-ico tone-warning"><i class="bi bi-hourglass-split"></i></span>
+                                <div class="tx-main">
+                                    <div class="tx-title">{{ $rr->user?->name ?? ('#'.$rr->user_id) }}</div>
+                                    <div class="tx-sub">{{ \App\Support\AdminLabels::label(\App\Support\AdminLabels::REFUND_METHODS, $rr->method) }} · {{ $rr->created_at?->locale(app()->getLocale())->diffForHumans() }}</div>
+                                </div>
+                                <div class="tx-amt">
+                                    <x-admin.money :minor="(int) $rr->amount_minor" />
+                                    @if($can('manage refunds'))
+                                        <div><a href="{{ route('admin.refund-requests.show', $rr) }}" class="small">{{ __('مراجعة') }}</a></div>
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
                 @endif
-            </div>
-            <div class="stat-item {{ !in_array('Restaurant', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-shop stat-icon"></i>
-                <div class="stat-label">المطاعم</div>
-                <div class="stat-count">{{ number_format($stats['festival']['restaurants']) }}</div>
-                @if(!in_array('Restaurant', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
+            </x-admin.card>
+        </div>
+
+        {{-- Recent wallet activity --}}
+        <div class="col-xl-7">
+            <x-admin.card title="أحدث حركات المحافظ" icon="clock-history" :flush="true">
+                @if($can('manage wallets') && $link('admin.wallets.index'))
+                    <x-slot:actions><a href="{{ route('admin.wallets.index') }}" class="btn btn-link btn-sm">{{ __('كل المحافظ') }} <i class="bi bi-chevron-left dir-icon"></i></a></x-slot:actions>
                 @endif
-            </div>
+                @if($m['recent']->isEmpty())
+                    <x-admin.empty-state icon="receipt" title="لا توجد حركات بعد" text="ستظهر عمليات الشحن والدفع والتأمينات هنا فور حدوثها." />
+                @else
+                    <ul class="tx-list">
+                        @foreach($m['recent'] as $tx)
+                            @php
+                                [$txIcon, $txTone] = $txIcons[$tx->type] ?? ['arrow-left-right', 'tone-neutral'];
+                                $bucket = data_get($tx->meta, 'bucket');
+                            @endphp
+                            <li class="tx-item">
+                                <span class="tx-ico {{ $txTone }}"><i class="bi bi-{{ $txIcon }}"></i></span>
+                                <div class="tx-main">
+                                    <div class="tx-title">
+                                        {{ \App\Support\AdminLabels::label(\App\Support\AdminLabels::TX_TYPES, $tx->type) }}
+                                        @if($bucket === 'promo')<span class="pill pill-sm pill-points">{{ __('ترويجي') }}</span>@endif
+                                    </div>
+                                    <div class="tx-sub">
+                                        {{ $tx->user?->name ?? '—' }}
+                                        @if($tx->vendor) · {{ \App\View\Fmt::t($tx->vendor->name, app()->getLocale()) }} @endif
+                                        · {{ $tx->created_at?->locale(app()->getLocale())->diffForHumans() }}
+                                    </div>
+                                </div>
+                                <div class="tx-amt">
+                                    <x-admin.money :minor="(int) $tx->amount_minor" :direction="$tx->direction === 'credit' ? 'credit' : 'debit'" />
+                                    @if($tx->status !== 'completed')
+                                        <div><x-admin.status-pill domain="tx" :status="$tx->status" size="sm" /></div>
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </x-admin.card>
+        </div>
+
+        {{-- Recent payments + content shortcuts --}}
+        <div class="col-xl-5">
+            @if($can('view payments'))
+                <x-admin.card title="أحدث المدفوعات" icon="credit-card-2-front" :flush="true">
+                    @if($link('admin.payments.index'))
+                        <x-slot:actions><a href="{{ route('admin.payments.index') }}" class="btn btn-link btn-sm">{{ __('عرض الكل') }} <i class="bi bi-chevron-left dir-icon"></i></a></x-slot:actions>
+                    @endif
+                    @if($m['recent_payments']->isEmpty())
+                        <x-admin.empty-state icon="credit-card" title="لا توجد مدفوعات" />
+                    @else
+                        <ul class="tx-list">
+                            @foreach($m['recent_payments'] as $p)
+                                <li class="tx-item">
+                                    <span class="tx-ico {{ $p->payment_type === 'topup' ? 'tone-success' : 'tone-brand' }}"><i class="bi bi-{{ $p->payment_type === 'topup' ? 'cash-coin' : 'ticket-perforated' }}"></i></span>
+                                    <div class="tx-main">
+                                        <div class="tx-title">{{ \App\Support\AdminLabels::label(\App\Support\AdminLabels::PAYMENT_TYPES, $p->payment_type) }} · {{ $p->user?->name ?? '—' }}</div>
+                                        <div class="tx-sub"><span class="ltr">{{ $p->transaction_id }}</span></div>
+                                    </div>
+                                    <div class="tx-amt">
+                                        <x-admin.money :minor="(int) $p->amount_minor" />
+                                        <div><x-admin.status-pill domain="payment" :status="$p->status" size="sm" /></div>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </x-admin.card>
+            @endif
+
+            <x-admin.card title="المحتوى" icon="collection">
+                <div class="quick-links">
+                    @foreach([
+                        ['admin.events.index', 'calendar-event', 'الفعاليات', $stats['main']['events'] ?? 0, 'manage events'],
+                        ['admin.categories.index', 'grid', 'الفئات', $stats['catalog']['categories'], 'manage events'],
+                        ['admin.event-tags.index', 'tags', 'الوسوم', $stats['catalog']['event_tags'], 'manage events'],
+                        ['admin.restaurants.index', 'cup-hot', 'المطاعم', $stats['catalog']['restaurants'], 'manage restaurants'],
+                        ['admin.map-locations.index', 'geo-alt', 'مواقع الخريطة', $stats['locations']['all_locations'] ?? 0, 'manage locations'],
+                        ['admin.announcements.index', 'megaphone', 'الإعلانات', $stats['communication']['announcements'] ?? 0, 'manage announcements'],
+                        ['admin.users.index', 'people', 'المستخدمون', $stats['main']['users'] ?? 0, 'manage users'],
+                    ] as [$qlRoute, $qlIcon, $qlLabel, $qlCount, $qlCan])
+                        @if($link($qlRoute) && $can($qlCan))
+                            <a class="quick-link" href="{{ route($qlRoute) }}"><i class="bi bi-{{ $qlIcon }}"></i><span>{{ __($qlLabel) }}</span><span class="n">{{ number_format($qlCount) }}</span></a>
+                        @endif
+                    @endforeach
+                </div>
+            </x-admin.card>
         </div>
     </div>
-
-    <!-- Locations -->
-    <div class="stats-card">
-        <h2 class="section-title">
-            <i class="bi bi-geo-alt-fill"></i>
-            المواقع والخدمات
-        </h2>
-        <div class="stats-grid">
-            <div class="stat-item {{ !in_array('Location', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-map stat-icon"></i>
-                <div class="stat-label">جميع المواقع</div>
-                <div class="stat-count">{{ number_format($stats['locations']['all_locations']) }}</div>
-                @if(!in_array('Location', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item">
-                <i class="bi bi-exclamation-triangle stat-icon"></i>
-                <div class="stat-label">خدمات الطوارئ</div>
-                <div class="stat-count">{{ number_format($stats['locations']['emergency']) }}</div>
-            </div>
-            <div class="stat-item">
-                <i class="bi bi-gear stat-icon"></i>
-                <div class="stat-label">الخدمات</div>
-                <div class="stat-count">{{ number_format($stats['locations']['services']) }}</div>
-            </div>
-            <div class="stat-item">
-                <i class="bi bi-heart-pulse stat-icon"></i>
-                <div class="stat-label">الإسعافات الأولية</div>
-                <div class="stat-count">{{ number_format($stats['locations']['first_aid']) }}</div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Communications -->
-    <div class="stats-card">
-        <h2 class="section-title">
-            <i class="bi bi-megaphone"></i>
-            الاتصالات
-        </h2>
-        <div class="stats-grid">
-            <div class="stat-item {{ !in_array('Announcement', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-broadcast stat-icon"></i>
-                <div class="stat-label">الإعلانات</div>
-                <div class="stat-count">{{ number_format($stats['communication']['announcements']) }}</div>
-                @if(!in_array('Announcement', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('Notification', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-bell stat-icon"></i>
-                <div class="stat-label">الإشعارات</div>
-                <div class="stat-count">{{ number_format($stats['communication']['notifications']) }}</div>
-                @if(!in_array('Notification', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- User Data -->
-    <div class="stats-card">
-        <h2 class="section-title">
-            <i class="bi bi-person-circle"></i>
-            بيانات المستخدمين
-        </h2>
-        <div class="stats-grid">
-            <div class="stat-item {{ !in_array('UserFavorite', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-heart stat-icon"></i>
-                <div class="stat-label">المفضلات</div>
-                <div class="stat-count">{{ number_format($stats['user_data']['user_favorites']) }}</div>
-                @if(!in_array('UserFavorite', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('UserInterest', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-star stat-icon"></i>
-                <div class="stat-label">الاهتمامات</div>
-                <div class="stat-count">{{ number_format($stats['user_data']['user_interests']) }}</div>
-                @if(!in_array('UserInterest', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-            <div class="stat-item {{ !in_array('OtpVerification', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-shield-lock stat-icon"></i>
-                <div class="stat-label">رموز التحقق</div>
-                <div class="stat-count">{{ number_format($stats['user_data']['otp_verifications']) }}</div>
-                @if(!in_array('OtpVerification', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- Settings -->
-    <div class="stats-card">
-        <h2 class="section-title">
-            <i class="bi bi-gear-fill"></i>
-            الإعدادات
-        </h2>
-        <div class="stats-grid">
-            <div class="stat-item {{ !in_array('AppSetting', $enabledControllers) ? 'disabled' : '' }}">
-                <i class="bi bi-sliders stat-icon"></i>
-                <div class="stat-label">إعدادات التطبيق</div>
-                <div class="stat-count">{{ number_format($stats['settings']['app_settings']) }}</div>
-                @if(!in_array('AppSetting', $enabledControllers))
-                    <span class="controller-badge disabled">غير مفعل</span>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
+
+@push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+    var el = document.getElementById('trendChart');
+    if (!el || !window.Chart) return;
+    var data = @json($m['series']);
+    var currency = @json(\App\View\Fmt::currency());
+    var decimals = {{ \App\View\Fmt::decimals() }};
+    var current = 'ticket_revenue';
+    var labels = { ticket_revenue: @json(__('مبيعات التذاكر')), topups: @json(__('شحن المحافظ')), tickets: @json(__('عدد التذاكر')) };
+    var ticketsTpl = @json(__(':count تذكرة'));
+    var isMoney = function (k) { return k !== 'tickets'; };
+    var css = function (v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
+    var fmt = function (minor) {
+        var v = (minor / Math.pow(10, decimals)).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        return currency + ' ' + v;
+    };
+    Chart.defaults.font.family = css('--font-num') + ', ' + css('--font-ar') + ', sans-serif';
+    var chart = new Chart(el, {
+        type: 'bar',
+        data: { labels: data.labels, datasets: [{ label: labels[current], data: data[current], backgroundColor: css('--brand'), hoverBackgroundColor: css('--brand-hover'), borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: 'bottom', maxBarThickness: 22 }] },
+        options: {
+            maintainAspectRatio: false,
+            locale: 'en-US',
+            plugins: {
+                legend: { display: false },
+                tooltip: { rtl: document.dir === 'rtl', displayColors: false, padding: 10, callbacks: { label: function (c) { return isMoney(current) ? fmt(c.raw) : ticketsTpl.replace(':count', c.raw); } } }
+            },
+            scales: {
+                x: { grid: { display: false }, border: { display: false } },
+                y: { beginAtZero: true, border: { display: false }, ticks: { maxTicksLimit: 5, callback: function (v) { return isMoney(current) ? (v / Math.pow(10, decimals)).toLocaleString('en-US') : v; } } }
+            },
+            interaction: { mode: 'index', intersect: false }
+        }
+    });
+    function paint() {
+        var ds = chart.data.datasets[0];
+        ds.backgroundColor = css('--brand');
+        ds.hoverBackgroundColor = css('--brand-hover');
+        chart.options.scales.x.ticks.color = css('--muted');
+        chart.options.scales.y.ticks.color = css('--muted');
+        chart.options.scales.y.grid.color = css('--hairline');
+        chart.options.plugins.tooltip.backgroundColor = css('--inverse');
+        chart.options.plugins.tooltip.titleColor = css('--on-inverse');
+        chart.options.plugins.tooltip.bodyColor = css('--on-inverse');
+        chart.update();
+    }
+    paint();
+    document.addEventListener('themechange', paint);
+    document.querySelectorAll('[data-chart-switch] button').forEach(function (b) {
+        b.addEventListener('click', function () {
+            current = b.dataset.series;
+            document.querySelectorAll('[data-chart-switch] button').forEach(function (x) { x.classList.toggle('active', x === b); });
+            chart.data.datasets[0].data = data[current];
+            chart.data.datasets[0].label = labels[current];
+            chart.update();
+        });
+    });
+})();
+</script>
+@endpush

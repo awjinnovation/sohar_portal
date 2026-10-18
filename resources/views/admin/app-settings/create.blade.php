@@ -1,22 +1,21 @@
 @extends('layouts.admin')
 
-@section('content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">إضافة إعدادات التطبيق جديد</h1>
-        <a href="{{ route('admin.app-settings.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-right"></i> رجوع
-        </a>
-    </div>
+@section('title', 'إضافة إعداد')
+@section('page-title', 'إضافة إعدادات التطبيق جديد')
+@section('page-subtitle', 'إعداد جديد يقرأه تطبيق الهاتف')
+@php
+    $pageIcon = 'sliders';
+    $breadcrumbs = ['المنظمة' => null, 'إعدادات التطبيق' => route('admin.app-settings.index'), 'إضافة إعداد' => null];
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.app-settings.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>
+@endsection
 
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <form action="{{ route('admin.app-settings.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                @include('admin.app-settings._form')
-                <button type="submit" class="btn btn-primary">حفظ</button>
-            </form>
-        </div>
-    </div>
-</div>
+@section('content')
+    @include('admin.partials.alerts')
+
+    <form action="{{ route('admin.app-settings.store') }}" method="POST" enctype="multipart/form-data">
+        @csrf
+        @include('admin.app-settings._form', ['appSetting' => new \App\Models\AppSetting(['setting_type' => 'string', 'is_public' => false]), 'submitLabel' => 'حفظ'])
+    </form>
 @endsection

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class PrivacyPolicy extends Model
 {
+    use \App\Tenancy\BelongsToTenant;
+
     protected $fillable = [
         'title',
         'title_ar',

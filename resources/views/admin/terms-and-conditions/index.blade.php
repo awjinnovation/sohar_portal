@@ -2,85 +2,56 @@
 
 @section('title', 'الشروط والأحكام')
 @section('page-title', 'إدارة الشروط والأحكام')
+@section('page-subtitle', 'الشروط والأحكام المعروضة في التطبيق وصفحته العامة')
+@php
+    $pageIcon = 'file-earmark-text';
+    $breadcrumbs = ['المحتوى' => null, 'الشروط والأحكام' => null];
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.terms-and-conditions.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> {{ __('إضافة شروط وأحكام جديدة') }}
+    </a>
+@endsection
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <a href="{{ route('admin.terms-and-conditions.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus me-2"></i>إضافة شروط وأحكام جديدة
-    </a>
-</div>
+    @include('admin.partials.alerts')
 
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
+    <x-admin.data-table title="جميع الإصدارات" icon="file-earmark-text" :count="$terms->total()" :paginator="$terms">
+        <x-slot:head>
+            <th style="width: 56px">#</th>
+            <th>{{ __('العنوان') }}</th>
+            <th>{{ __('الحالة') }}</th>
+            <th>{{ __('تاريخ الإنشاء') }}</th>
+            <th>{{ __('آخر تحديث') }}</th>
+            <th class="text-end">{{ __('الإجراءات') }}</th>
+        </x-slot:head>
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>رقم</th>
-                        <th>النوع</th>
-                        <th>اللغة</th>
-                        <th>العنوان</th>
-                        <th>الحالة</th>
-                        <th>تاريخ الإنشاء</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($terms as $term)
-                    <tr>
-                        <td>{{ $term->id }}</td>
-                        <td>
-                            <span class="badge bg-primary">{{ ucfirst($term->type) }}</span>
-                        </td>
-                        <td>
-                            <span class="badge bg-info">{{ strtoupper($term->language) }}</span>
-                        </td>
-                        <td>{{ $term->title }}</td>
-                        <td>
-                            @if($term->is_active)
-                                <span class="badge bg-success">نشط</span>
-                            @else
-                                <span class="badge bg-secondary">غير نشط</span>
-                            @endif
-                        </td>
-                        <td>{{ $term->created_at->format('Y-m-d') }}</td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <a href="{{ route('admin.terms-and-conditions.show', $term) }}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.terms-and-conditions.edit', $term) }}" class="btn btn-sm btn-warning">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ route('admin.terms-and-conditions.destroy', $term) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذه الشروط؟')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="7" class="text-center">لا توجد شروط وأحكام</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <div class="mt-4">
-            {{ $terms->links() }}
-        </div>
-    </div>
-</div>
+        @forelse($terms as $term)
+            <tr>
+                <td class="num text-muted">{{ $term->id }}</td>
+                <td>
+                    <a href="{{ route('admin.terms-and-conditions.show', $term) }}" class="cell-title d-block text-decoration-none">{{ $term->title_ar }}</a>
+                    <div class="cell-sub ltr text-start">{{ $term->title }}</div>
+                </td>
+                <td><x-admin.status-pill domain="active" :status="$term->is_active" /></td>
+                <td class="num text-muted">{{ $term->created_at?->format('Y-m-d') }}</td>
+                <td class="num text-muted">{{ $term->updated_at?->format('Y-m-d') }}</td>
+                <td class="text-end">
+                    <div class="row-actions">
+                        <a href="{{ route('admin.terms-and-conditions.show', $term) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.terms-and-conditions.edit', $term) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
+                        <form action="{{ route('admin.terms-and-conditions.destroy', $term) }}" method="POST" data-confirm="{{ __('سيتم حذف هذه الشروط نهائيًا.') }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <x-admin.empty-row :colspan="6" icon="file-earmark-text" title="لا توجد شروط وأحكام" text="أضف الشروط والأحكام لتظهر للمستخدمين في التطبيق.">
+                <a href="{{ route('admin.terms-and-conditions.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة شروط') }}</a>
+            </x-admin.empty-row>
+        @endforelse
+    </x-admin.data-table>
 @endsection

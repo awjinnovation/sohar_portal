@@ -4,37 +4,44 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
-use Illuminate\Http\Request;
+use App\Tenancy\TenantContext;
+use Illuminate\Http\JsonResponse;
 
+/**
+ * GET /api/v1/app-settings[/{key}] — the tenant's public settings only.
+ */
 class AppSettingController extends Controller
 {
-    public function index()
-    {
-        $settings = AppSetting::first();
+    public function __construct(private TenantContext $context) {}
 
-        if (!$settings) {
-            // Return default settings
-            $settings = [
-                'app_name' => 'Sohar Festival',
-                'app_name_ar' => 'مهرجان صحار',
-                'app_version' => '1.0.0',
-                'maintenance_mode' => false,
-                'contact_email' => 'info@soharfestival.om',
-                'contact_phone' => '+968 1234 5678',
-                'social_media' => [
-                    'facebook' => 'https://facebook.com/soharfestival',
-                    'instagram' => 'https://instagram.com/soharfestival',
-                    'twitter' => 'https://twitter.com/soharfestival'
-                ],
-                'terms_url' => 'https://soharfestival.om/terms',
-                'privacy_url' => 'https://soharfestival.om/privacy',
-                'about_url' => 'https://soharfestival.om/about'
-            ];
+    public function index(): JsonResponse
+    {
+        $t = $this->context->get();
+
+        $data = array_merge([
+            'app_name' => $t->localizedName('en'),
+            'app_name_ar' => $t->localizedName('ar'),
+            'app_version' => $t->setting('app.latest_version'),
+            'maintenance_mode' => (bool) $t->setting('app.maintenance_mode'),
+            'contact_email' => $t->setting('tenant.support.email'),
+            'contact_phone' => $t->setting('tenant.support.phone'),
+            'social_media' => array_filter((array) $t->setting('tenant.social', [])),
+            'terms_url' => $t->setting('tenant.legal.terms_url'),
+            'privacy_url' => $t->setting('tenant.legal.privacy_url'),
+            'about_url' => $t->setting('tenant.support.website'),
+        ], AppSetting::getPublicSettings());
+
+        return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    public function show(string $key): JsonResponse
+    {
+        $public = AppSetting::getPublicSettings();
+
+        if (! array_key_exists($key, $public)) {
+            return response()->json(['success' => false, 'message' => 'Setting not found'], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $settings
-        ]);
+        return response()->json(['success' => true, 'data' => ['key' => $key, 'value' => $public[$key]]]);
     }
 }

@@ -1,86 +1,72 @@
 @extends('layouts.admin')
 
+@section('title', 'التذاكر')
+@section('page-title', 'التذاكر المصدرة')
+@section('page-subtitle', 'تذاكر الفعاليات الصادرة من عمليات الشراء في التطبيق')
+@php
+    $pageIcon = 'ticket-perforated';
+    $breadcrumbs = ['الفعاليات والتذاكر' => null, 'التذاكر' => null];
+    $typeLabels = ['standard' => __('عادية'), 'vip' => 'VIP', 'child' => __('طفل'), 'adult' => __('بالغ'), 'family' => __('عائلية'), 'student' => __('طالب')];
+@endphp
+
 @section('content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">التذاكر</h1>
-        <a href="{{ route('admin.tickets.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> إضافة تذكرة جديدة
-        </a>
-    </div>
+    @include('admin.partials.alerts')
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+    <x-admin.data-table title="جميع التذاكر" icon="ticket-perforated" :count="$tickets->total()" search="q"
+        search-placeholder="رقم التذكرة / الاسم / رقم العملية" :paginator="$tickets">
+        <x-slot:filters>
+            <select name="event_id" class="form-select" aria-label="{{ __('الفعالية') }}">
+                <option value="">{{ __('كل الفعاليات') }}</option>
+                @foreach($events as $event)
+                    <option value="{{ $event->id }}" @selected(request('event_id') == $event->id)>{{ $event->title_ar ?: $event->title }}</option>
+                @endforeach
+            </select>
+            <select name="status" class="form-select" aria-label="{{ __('الحالة') }}">
+                <option value="">{{ __('كل الحالات') }}</option>
+                @foreach(['active' => __('صالحة'), 'used' => __('مستخدمة'), 'cancelled' => __('ملغاة'), 'expired' => __('منتهية')] as $value => $label)
+                    <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </x-slot:filters>
+        <x-slot:head>
+            <th>{{ __('رقم التذكرة') }}</th>
+            <th>{{ __('الفعالية') }}</th>
+            <th>{{ __('حامل التذكرة') }}</th>
+            <th>{{ __('تاريخ الحجز') }}</th>
+            <th>{{ __('السعر') }}</th>
+            <th>{{ __('الحالة') }}</th>
+            <th class="text-end">{{ __('الإجراءات') }}</th>
+        </x-slot:head>
 
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>نوع التذكرة</th>
-                            <th>الفعالية</th>
-                            <th>الكمية الإجمالية</th>
-                            <th>المتاح</th>
-                            <th>فترة البيع</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($tickets as $ticket)
-                            <tr>
-                                <td>{{ $ticket->ticket_type }}</td>
-                                <td>{{ $ticket->event->title_ar ?? '-' }}</td>
-                                <td>{{ $ticket->total_quantity }}</td>
-                                <td>{{ $ticket->available_quantity }}</td>
-                                <td>
-                                    @if($ticket->sale_start_date && $ticket->sale_end_date)
-                                        {{ $ticket->sale_start_date->format('Y-m-d') }} - 
-                                        {{ $ticket->sale_end_date->format('Y-m-d') }}
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($ticket->is_active)
-                                        <span class="badge bg-success">نشط</span>
-                                    @else
-                                        <span class="badge bg-danger">غير نشط</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.tickets.show', $ticket) }}" class="btn btn-sm btn-info">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a href="{{ route('admin.tickets.edit', $ticket) }}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <form action="{{ route('admin.tickets.destroy', $ticket) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center">لا توجد تذاكر</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            {{ $tickets->links() }}
-        </div>
-    </div>
-</div>
+        @forelse($tickets as $ticket)
+            <tr>
+                <td class="nowrap"><a href="{{ route('admin.tickets.show', $ticket) }}" class="num fw-semibold" dir="ltr">{{ $ticket->ticket_number }}</a></td>
+                <td>
+                    <div class="cell-title">{{ $ticket->event?->title_ar ?: ($ticket->event?->title ?? '—') }}</div>
+                    @if($ticket->ticket_type)<div class="cell-sub">{{ $typeLabels[$ticket->ticket_type] ?? $ticket->ticket_type }}</div>@endif
+                </td>
+                <td>
+                    <div class="cell-title">{{ $ticket->holder_name ?: '—' }}</div>
+                    @if($ticket->user?->phone_number)<div class="cell-sub num"><span dir="ltr">{{ $ticket->user->phone_number }}</span></div>@endif
+                </td>
+                <td class="num">{{ $ticket->booking_date?->format('Y-m-d') ?? '—' }}</td>
+                <td class="nowrap">
+                    @if((float) $ticket->price == 0)
+                        <x-admin.status-pill variant="success" label="مجانية" />
+                    @else
+                        <x-admin.money :amount="$ticket->price" :currency="$ticket->currency ?: null" />
+                    @endif
+                </td>
+                <td><x-admin.status-pill domain="ticket" :status="$ticket->status" /></td>
+                <td class="text-end">
+                    <div class="row-actions">
+                        <a href="{{ route('admin.tickets.show', $ticket) }}" class="icon-btn" title="{{ __('عرض') }}" aria-label="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <x-admin.empty-row :colspan="7" icon="ticket-perforated" title="لا توجد تذاكر"
+                text="تظهر هنا التذاكر بعد شرائها من التطبيق. جرّب تغيير معايير البحث." />
+        @endforelse
+    </x-admin.data-table>
 @endsection

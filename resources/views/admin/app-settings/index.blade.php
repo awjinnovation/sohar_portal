@@ -1,223 +1,102 @@
 @extends('layouts.admin')
 
+@section('title', 'إعدادات التطبيق')
 @section('page-title', 'إعدادات التطبيق')
+@section('page-subtitle', 'إدارة إعدادات تطبيق الهاتف المحمول')
+@php
+    $pageIcon = 'sliders';
+    $breadcrumbs = ['المنظمة' => null, 'إعدادات التطبيق' => null];
+    $typeMeta = [
+        'string' => [__('نص'), 'brand'],
+        'integer' => [__('رقم صحيح'), 'success'],
+        'boolean' => [__('منطقي'), 'warning'],
+        'decimal' => [__('عشري'), 'info'],
+        'json' => ['JSON', 'neutral'],
+    ];
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.app-settings.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> {{ __('إضافة إعداد جديد') }}
+    </a>
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-1">⚙️ إعدادات تطبيق Flutter</h2>
-            <p class="text-muted mb-0">إدارة إعدادات تطبيق الهاتف المحمول</p>
-        </div>
-        <div>
-            <a href="{{ route('admin.app-settings.create') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> إضافة إعداد جديد
-            </a>
-        </div>
+    @include('admin.partials.alerts')
+
+    <div class="stat-grid">
+        <x-admin.stat-tile label="إعدادات عامة" :value="\App\Models\AppSetting::where('is_public', true)->count()" icon="globe" tone="brand" />
+        <x-admin.stat-tile label="إعدادات منطقية" :value="\App\Models\AppSetting::where('setting_type', 'boolean')->count()" icon="toggle-on" tone="success" />
+        <x-admin.stat-tile label="إعدادات JSON" :value="\App\Models\AppSetting::where('setting_type', 'json')->count()" icon="braces" tone="info" />
+        <x-admin.stat-tile label="إعدادات الألوان" :value="\App\Models\AppSetting::where('setting_key', 'like', '%color%')->count()" icon="palette" tone="accent" />
     </div>
 
-    <!-- Success Message -->
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+    <x-admin.data-table title="الإعدادات" icon="sliders" :count="$settings->total()" search="search" search-placeholder="البحث بالمفتاح أو الوصف..." :paginator="$settings">
+        <x-slot:filters>
+            <select name="type" class="form-select" aria-label="{{ __('النوع') }}">
+                <option value="">{{ __('جميع الأنواع') }}</option>
+                @foreach($typeMeta as $typeKey => [$typeLabel, $typeTone])
+                    <option value="{{ $typeKey }}" @selected(request('type') == $typeKey)>{{ $typeLabel }} ({{ ucfirst($typeKey) }})</option>
+                @endforeach
+            </select>
+        </x-slot:filters>
 
-    <!-- Search & Filter -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <form method="GET" action="{{ route('admin.app-settings.index') }}" class="row g-3">
-                <div class="col-md-5">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" name="search" class="form-control" placeholder="البحث بالاسم..." value="{{ request('search') }}">
+        <x-slot:head>
+            <th style="width: 56px">#</th>
+            <th>{{ __('مفتاح الإعداد') }}</th>
+            <th>{{ __('القيمة') }}</th>
+            <th>{{ __('النوع') }}</th>
+            <th>{{ __('الظهور') }}</th>
+            <th class="text-end">{{ __('الإجراءات') }}</th>
+        </x-slot:head>
+
+        @forelse($settings as $setting)
+            @php [$typeLabel, $typeTone] = $typeMeta[$setting->setting_type] ?? [$setting->setting_type, 'neutral']; @endphp
+            <tr>
+                <td class="num text-muted">{{ $setting->id }}</td>
+                <td>
+                    <code class="ltr">{{ $setting->setting_key }}</code>
+                    @if($setting->description)
+                        <div class="cell-sub mt-1">{{ \Illuminate\Support\Str::limit($setting->description, 60) }}</div>
+                    @endif
+                </td>
+                <td>
+                    @if($setting->setting_type == 'boolean')
+                        @if($setting->value)
+                            <x-admin.status-pill variant="success" label="نعم" icon="check-lg" size="sm" />
+                        @else
+                            <x-admin.status-pill variant="neutral" label="لا" icon="x-lg" size="sm" />
+                        @endif
+                    @elseif($setting->setting_type == 'json')
+                        <span class="pill pill-info pill-sm"><i class="bi bi-braces"></i>JSON</span>
+                    @else
+                        <span class="{{ in_array($setting->setting_type, ['integer', 'decimal']) ? 'num fw-semibold' : 'fw-medium' }}">{{ \Illuminate\Support\Str::limit($setting->setting_value, 50) }}</span>
+                    @endif
+                </td>
+                <td><span class="pill pill-{{ $typeTone }} pill-sm">{{ $typeLabel }}</span></td>
+                <td>
+                    @if($setting->is_public)
+                        <x-admin.status-pill variant="success" label="عام" icon="globe" size="sm" />
+                    @else
+                        <x-admin.status-pill variant="neutral" label="خاص" icon="lock" size="sm" />
+                    @endif
+                </td>
+                <td class="text-end">
+                    <div class="row-actions">
+                        <a href="{{ route('admin.app-settings.show', $setting) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.app-settings.edit', $setting) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
+                        <form action="{{ route('admin.app-settings.destroy', $setting) }}" method="POST" data-confirm="{{ __('سيتم حذف الإعداد «:key» نهائيًا وقد يتأثر التطبيق.', ['key' => $setting->setting_key]) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
+                        </form>
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <select name="type" class="form-select">
-                        <option value="">جميع الأنواع</option>
-                        <option value="string" {{ request('type') == 'string' ? 'selected' : '' }}>نص (String)</option>
-                        <option value="integer" {{ request('type') == 'integer' ? 'selected' : '' }}>رقم صحيح (Integer)</option>
-                        <option value="boolean" {{ request('type') == 'boolean' ? 'selected' : '' }}>منطقي (Boolean)</option>
-                        <option value="decimal" {{ request('type') == 'decimal' ? 'selected' : '' }}>عشري (Decimal)</option>
-                        <option value="json" {{ request('type') == 'json' ? 'selected' : '' }}>JSON</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-funnel"></i> تصفية
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Settings Table -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-white py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">الإعدادات ({{ $settings->total() }})</h5>
-                <span class="badge bg-primary rounded-pill">{{ $settings->total() }} إعداد</span>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width: 5%">#</th>
-                            <th style="width: 25%">مفتاح الإعداد</th>
-                            <th style="width: 20%">القيمة</th>
-                            <th style="width: 10%">النوع</th>
-                            <th style="width: 10%">عام</th>
-                            <th style="width: 20%">الوصف</th>
-                            <th style="width: 10%" class="text-center">الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($settings as $setting)
-                            <tr>
-                                <td class="text-muted">{{ $setting->id }}</td>
-                                <td>
-                                    <code class="text-primary">{{ $setting->setting_key }}</code>
-                                </td>
-                                <td>
-                                    @if($setting->setting_type == 'boolean')
-                                        @if($setting->value)
-                                            <span class="badge bg-success">✓ نعم</span>
-                                        @else
-                                            <span class="badge bg-secondary">✗ لا</span>
-                                        @endif
-                                    @elseif($setting->setting_type == 'json')
-                                        <span class="badge bg-info"><i class="bi bi-braces"></i> JSON</span>
-                                    @elseif(strlen($setting->setting_value) > 50)
-                                        <small class="text-muted">{{ Str::limit($setting->setting_value, 50) }}</small>
-                                    @else
-                                        <span class="fw-medium">{{ $setting->setting_value }}</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @php
-                                        $badges = [
-                                            'string' => 'bg-primary',
-                                            'integer' => 'bg-success',
-                                            'boolean' => 'bg-warning',
-                                            'decimal' => 'bg-info',
-                                            'json' => 'bg-dark'
-                                        ];
-                                        $badgeClass = $badges[$setting->setting_type] ?? 'bg-secondary';
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }}">{{ $setting->setting_type }}</span>
-                                </td>
-                                <td>
-                                    @if($setting->is_public)
-                                        <i class="bi bi-globe text-success" title="متاح للعموم"></i>
-                                    @else
-                                        <i class="bi bi-lock text-muted" title="خاص"></i>
-                                    @endif
-                                </td>
-                                <td>
-                                    <small class="text-muted">{{ Str::limit($setting->description ?? '-', 40) }}</small>
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a href="{{ route('admin.app-settings.edit', $setting) }}"
-                                           class="btn btn-outline-primary"
-                                           title="تعديل">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <form action="{{ route('admin.app-settings.destroy', $setting) }}"
-                                              method="POST"
-                                              class="d-inline"
-                                              onsubmit="return confirm('هل أنت متأكد من حذف هذا الإعداد؟\n{{ $setting->setting_key }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger" title="حذف">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-5">
-                                    <div class="text-muted">
-                                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                                        <p class="mt-3">لا توجد إعدادات</p>
-                                        <a href="{{ route('admin.app-settings.create') }}" class="btn btn-primary btn-sm">
-                                            <i class="bi bi-plus-circle"></i> إضافة إعداد جديد
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        @if($settings->hasPages())
-        <div class="card-footer bg-white">
-            {{ $settings->links() }}
-        </div>
-        @endif
-    </div>
-
-    <!-- Quick Stats -->
-    <div class="row mt-4">
-        <div class="col-md-3">
-            <div class="card border-primary">
-                <div class="card-body text-center">
-                    <i class="bi bi-globe text-primary" style="font-size: 2rem;"></i>
-                    <h4 class="mt-2">{{ \App\Models\AppSetting::where('is_public', true)->count() }}</h4>
-                    <p class="text-muted mb-0">إعدادات عامة</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-success">
-                <div class="card-body text-center">
-                    <i class="bi bi-toggle-on text-success" style="font-size: 2rem;"></i>
-                    <h4 class="mt-2">{{ \App\Models\AppSetting::where('setting_type', 'boolean')->count() }}</h4>
-                    <p class="text-muted mb-0">إعدادات منطقية</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-info">
-                <div class="card-body text-center">
-                    <i class="bi bi-braces text-info" style="font-size: 2rem;"></i>
-                    <h4 class="mt-2">{{ \App\Models\AppSetting::where('setting_type', 'json')->count() }}</h4>
-                    <p class="text-muted mb-0">إعدادات JSON</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-warning">
-                <div class="card-body text-center">
-                    <i class="bi bi-palette text-warning" style="font-size: 2rem;"></i>
-                    <h4 class="mt-2">{{ \App\Models\AppSetting::where('setting_key', 'like', '%color%')->count() }}</h4>
-                    <p class="text-muted mb-0">إعدادات الألوان</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-@push('styles')
-<style>
-    code {
-        font-size: 0.875rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        background: #f8f9fa;
-    }
-    .table td, .table th {
-        vertical-align: middle;
-    }
-</style>
-@endpush
+                </td>
+            </tr>
+        @empty
+            <x-admin.empty-row :colspan="6" icon="sliders" title="لا توجد إعدادات"
+                :text="request('search') || request('type') ? 'لا توجد نتائج مطابقة للتصفية.' : 'أضف إعدادًا ليقرأه تطبيق الهاتف.'">
+                <a href="{{ route('admin.app-settings.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة إعداد جديد') }}</a>
+            </x-admin.empty-row>
+        @endforelse
+    </x-admin.data-table>
 @endsection

@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
-use Spatie\Permission\Models\Role;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use PHPUnit\Framework\Attributes\Test;
 
 class EventCrudTest extends TestCase
@@ -22,8 +22,9 @@ class EventCrudTest extends TestCase
     {
         parent::setUp();
 
-        // Create admin role
-        $adminRole = Role::create(['name' => 'admin']);
+        // Global role definitions; the assignment below is made in the
+        // current tenant (north-batinah, set by the base TestCase).
+        $this->seed(RolesAndPermissionsSeeder::class);
 
         // Create admin user
         $this->admin = User::factory()->create([
@@ -118,7 +119,6 @@ class EventCrudTest extends TestCase
     #[Test]
     public function admin_can_create_new_event_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $eventData = [
@@ -161,7 +161,6 @@ class EventCrudTest extends TestCase
     #[Test]
     public function event_creation_fails_with_invalid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $invalidData = [
@@ -196,7 +195,6 @@ class EventCrudTest extends TestCase
     #[Test]
     public function end_time_must_be_after_start_time()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $invalidData = [
@@ -281,7 +279,6 @@ class EventCrudTest extends TestCase
     #[Test]
     public function admin_can_update_event_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $event = Event::create([
@@ -326,7 +323,6 @@ class EventCrudTest extends TestCase
     #[Test]
     public function admin_can_delete_event_without_tickets()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $event = Event::create([
@@ -363,7 +359,6 @@ class EventCrudTest extends TestCase
     #[Test]
     public function event_currency_defaults_to_omr_if_not_provided()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $eventData = [

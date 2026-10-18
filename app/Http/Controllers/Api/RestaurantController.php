@@ -184,7 +184,7 @@ class RestaurantController extends Controller
             ->where('favoritable_type', Restaurant::class)
             ->pluck('favoritable_id');
 
-        $restaurants = Restaurant::with(['images', 'features'])
+        $restaurants = Restaurant::query()
             ->whereIn('id', $favoriteIds)
             ->paginate(20);
 

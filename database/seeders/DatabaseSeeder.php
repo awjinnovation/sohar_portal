@@ -2,70 +2,37 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use App\Models\Tenant;
+use App\Tenancy\TenantContext;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * Seeds the platform: roles, tenants (north-batinah + demo), staff
+     * accounts, vendors and each tenant's sample content.
      */
     public function run(): void
     {
-        // Create roles
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $userRole = Role::firstOrCreate(['name' => 'user']);
-
-        // Create permissions
-        $permissions = [
-            'manage users',
-            'manage roles',
-            'manage events',
-            'manage heritage villages',
-            'manage restaurants',
-            'manage announcements',
-            'manage emergency contacts',
-        ];
-
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
-        }
-
-        // Assign all permissions to admin role
-        $adminRole->givePermissionTo(Permission::all());
-
-        // Create admin user
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@soharfestival.om'],
-            [
-                'name' => 'مدير النظام',
-                'password' => bcrypt('admin123'),
-            ]
-        );
-        $admin->assignRole('admin');
-
-        // Create test user
-        $user = User::firstOrCreate(
-            ['email' => 'user@soharfestival.om'],
-            [
-                'name' => 'مستخدم تجريبي',
-                'password' => bcrypt('user123'),
-            ]
-        );
-        $user->assignRole('user');
-
-        // Call other seeders
         $this->call([
             RolesAndPermissionsSeeder::class,
-            // General North Batinah events catalogue (replaces the old
-            // Sohar-festival-specific TestDataSeeder). Seeds categories,
-            // events, restaurants, venues, announcements, notifications and a
-            // demo visitor with tickets/favorites.
-            NorthBatinahEventsSeeder::class,
-            TermsAndConditionSeeder::class,
-            PrivacyPolicySeeder::class,
+            TenantSeeder::class,
         ]);
+
+        $context = app(TenantContext::class);
+
+        $context->run(Tenant::where('slug', 'north-batinah')->firstOrFail(), function () {
+            $this->call([
+                PlatformUsersSeeder::class,
+                NorthBatinahEventsSeeder::class,
+                TermsAndConditionSeeder::class,
+                PrivacyPolicySeeder::class,
+                NorthBatinahVendorsSeeder::class,
+            ]);
+        });
+
+        $context->run(Tenant::where('slug', 'demo')->firstOrFail(), function () {
+            $this->call(DemoTenantSeeder::class);
+        });
     }
 }

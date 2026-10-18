@@ -11,13 +11,19 @@ class PrivacyPolicySeeder extends Seeder
     /**
      * Run the database seeds.
      */
+    /**
+     * Generic legal template filled from the tenant's settings (name,
+     * organization, support e-mail/phone). Idempotent: an existing page of
+     * the tenant (possibly edited in the admin) is left untouched.
+     */
     public function run(): void
     {
-        PrivacyPolicy::create([
-            'title' => 'Privacy Policy',
+        $tenant = app(\App\Tenancy\TenantContext::class)->get();
+
+        PrivacyPolicy::firstOrCreate(['title' => 'Privacy Policy'], [
             'title_ar' => 'سياسة الخصوصية',
-            'content' => $this->getEnglishContent(),
-            'content_ar' => $this->getArabicContent(),
+            'content' => LegalTemplate::fill($this->getEnglishContent(), $tenant),
+            'content_ar' => LegalTemplate::fill($this->getArabicContent(), $tenant),
             'is_active' => true,
         ]);
     }
@@ -25,12 +31,12 @@ class PrivacyPolicySeeder extends Seeder
     private function getEnglishContent(): string
     {
         return <<<HTML
-<h2>Privacy Policy for Sohar Festival</h2>
-<p><strong>Managed by North Batinah Governor Office</strong></p>
+<h2>Privacy Policy for {app_en}</h2>
+<p><strong>Managed by {org_en}</strong></p>
 <p><em>Last Updated: October 2025</em></p>
 
 <h3>1. Introduction</h3>
-<p>Welcome to Sohar Festival. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and services. The Sohar Festival is managed by the North Batinah Governor Office (مكتب محافظ شمال الباطنة).</p>
+<p>Welcome to {app_en}. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and services. {app_en} is managed by the {org_en} ({org_ar}).</p>
 
 <h3>2. Information We Collect</h3>
 <h4>2.1 Personal Information</h4>
@@ -88,21 +94,21 @@ class PrivacyPolicySeeder extends Seeder
 
 <h3>9. Contact Us</h3>
 <p>For questions about this Privacy Policy, please contact:</p>
-<p><strong>North Batinah Governor Office</strong><br>
-Sohar Festival Management<br>
-Email: info@soharfestival.om</p>
+<p><strong>{org_en}</strong><br>
+{app_en} Management<br>
+Email: {email}</p>
 HTML;
     }
 
     private function getArabicContent(): string
     {
         return <<<HTML
-<h2>سياسة الخصوصية لمهرجان صحار</h2>
-<p><strong>تحت إدارة مكتب محافظ شمال الباطنة</strong></p>
+<h2>سياسة الخصوصية ل{app_ar}</h2>
+<p><strong>تحت إدارة {org_ar}</strong></p>
 <p><em>آخر تحديث: أكتوبر 2025</em></p>
 
 <h3>1. المقدمة</h3>
-<p>مرحباً بكم في مهرجان صحار. توضح سياسة الخصوصية هذه كيفية جمع واستخدام والإفصاح عن معلوماتك وحمايتها عند استخدام تطبيق الهاتف المحمول والخدمات الخاصة بنا. يدار مهرجان صحار من قبل مكتب محافظ شمال الباطنة.</p>
+<p>مرحباً بكم في {app_ar}. توضح سياسة الخصوصية هذه كيفية جمع واستخدام والإفصاح عن معلوماتك وحمايتها عند استخدام تطبيق الهاتف المحمول والخدمات الخاصة بنا. يدار {app_ar} من قبل {org_ar}.</p>
 
 <h3>2. المعلومات التي نجمعها</h3>
 <h4>2.1 المعلومات الشخصية</h4>
@@ -160,9 +166,9 @@ HTML;
 
 <h3>9. اتصل بنا</h3>
 <p>للاستفسارات حول سياسة الخصوصية هذه، يرجى الاتصال بـ:</p>
-<p><strong>مكتب محافظ شمال الباطنة</strong><br>
-إدارة مهرجان صحار<br>
-البريد الإلكتروني: info@soharfestival.om</p>
+<p><strong>{org_ar}</strong><br>
+إدارة {app_ar}<br>
+البريد الإلكتروني: {email}</p>
 HTML;
     }
 }

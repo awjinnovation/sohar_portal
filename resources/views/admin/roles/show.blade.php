@@ -2,136 +2,111 @@
 
 @section('title', 'عرض الدور')
 @section('page-title', 'تفاصيل الدور')
+@section('page-subtitle', $role->name)
+@php
+    $pageIcon = 'shield-lock';
+    $breadcrumbs = ['المنظمة' => null, 'الأدوار والصلاحيات' => route('admin.roles.index'), $role->name => null];
+    $isProtected = in_array($role->name, ['super-admin', 'admin'], true);
+    $isSuperActor = auth()->user()->isSuperAdmin();
+    $groupedPermissions = $role->permissions->groupBy(function ($permission) {
+        $parts = explode(' ', $permission->name);
+
+        return end($parts);
+    });
+@endphp
+@section('page-actions')
+    @if(! $isProtected && $isSuperActor)
+        <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-primary"><i class="bi bi-pencil"></i> {{ __('تعديل') }}</a>
+    @endif
+    <a href="{{ route('admin.roles.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold">معلومات الدور</h5>
-                        <div>
-                            @if(!in_array($role->name, ['super-admin', 'admin']))
-                                @can('assign roles')
-                                <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-pencil"></i>
-                                    تعديل
-                                </a>
-                                @endcan
-                            @endif
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="mb-4">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <label class="text-muted small">اسم الدور</label>
-                                <h5>
-                                    <span class="badge bg-primary">{{ ucfirst($role->name) }}</span>
-                                </h5>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="text-muted small">عدد المستخدمين</label>
-                                <h5>{{ $role->users->count() }}</h5>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="text-muted small">عدد الصلاحيات</label>
-                                <h5>{{ $role->permissions->count() }}</h5>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <hr>
-                    
-                    <div class="mb-4">
-                        <h6 class="mb-3">الصلاحيات المخصصة لهذا الدور</h6>
-                        <div class="border rounded p-3">
-                            @php
-                                $groupedPermissions = $role->permissions->groupBy(function($permission) {
-                                    $parts = explode(' ', $permission->name);
-                                    return end($parts);
-                                });
-                            @endphp
-                            
-                            @forelse($groupedPermissions as $group => $permissions)
-                            <div class="mb-3">
-                                <h6 class="text-primary">
-                                    <i class="bi bi-shield-check"></i>
-                                    {{ ucfirst(str_replace('_', ' ', $group)) }}
-                                </h6>
-                                <div class="row mt-2">
-                                    @foreach($permissions as $permission)
-                                    <div class="col-md-4 mb-2">
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle"></i>
-                                            {{ $permission->name }}
-                                        </span>
-                                    </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                            @if(!$loop->last)
-                            <hr>
-                            @endif
-                            @empty
-                            <p class="text-muted mb-0">لا توجد صلاحيات محددة لهذا الدور</p>
-                            @endforelse
-                        </div>
-                    </div>
-                    
-                    @if($role->users->count() > 0)
-                    <hr>
-                    <div class="mb-4">
-                        <h6 class="mb-3">المستخدمون بهذا الدور</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
+    @include('admin.partials.alerts')
+
+    <div class="row g-4">
+        <div class="col-xl-8">
+            <x-admin.card title="الصلاحيات المخصصة لهذا الدور" icon="ui-checks-grid" subtitle="مشتركة بين جميع الجهات التي تستخدم هذا الدور">
+                @if($groupedPermissions->isNotEmpty())
+                    @include('admin.roles._permissions', ['permissions' => $groupedPermissions, 'readonly' => true])
+                @else
+                    <x-admin.empty-state icon="shield-x" title="لا توجد صلاحيات" text="لا توجد صلاحيات محددة لهذا الدور" />
+                @endif
+            </x-admin.card>
+
+            <x-admin.card title="المستخدمون بهذا الدور" icon="people" subtitle="أعضاء هذه الجهة فقط" :flush="true">
+                <x-slot:actions>
+                    <span class="pill pill-neutral pill-sm num">{{ $tenantUsers->count() }}</span>
+                </x-slot:actions>
+                @if($tenantUsers->count() > 0)
+                    <div class="x-table-wrap table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('الاسم') }}</th>
+                                    <th>{{ __('البريد الإلكتروني') }}</th>
+                                    <th>{{ __('تاريخ التسجيل') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($tenantUsers->take(10) as $user)
                                     <tr>
-                                        <th>الاسم</th>
-                                        <th>البريد الإلكتروني</th>
-                                        <th>تاريخ التعيين</th>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="avatar">{{ mb_substr($user->name, 0, 1) }}</span>
+                                                <span class="cell-title">{{ $user->name }}</span>
+                                            </div>
+                                        </td>
+                                        <td><span class="ltr">{{ $user->email ?? $user->phone_number ?? '-' }}</span></td>
+                                        <td class="num text-muted">{{ $user->created_at->format('Y-m-d') }}</td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($role->users->take(10) as $user)
-                                    <tr>
-                                        <td>{{ $user->name }}</td>
-                                        <td dir="ltr" class="text-end">{{ $user->email }}</td>
-                                        <td>{{ $user->created_at->format('Y-m-d') }}</td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                            @if($role->users->count() > 10)
-                            <p class="text-muted small">وآخرون... (إجمالي {{ $role->users->count() }} مستخدم)</p>
-                            @endif
-                        </div>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
+                    @if($tenantUsers->count() > 10)
+                        <p class="text-muted small px-3 py-2 mb-0">{{ __('وآخرون... (إجمالي :count مستخدم)', ['count' => $tenantUsers->count()]) }}</p>
                     @endif
-                    
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ route('admin.roles.index') }}" class="btn btn-secondary">
-                            رجوع
-                        </a>
-                        
-                        @if(!in_array($role->name, ['super-admin', 'admin']) && $role->users->count() == 0)
-                            @can('delete users')
-                            <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف هذا الدور؟')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="bi bi-trash"></i>
-                                    حذف الدور
-                                </button>
-                            </form>
-                            @endcan
-                        @endif
+                @else
+                    <x-admin.empty-state icon="people" title="لا يوجد مستخدمون" text="لم يُعيَّن هذا الدور لأي مستخدم في هذه الجهة بعد." />
+                @endif
+            </x-admin.card>
+        </div>
+
+        <div class="col-xl-4">
+            <x-admin.card title="معلومات الدور" icon="info-circle">
+                <div class="kv-grid mb-3">
+                    <div class="kv">
+                        <div class="k">{{ __('عدد المستخدمين') }}</div>
+                        <div class="v num">{{ $tenantUsers->count() }}</div>
+                    </div>
+                    <div class="kv">
+                        <div class="k">{{ __('عدد الصلاحيات') }}</div>
+                        <div class="v num">{{ $role->permissions->count() }}</div>
                     </div>
                 </div>
-            </div>
+                <dl class="dl">
+                    <dt>{{ __('اسم الدور') }}</dt><dd><span class="pill pill-brand"><span class="ltr">{{ $role->name }}</span></span></dd>
+                    <dt>{{ __('النوع') }}</dt>
+                    <dd>
+                        @if($isProtected)
+                            <x-admin.status-pill variant="neutral" label="محمي من النظام" icon="lock-fill" />
+                        @else
+                            <x-admin.status-pill variant="info" label="{{ $role->team_id ? 'خاص بهذه الجهة' : 'مشترك بين الجهات' }}" />
+                        @endif
+                    </dd>
+                    <dt>{{ __('تاريخ الإنشاء') }}</dt><dd class="num">{{ $role->created_at->format('Y-m-d') }}</dd>
+                </dl>
+                @if(! $isProtected && $isSuperActor && $tenantUsers->count() == 0)
+                    <x-slot:footer>
+                        <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" data-confirm="{{ __('سيتم حذف الدور «:name» نهائيًا من جميع الجهات.', ['name' => $role->name]) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-trash"></i> {{ __('حذف الدور') }}</button>
+                        </form>
+                    </x-slot:footer>
+                @endif
+            </x-admin.card>
         </div>
     </div>
-</div>
 @endsection

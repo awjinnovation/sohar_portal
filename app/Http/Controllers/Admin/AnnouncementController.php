@@ -26,7 +26,7 @@ class AnnouncementController extends Controller
             "title_ar" => "required|max:255",
             "content" => "required",
             "content_ar" => "required",
-            "type" => "required|in:info,warning,emergency,celebration",
+            "type" => ["required", \Illuminate\Validation\Rule::in(Announcement::TYPES)],
             "priority" => "nullable|integer",
             "is_pinned" => "boolean",
             "is_active" => "boolean",
@@ -59,7 +59,8 @@ class AnnouncementController extends Controller
             "title_ar" => "required|max:255",
             "content" => "required",
             "content_ar" => "required",
-            "type" => "required|in:info,warning,emergency,celebration",
+            // A stored legacy type (alert, success...) may be kept unchanged.
+            "type" => ["required", \Illuminate\Validation\Rule::in(array_unique(array_merge(Announcement::TYPES, [$announcement->type])))],
             "priority" => "nullable|integer",
             "is_pinned" => "boolean",
             "is_active" => "boolean",

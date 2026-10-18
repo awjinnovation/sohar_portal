@@ -21,7 +21,7 @@ class ValidationHistoryResource extends JsonResource
             'event_name' => $this->event?->title ?? null,
             'visitor_name' => $this->holder_name ?? $this->user?->name,
             'status' => $this->status,
-            'validated_at' => $this->used_at?->toIso8601String(),
+            'validated_at' => \App\Support\TenantTime::iso($this->used_at),
             'validated_by' => $this->validated_by,
             'location' => $this->validation_location,
         ];

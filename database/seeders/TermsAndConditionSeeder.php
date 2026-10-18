@@ -11,13 +11,19 @@ class TermsAndConditionSeeder extends Seeder
     /**
      * Run the database seeds.
      */
+    /**
+     * Generic legal template filled from the tenant's settings (name,
+     * organization, support e-mail/phone). Idempotent: an existing page of
+     * the tenant (possibly edited in the admin) is left untouched.
+     */
     public function run(): void
     {
-        TermsAndCondition::create([
-            'title' => 'Terms and Conditions',
+        $tenant = app(\App\Tenancy\TenantContext::class)->get();
+
+        TermsAndCondition::firstOrCreate(['title' => 'Terms and Conditions'], [
             'title_ar' => 'الشروط والأحكام',
-            'content' => $this->getEnglishContent(),
-            'content_ar' => $this->getArabicContent(),
+            'content' => LegalTemplate::fill($this->getEnglishContent(), $tenant),
+            'content_ar' => LegalTemplate::fill($this->getArabicContent(), $tenant),
             'is_active' => true,
         ]);
     }
@@ -25,12 +31,12 @@ class TermsAndConditionSeeder extends Seeder
     private function getEnglishContent(): string
     {
         return <<<HTML
-<h2>Terms and Conditions for Sohar Festival</h2>
-<p><strong>Managed by North Batinah Governor Office</strong></p>
+<h2>Terms and Conditions for {app_en}</h2>
+<p><strong>Managed by {org_en}</strong></p>
 <p><em>Last Updated: October 2025</em></p>
 
 <h3>1. Acceptance of Terms</h3>
-<p>By accessing and using the Sohar Festival mobile application and services, you accept and agree to be bound by the terms and provision of this agreement. The Sohar Festival is managed by the North Batinah Governor Office (مكتب محافظ شمال الباطنة).</p>
+<p>By accessing and using the {app_en} mobile application and services, you accept and agree to be bound by the terms and provision of this agreement. {app_en} is managed by the {org_en} ({org_ar}).</p>
 
 <h3>2. Use of Services</h3>
 <h4>2.1 Eligibility</h4>
@@ -70,7 +76,7 @@ class TermsAndConditionSeeder extends Seeder
 </ul>
 
 <h3>5. Intellectual Property</h3>
-<p>All content, features, and functionality are owned by the North Batinah Governor Office and are protected by international copyright, trademark, and other intellectual property laws.</p>
+<p>All content, features, and functionality are owned by the {org_en} and are protected by international copyright, trademark, and other intellectual property laws.</p>
 
 <h3>6. Event Rules and Regulations</h3>
 <ul>
@@ -81,7 +87,7 @@ class TermsAndConditionSeeder extends Seeder
 </ul>
 
 <h3>7. Limitation of Liability</h3>
-<p>The North Batinah Governor Office and Sohar Festival shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the app or services.</p>
+<p>The {org_en} and {app_en} shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the app or services.</p>
 
 <h3>8. Changes to Events</h3>
 <p>Event details including dates, times, venues, and performers are subject to change. We will notify you of any significant changes through the app or registered contact information.</p>
@@ -97,22 +103,22 @@ class TermsAndConditionSeeder extends Seeder
 
 <h3>12. Contact Information</h3>
 <p>For questions or concerns about these Terms and Conditions, please contact:</p>
-<p><strong>North Batinah Governor Office</strong><br>
-Sohar Festival Management<br>
-Email: info@soharfestival.om<br>
-Phone: +968 XXXXXXXX</p>
+<p><strong>{org_en}</strong><br>
+{app_en} Management<br>
+Email: {email}<br>
+Phone: {phone}</p>
 HTML;
     }
 
     private function getArabicContent(): string
     {
         return <<<HTML
-<h2>الشروط والأحكام لمهرجان صحار</h2>
-<p><strong>تحت إدارة مكتب محافظ شمال الباطنة</strong></p>
+<h2>الشروط والأحكام ل{app_ar}</h2>
+<p><strong>تحت إدارة {org_ar}</strong></p>
 <p><em>آخر تحديث: أكتوبر 2025</em></p>
 
 <h3>1. قبول الشروط</h3>
-<p>من خلال الوصول إلى تطبيق وخدمات مهرجان صحار واستخدامها، فإنك تقبل وتوافق على الالتزام بشروط وأحكام هذه الاتفاقية. يدار مهرجان صحار من قبل مكتب محافظ شمال الباطنة.</p>
+<p>من خلال الوصول إلى تطبيق وخدمات {app_ar} واستخدامها، فإنك تقبل وتوافق على الالتزام بشروط وأحكام هذه الاتفاقية. يدار {app_ar} من قبل {org_ar}.</p>
 
 <h3>2. استخدام الخدمات</h3>
 <h4>2.1 الأهلية</h4>
@@ -152,7 +158,7 @@ HTML;
 </ul>
 
 <h3>5. الملكية الفكرية</h3>
-<p>جميع المحتويات والميزات والوظائف مملوكة لمكتب محافظ شمال الباطنة ومحمية بموجب قوانين حقوق النشر والعلامات التجارية والملكية الفكرية الأخرى الدولية.</p>
+<p>جميع المحتويات والميزات والوظائف مملوكة ل{org_ar} ومحمية بموجب قوانين حقوق النشر والعلامات التجارية والملكية الفكرية الأخرى الدولية.</p>
 
 <h3>6. قواعد ولوائح الفعاليات</h3>
 <ul>
@@ -163,7 +169,7 @@ HTML;
 </ul>
 
 <h3>7. حدود المسؤولية</h3>
-<p>لن يكون مكتب محافظ شمال الباطنة ومهرجان صحار مسؤولين عن أي أضرار غير مباشرة أو عرضية أو خاصة أو تبعية أو عقابية ناتجة عن استخدامك للتطبيق أو الخدمات.</p>
+<p>لن يكون {org_ar} و{app_ar} مسؤولين عن أي أضرار غير مباشرة أو عرضية أو خاصة أو تبعية أو عقابية ناتجة عن استخدامك للتطبيق أو الخدمات.</p>
 
 <h3>8. التغييرات في الفعاليات</h3>
 <p>تفاصيل الفعالية بما في ذلك التواريخ والأوقات والأماكن والفنانين عرضة للتغيير. سنخطرك بأي تغييرات مهمة من خلال التطبيق أو معلومات الاتصال المسجلة.</p>
@@ -179,10 +185,10 @@ HTML;
 
 <h3>12. معلومات الاتصال</h3>
 <p>للأسئلة أو المخاوف بشأن هذه الشروط والأحكام، يرجى الاتصال بـ:</p>
-<p><strong>مكتب محافظ شمال الباطنة</strong><br>
-إدارة مهرجان صحار<br>
-البريد الإلكتروني: info@soharfestival.om<br>
-الهاتف: +968 XXXXXXXX</p>
+<p><strong>{org_ar}</strong><br>
+إدارة {app_ar}<br>
+البريد الإلكتروني: {email}<br>
+الهاتف: {phone}</p>
 HTML;
     }
 }

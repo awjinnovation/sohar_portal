@@ -70,8 +70,7 @@ class TicketValidationController extends Controller
     public function markAsUsed(MarkTicketUsedRequest $request, string $ticketId): JsonResponse
     {
         // Find ticket by ID or ticket_number
-        $ticket = Ticket::where('id', $ticketId)
-            ->orWhere('ticket_number', $ticketId)
+        $ticket = Ticket::where(fn ($q) => $q->where('id', $ticketId)->orWhere('ticket_number', $ticketId))
             ->first();
 
         if (!$ticket) {
@@ -99,11 +98,33 @@ class TicketValidationController extends Controller
         $staff = $request->user();
         $validatedBy = $staff ? sprintf('%s (#%d)', $staff->name, $staff->id) : 'unknown';
 
-        $ticket->markAsUsed(
-            $validatedBy,
-            $request->input('location'),
-            $request->input('validation_notes')
-        );
+        $ticket = \Illuminate\Support\Facades\DB::transaction(function () use ($ticket, $validatedBy, $request) {
+            // Lock: two gates scanning the same ticket must not both admit.
+            $locked = Ticket::whereKey($ticket->id)->lockForUpdate()->first();
+            if (! $locked->getValidationStatus()['is_valid']) {
+                return null;
+            }
+            $firstCheckIn = (int) $locked->check_in_count === 0;
+            $locked->markAsUsed($validatedBy, $request->input('location'), $request->input('validation_notes'));
+
+            // Optional tenant reward: points on the first gate validation (§6a).
+            $tenant = app(\App\Tenancy\TenantContext::class)->get();
+            $points = (int) $tenant->setting('points.checkin_points', 0);
+            if ($firstCheckIn && $tenant->moduleEnabled('points') && $tenant->setting('points.earn_on_checkin') && $points > 0 && $locked->user) {
+                $service = app(\App\Services\Wallet\PointsService::class);
+                $service->award($service->accountFor($locked->user, $tenant), $tenant, $points, 'platform.points.earn_checkin', $locked, "checkin:ticket:{$locked->id}");
+            }
+
+            return $locked;
+        });
+
+        if (! $ticket) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot mark ticket as used',
+                'error_code' => 'INVALID_OPERATION',
+            ], 400);
+        }
 
         return response()->json([
             'success' => true,
@@ -112,7 +133,7 @@ class TicketValidationController extends Controller
                 'ticket_id' => (string) $ticket->id,
                 'ticket_number' => $ticket->ticket_number,
                 'status' => $ticket->status,
-                'validated_at' => $ticket->used_at?->toIso8601String(),
+                'validated_at' => \App\Support\TenantTime::iso($ticket->used_at),
                 'validated_by' => $ticket->validated_by,
                 'check_in_count' => $ticket->check_in_count,
             ],

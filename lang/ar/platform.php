@@ -1,0 +1,41 @@
+<?php
+
+return [
+    'errors' => [
+        'insufficient_balance' => 'رصيد المحفظة غير كافٍ.',
+        'wallet_frozen' => 'هذه المحفظة مجمدة. يرجى التواصل مع الدعم.',
+        'pay_token_expired' => 'انتهت صلاحية رمز الدفع أو تم استخدامه. اطلب من العميل تحديثه.',
+        'pay_token_invalid' => 'رمز الدفع غير صالح.',
+        'limit_exceeded' => 'المبلغ يتجاوز الحد المسموح.',
+        'module_disabled' => 'خدمة :module غير متاحة.',
+        'refund_not_allowed' => 'لا يمكن استرداد المبلغ لهذه المحفظة.',
+        'insufficient_points' => 'النقاط غير كافية.',
+        'idempotency_conflict' => 'تم استخدام مفتاح الطلب لعملية مختلفة.',
+        'tenant_not_found' => 'الجهة غير موجودة أو غير مفعلة.',
+        'server_error' => 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
+    ],
+    'tx' => [
+        'topup' => ['title' => 'شحن المحفظة', 'description' => 'تمت الإضافة إلى محفظتك'],
+        'topup_bonus' => ['title' => 'مكافأة الشحن', 'description' => 'رصيد إضافي مقابل الشحن'],
+        'ticket_purchase' => ['title' => 'شراء تذكرة', 'description' => ':event'],
+        'ticket_refund' => ['title' => 'استرداد تذكرة', 'description' => ':event'],
+        'vendor_payment' => ['title' => 'دفع', 'description' => ':vendor'],
+        'deposit_hold' => ['title' => 'حجز تأمين', 'description' => ':label'],
+        'deposit_release' => ['title' => 'إرجاع التأمين', 'description' => ':label'],
+        'deposit_forfeit' => ['title' => 'مصادرة التأمين', 'description' => ':label'],
+        'refund' => ['title' => 'استرداد إليك', 'description' => 'طلب استرداد رقم :id'],
+        'refund_reversal' => ['title' => 'إلغاء الاسترداد', 'description' => 'تمت إعادة طلب الاسترداد رقم :id إلى محفظتك'],
+        'points_redemption' => ['title' => 'استبدال النقاط', 'description' => ':points نقطة'],
+        'adjustment' => ['title' => 'تعديل الرصيد', 'description' => ':reason'],
+        'promo_expired' => ['title' => 'انتهاء صلاحية الرصيد الترويجي', 'description' => 'انتهت صلاحية الرصيد الترويجي غير المستخدم'],
+    ],
+    'points' => [
+        'earn' => 'نقاط مكتسبة',
+        'earn_checkin' => 'مكافأة الحضور',
+        'redeem' => 'استبدال النقاط',
+        'redeem_checkout' => 'نقاط مستخدمة عند الدفع',
+        'expire' => 'نقاط منتهية',
+        'adjust' => 'تعديل النقاط',
+        'reversal' => 'عكس النقاط (استرداد)',
+    ],
+];

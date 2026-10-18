@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class TermsAndCondition extends Model
 {
+    use \App\Tenancy\BelongsToTenant;
+
     protected $fillable = [
         'title',
         'title_ar',

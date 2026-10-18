@@ -39,7 +39,9 @@ class NorthBatinahEventsSeeder extends Seeder
 
     public function run(): void
     {
-        $now = Carbon::now();
+        // Wall-clock times in the tenant zone (event times are tenant-local).
+        $now = Carbon::now(\App\Support\TenantTime::zone());
+        $tenantId = app(\App\Tenancy\TenantContext::class)->id();
 
         // ------------------------------------------------------------------
         // Categories (general event types)
@@ -56,8 +58,8 @@ class NorthBatinahEventsSeeder extends Seeder
         ];
         $categories = [];
         foreach ($categoryDefs as $c) {
-            $categories[$c['key']] = Category::create([
-                'name' => $c['name'],
+            // Idempotent: re-running `db:seed` updates instead of duplicating.
+            $categories[$c['key']] = Category::updateOrCreate(['name' => $c['name']], [
                 'name_ar' => $c['name_ar'],
                 'description' => $c['name'] . ' across North Batinah',
                 'description_ar' => $c['name_ar'] . ' في محافظة شمال الباطنة',
@@ -86,9 +88,8 @@ class NorthBatinahEventsSeeder extends Seeder
         ];
         $map = [];
         foreach ($mapDefs as $m) {
-            $loc = MapLocation::create([
+            $loc = MapLocation::updateOrCreate(['name' => $m['name']], [
                 'type' => $m['type'],
-                'name' => $m['name'],
                 'name_ar' => $m['name_ar'],
                 'description' => $m['name'] . ', North Batinah',
                 'description_ar' => $m['name_ar'] . '، شمال الباطنة',
@@ -137,8 +138,8 @@ class NorthBatinahEventsSeeder extends Seeder
                 $start = (clone $now)->subDays(2)->setTime(17, 0);
                 $end = (clone $now)->addDays(5)->setTime(23, 0);
             }
-            Event::create([
-                'title' => $e['t'],
+            // Content keyed by title; an existing event (maybe edited) is kept.
+            Event::firstOrCreate(['title' => $e['t']], [
                 'title_ar' => $e['t_ar'],
                 'description' => $e['d'],
                 'description_ar' => $e['d_ar'],
@@ -178,8 +179,7 @@ class NorthBatinahEventsSeeder extends Seeder
             ['day' => 'Fri-Sat', 'day_ar' => 'الجمعة-السبت', 'opening' => '13:00', 'closing' => '00:30'],
         ];
         foreach ($restaurantDefs as $r) {
-            Restaurant::create([
-                'name' => $r['n'],
+            Restaurant::firstOrCreate(['name' => $r['n']], [
                 'name_ar' => $r['n_ar'],
                 'description' => $r['d'],
                 'description_ar' => $r['d_ar'],
@@ -219,7 +219,13 @@ class NorthBatinahEventsSeeder extends Seeder
             ['type' => 'service', 'name' => 'Lost & Found', 'name_ar' => 'المفقودات', 'phone' => '+968 2684 0122', 'addr' => 'Information Desk'],
         ];
         foreach ($locationDefs as $l) {
-            DB::table('locations')->insert([
+            $exists = DB::table('locations')->where('name', $l['name'])
+                ->when(\Illuminate\Support\Facades\Schema::hasColumn('locations', 'tenant_id'), fn ($q) => $q->where('tenant_id', $tenantId))
+                ->exists();
+            if ($exists) {
+                continue;
+            }
+            DB::table('locations')->insert(array_merge(\Illuminate\Support\Facades\Schema::hasColumn('locations', 'tenant_id') ? ['tenant_id' => $tenantId] : [], [
                 'name' => $l['name'],
                 'name_ar' => $l['name_ar'],
                 'type' => $l['type'],
@@ -232,9 +238,9 @@ class NorthBatinahEventsSeeder extends Seeder
                 'contact_number' => $l['phone'],
                 'additional_info' => json_encode(['is_24_hours' => $l['type'] === 'emergency']),
                 'is_active' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
         }
 
         // ------------------------------------------------------------------
@@ -247,8 +253,7 @@ class NorthBatinahEventsSeeder extends Seeder
             ['t' => 'Weather advisory', 't_ar' => 'تنبيه الطقس', 'c' => 'Evenings may be humid — please stay hydrated at outdoor events.', 'c_ar' => 'قد تكون الأمسيات رطبة — يرجى شرب الماء في الفعاليات الخارجية.', 'type' => 'warning', 'prio' => 1, 'pin' => false],
         ];
         foreach ($announcementDefs as $a) {
-            Announcement::create([
-                'title' => $a['t'],
+            Announcement::firstOrCreate(['title' => $a['t']], [
                 'title_ar' => $a['t_ar'],
                 'content' => $a['c'],
                 'content_ar' => $a['c_ar'],
@@ -258,21 +263,21 @@ class NorthBatinahEventsSeeder extends Seeder
                 'is_active' => true,
                 'start_datetime' => $now,
                 'end_datetime' => (clone $now)->addDays(30),
-                'created_by' => 1,
+                'created_by' => User::orderBy('id')->value('id'),
             ]);
         }
 
         // ------------------------------------------------------------------
         // Demo visitor with personal data (registered/purchased events,
-        // favorites, notifications). Log in with phone 91234567 + test OTP.
+        // favorites, notifications). Log in with phone 91234567 (stored as 96891234567) + test OTP.
         // ------------------------------------------------------------------
         $demo = User::firstOrCreate(
-            ['phone_number' => '91234567'],
+            ['phone_number' => '96891234567'],
             [
                 'name' => 'أحمد الزدجالي',
                 'email' => 'visitor@northbatinah.events',
                 'password' => Hash::make('visitor123'),
-                'phone_verified_at' => $now,
+                'phone_verified_at' => now(),
                 'preferred_language' => 'ar',
             ]
         );
@@ -280,20 +285,25 @@ class NorthBatinahEventsSeeder extends Seeder
         $soharFestival = Event::where('title', 'Sohar Festival 2025')->first();
         $featuredRestaurant = Restaurant::where('is_featured', true)->first();
 
-        if ($soharFestival) {
+        $hasSeedOrder = $soharFestival && Payment::where('user_id', $demo->id)
+            ->where('payable_id', $soharFestival->id)->where('payment_type', 'ticket')->exists();
+        if ($soharFestival && ! $hasSeedOrder) {
             $txn = 'TXN' . strtoupper(Str::random(10));
             Payment::create([
                 'user_id' => $demo->id,
                 'transaction_id' => $txn,
                 'payment_type' => 'ticket',
+                'method' => 'gateway',
                 'payable_id' => $soharFestival->id,
-                'payable_type' => 'App\\Models\\Ticket',
+                'payable_type' => Event::class,
                 'amount' => (float) $soharFestival->price * 2,
+                'amount_minor' => $soharFestival->unitPriceMinor() * 2,
+                'fulfilled_at' => now(),
                 'currency' => 'OMR',
                 'status' => 'completed',
                 'payment_method' => 'card',
-                'paid_at' => $now,
-                'metadata' => ['quantity' => 2, 'ticket_type' => 'standard', 'booking_date' => (clone $now)->addDay()->format('Y-m-d')],
+                'paid_at' => now(),
+                'metadata' => ['event_id' => $soharFestival->id, 'quantity' => 2, 'ticket_type' => 'standard', 'booking_date' => (clone $now)->addDay()->format('Y-m-d'), 'tickets_minor' => $soharFestival->unitPriceMinor() * 2],
             ]);
             for ($i = 0; $i < 2; $i++) {
                 Ticket::create([
@@ -308,17 +318,19 @@ class NorthBatinahEventsSeeder extends Seeder
                     'price' => (float) $soharFestival->price,
                     'currency' => 'OMR',
                     'holder_name' => $demo->name,
-                    'purchase_date' => $now,
+                    'purchase_date' => now(),
                 ]);
             }
-            UserFavorite::create([
+        }
+        if ($soharFestival) {
+            UserFavorite::firstOrCreate([
                 'user_id' => $demo->id,
                 'favoritable_type' => Event::class,
                 'favoritable_id' => $soharFestival->id,
             ]);
         }
         if ($featuredRestaurant) {
-            UserFavorite::create([
+            UserFavorite::firstOrCreate([
                 'user_id' => $demo->id,
                 'favoritable_type' => Restaurant::class,
                 'favoritable_id' => $featuredRestaurant->id,
@@ -332,36 +344,18 @@ class NorthBatinahEventsSeeder extends Seeder
             ['t' => 'Payment received', 't_ar' => 'تم استلام الدفع', 'b' => 'We received your payment of 4.000 OMR. Thank you!', 'b_ar' => 'استلمنا دفعتك بقيمة 4.000 ريال عماني. شكراً لك!', 'type' => 'payment', 'read' => true],
         ];
         foreach ($notificationDefs as $n) {
-            Notification::create([
-                'user_id' => $demo->id,
-                'title' => $n['t'],
+            Notification::firstOrCreate(['user_id' => $demo->id, 'title' => $n['t']], [
                 'title_ar' => $n['t_ar'],
                 'body' => $n['b'],
                 'body_ar' => $n['b_ar'],
                 'type' => $n['type'],
                 'data' => null,
                 'is_read' => $n['read'],
-                'read_at' => $n['read'] ? $now : null,
+                'read_at' => $n['read'] ? now() : null,
             ]);
         }
 
-        // ------------------------------------------------------------------
-        // App settings / config
-        // ------------------------------------------------------------------
-        $settings = [
-            ['setting_key' => 'app_name', 'setting_value' => 'فعاليات شمال الباطنة', 'setting_type' => 'string', 'is_public' => true],
-            ['setting_key' => 'app_name_en', 'setting_value' => 'North Batinah Events', 'setting_type' => 'string', 'is_public' => true],
-            ['setting_key' => 'primary_color', 'setting_value' => '#2B4C8C', 'setting_type' => 'string', 'is_public' => true],
-            ['setting_key' => 'secondary_color', 'setting_value' => '#F4A521', 'setting_type' => 'string', 'is_public' => true],
-            ['setting_key' => 'support_phone', 'setting_value' => '+968 2684 0000', 'setting_type' => 'string', 'is_public' => true],
-            ['setting_key' => 'support_email', 'setting_value' => 'info@northbatinah.events', 'setting_type' => 'string', 'is_public' => true],
-        ];
-        foreach ($settings as $s) {
-            DB::table('app_settings')->updateOrInsert(
-                ['setting_key' => $s['setting_key']],
-                array_merge($s, ['created_at' => $now, 'updated_at' => $now])
-            );
-        }
+        // Branding / theme / modules live in the tenant settings (TenantSeeder).
 
         echo "North Batinah Events data seeded: "
             . Category::count() . " categories, "

@@ -8,22 +8,27 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Event extends Model implements HasMedia
 {
+    use \App\Tenancy\BelongsToTenant;
+
     use InteractsWithMedia;
     protected $fillable = [
         'title', 'title_ar', 'description', 'description_ar', 'category_id',
         'start_time', 'end_time', 'location', 'location_ar', 'map_location_id',
         'image_url', 'images', 'price', 'currency', 'available_tickets', 'total_tickets',
-        'organizer_name', 'organizer_name_ar', 'is_featured', 'is_active', 'pricing'
+        'organizer_name', 'organizer_name_ar', 'is_featured', 'is_active', 'pricing',
+        'deposit_minor', 'deposit_type',
     ];
 
     protected $casts = [
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
+        // Wall-clock times in the tenant time zone (what organizers type).
+        'start_time' => \App\Casts\TenantLocalDateTime::class,
+        'end_time' => \App\Casts\TenantLocalDateTime::class,
         'price' => 'decimal:3',
         'is_featured' => 'boolean',
         'is_active' => 'boolean',
         'images' => 'array',
-        'pricing' => 'array'
+        'pricing' => 'array',
+        'deposit_minor' => 'integer',
     ];
 
     public function category()
@@ -46,9 +51,21 @@ class Event extends Model implements HasMedia
         return $this->hasMany(Ticket::class);
     }
 
-    public function ticketPricing()
+    /**
+     * Server-side unit price in minor units for a ticket type. A matching
+     * entry in the `pricing` JSON ([{type, price}]) wins over the base price.
+     */
+    public function unitPriceMinor(?string $ticketType = null, int $decimals = 3): int
     {
-        return $this->hasMany(TicketPricing::class);
+        if ($ticketType && is_array($this->pricing)) {
+            foreach ($this->pricing as $tier) {
+                if (($tier['type'] ?? null) === $ticketType && isset($tier['price'])) {
+                    return \App\Support\Money::toMinor((string) $tier['price'], $decimals);
+                }
+            }
+        }
+
+        return \App\Support\Money::toMinor((string) ($this->getRawOriginal('price') ?? $this->price ?? 0), $decimals);
     }
 
 
@@ -64,7 +81,7 @@ class Event extends Model implements HasMedia
 
     public function scopeUpcoming($query)
     {
-        return $query->where('start_time', '>', now());
+        return $query->where('start_time', '>', \App\Support\TenantTime::localNow());
     }
 
     /**
@@ -136,7 +153,7 @@ class Event extends Model implements HasMedia
     public function canBookForDate(string $date, int $quantity = 1): bool
     {
         // Check if date is within event range
-        $bookingDate = \Carbon\Carbon::parse($date);
+        $bookingDate = \Carbon\Carbon::parse($date, $this->start_time->getTimezone());
         if ($bookingDate < $this->start_time->startOfDay() || $bookingDate > $this->end_time->endOfDay()) {
             return false;
         }

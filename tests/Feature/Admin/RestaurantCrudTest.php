@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
-use Spatie\Permission\Models\Role;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use PHPUnit\Framework\Attributes\Test;
 
 class RestaurantCrudTest extends TestCase
@@ -20,8 +20,9 @@ class RestaurantCrudTest extends TestCase
     {
         parent::setUp();
 
-        // Create admin role
-        $adminRole = Role::create(['name' => 'admin']);
+        // Global role definitions; the assignment below is made in the
+        // current tenant (north-batinah, set by the base TestCase).
+        $this->seed(RolesAndPermissionsSeeder::class);
 
         // Create admin user
         $this->admin = User::factory()->create([
@@ -60,7 +61,6 @@ class RestaurantCrudTest extends TestCase
     #[Test]
     public function admin_can_create_new_restaurant_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $restaurantData = [
@@ -105,7 +105,6 @@ class RestaurantCrudTest extends TestCase
     #[Test]
     public function restaurant_creation_fails_with_invalid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $invalidData = [
@@ -176,6 +175,7 @@ class RestaurantCrudTest extends TestCase
             'cuisine_ar' => 'آسيوي',
             'location' => 'Muscat',
             'location_ar' => 'مسقط',
+            'price_range' => '$$',
             'is_active' => true,
         ]);
 
@@ -190,7 +190,6 @@ class RestaurantCrudTest extends TestCase
     #[Test]
     public function admin_can_update_restaurant_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $restaurant = Restaurant::create([
@@ -203,6 +202,7 @@ class RestaurantCrudTest extends TestCase
             'location' => 'Original Location',
             'location_ar' => 'الموقع الأصلي',
             'phone' => '+968 1111 1111',
+            'price_range' => '$$',
             'is_active' => true,
         ]);
 
@@ -243,7 +243,6 @@ class RestaurantCrudTest extends TestCase
     #[Test]
     public function admin_can_delete_restaurant()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $restaurant = Restaurant::create([
@@ -255,6 +254,7 @@ class RestaurantCrudTest extends TestCase
             'cuisine_ar' => 'اختبار',
             'location' => 'Test',
             'location_ar' => 'اختبار',
+            'price_range' => '$$',
             'is_active' => true,
         ]);
 
@@ -281,7 +281,6 @@ class RestaurantCrudTest extends TestCase
     #[Test]
     public function restaurant_name_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $restaurantData = [
@@ -299,7 +298,6 @@ class RestaurantCrudTest extends TestCase
     #[Test]
     public function restaurant_name_ar_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $restaurantData = [
@@ -317,7 +315,6 @@ class RestaurantCrudTest extends TestCase
     #[Test]
     public function restaurant_description_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $restaurantData = [
@@ -335,7 +332,6 @@ class RestaurantCrudTest extends TestCase
     #[Test]
     public function restaurant_description_ar_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $restaurantData = [
@@ -353,15 +349,20 @@ class RestaurantCrudTest extends TestCase
     #[Test]
     public function restaurant_can_have_nullable_optional_fields()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
+        // Required: names, descriptions, cuisine, location, price range.
+        // Optional (omitted): coordinates, image, phone, website, flags.
         $restaurantData = [
             'name' => 'Minimal Restaurant',
             'name_ar' => 'مطعم بسيط',
             'description' => 'Minimal description',
             'description_ar' => 'وصف بسيط',
-            'is_active' => 1,
+            'cuisine' => 'Omani',
+            'cuisine_ar' => 'عماني',
+            'location' => 'Corniche',
+            'location_ar' => 'الكورنيش',
+            'price_range' => '$',
         ];
 
         $response = $this->post(route('admin.restaurants.store'), $restaurantData);
@@ -371,6 +372,9 @@ class RestaurantCrudTest extends TestCase
         $this->assertDatabaseHas('restaurants', [
             'name' => 'Minimal Restaurant',
             'name_ar' => 'مطعم بسيط',
+            'latitude' => null,
+            'phone' => null,
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 }

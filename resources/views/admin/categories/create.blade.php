@@ -2,184 +2,99 @@
 
 @section('title', 'إضافة فئة جديدة')
 @section('page-title', 'إضافة فئة جديدة')
+@php
+    $pageIcon = 'grid';
+    $breadcrumbs = ['الفعاليات والتذاكر' => null, 'الفئات' => route('admin.categories.index'), 'إضافة فئة' => null];
+    $model = null;
+    $colorInt = old('color_value', '507744394');
+    $colorHex = sprintf('#%06X', ((int) $colorInt) & 0xFFFFFF);
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.categories.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">معلومات الفئة الجديدة</h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ route('admin.categories.store') }}" method="POST">
-                        @csrf
-                        
-                        <!-- Language Tabs -->
-                        <ul class="nav nav-tabs mb-4" role="tablist">
-                            <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#arabic-content">
-                                    <i class="bi bi-translate"></i> العربية
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#english-content">
-                                    <i class="bi bi-globe"></i> English
-                                </a>
-                            </li>
-                        </ul>
+    @include('admin.partials.alerts')
 
-                        <!-- Tab Content -->
-                        <div class="tab-content">
-                            <!-- Arabic Content -->
-                            <div class="tab-pane fade show active" id="arabic-content">
-                                <div class="mb-3">
-                                    <label for="name_ar" class="form-label">اسم الفئة <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('name_ar') is-invalid @enderror" 
-                                           id="name_ar" name="name_ar" value="{{ old('name_ar') }}" required>
-                                    @error('name_ar')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="description_ar" class="form-label">الوصف <span class="text-danger">*</span></label>
-                                    <textarea class="form-control @error('description_ar') is-invalid @enderror" 
-                                              id="description_ar" name="description_ar" rows="3" required>{{ old('description_ar') }}</textarea>
-                                    @error('description_ar')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-
-                            <!-- English Content -->
-                            <div class="tab-pane fade" id="english-content">
-                                <div class="mb-3">
-                                    <label for="name" class="form-label">Category Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                           id="name" name="name" value="{{ old('name') }}" required>
-                                    @error('name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-                                    <textarea class="form-control @error('description') is-invalid @enderror" 
-                                              id="description" name="description" rows="3" required>{{ old('description') }}</textarea>
-                                    @error('description')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+    <form action="{{ route('admin.categories.store') }}" method="POST">
+        @csrf
+        <div class="row g-4">
+            <div class="col-xl-8">
+                <x-admin.card title="معلومات الفئة" icon="translate" subtitle="يظهر النص العربي أو الإنجليزي حسب لغة المستخدم">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="arabic-tab" data-bs-toggle="tab" data-bs-target="#arabic-content" type="button" role="tab">{{ __('العربية') }}</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="english-tab" data-bs-toggle="tab" data-bs-target="#english-content" type="button" role="tab">English</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content border border-top-0 p-3">
+                        <div class="tab-pane fade show active" id="arabic-content" role="tabpanel">
+                            <x-admin.form-field name="name_ar" label="اسم الفئة" :value="old('name_ar', $model?->name_ar)" required />
+                            <x-admin.form-field name="description_ar" label="الوصف" type="textarea" rows="3" :value="old('description_ar', $model?->description_ar)" required />
                         </div>
-
-                        <!-- Common Fields -->
-                        <hr class="my-4">
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="icon_name" class="form-label">الأيقونة <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('icon_name') is-invalid @enderror" 
-                                            id="icon_name" name="icon_name" required>
-                                        <option value="">اختر أيقونة</option>
-                                        <option value="music-note" {{ old('icon_name') == 'music-note' ? 'selected' : '' }}>🎵 موسيقى</option>
-                                        <option value="calendar" {{ old('icon_name') == 'calendar' ? 'selected' : '' }}>📅 فعاليات</option>
-                                        <option value="palette" {{ old('icon_name') == 'palette' ? 'selected' : '' }}>🎨 فنون</option>
-                                        <option value="book" {{ old('icon_name') == 'book' ? 'selected' : '' }}>📚 ثقافة</option>
-                                        <option value="trophy" {{ old('icon_name') == 'trophy' ? 'selected' : '' }}>🏆 رياضة</option>
-                                        <option value="heart" {{ old('icon_name') == 'heart' ? 'selected' : '' }}>❤️ عائلي</option>
-                                        <option value="shop" {{ old('icon_name') == 'shop' ? 'selected' : '' }}>🛍️ تسوق</option>
-                                        <option value="cup-hot" {{ old('icon_name') == 'cup-hot' ? 'selected' : '' }}>☕ طعام</option>
-                                    </select>
-                                    @error('icon_name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="color_value" class="form-label">اللون <span class="text-danger">*</span></label>
-                                    <input type="color" class="form-control form-control-color @error('color_value') is-invalid @enderror" 
-                                           id="color_picker" value="#1E3A8A">
-                                    <input type="hidden" id="color_value" name="color_value" value="{{ old('color_value', '507744394') }}">
-                                    @error('color_value')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+                        <div class="tab-pane fade" id="english-content" role="tabpanel" dir="ltr">
+                            <x-admin.form-field name="name" label="Category Name" :value="old('name', $model?->name)" required />
+                            <x-admin.form-field name="description" label="Description" type="textarea" rows="3" :value="old('description', $model?->description)" required />
                         </div>
+                    </div>
+                </x-admin.card>
+            </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="display_order" class="form-label">الترتيب</label>
-                                    <input type="number" class="form-control @error('display_order') is-invalid @enderror" 
-                                           id="display_order" name="display_order" value="{{ old('display_order', 0) }}" min="0">
-                                    @error('display_order')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+            <div class="col-xl-4">
+                <x-admin.card title="المظهر" icon="palette">
+                    <x-admin.form-field name="icon_name" label="الأيقونة" type="select" required placeholder="اختر أيقونة" :value="old('icon_name')"
+                        :options="['music-note' => 'موسيقى', 'calendar' => 'فعاليات', 'palette' => 'فنون', 'book' => 'ثقافة', 'trophy' => 'رياضة', 'heart' => 'عائلي', 'shop' => 'تسوق', 'cup-hot' => 'طعام']" />
 
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="image_url" class="form-label">رابط الصورة</label>
-                                    <input type="url" class="form-control @error('image_url') is-invalid @enderror" 
-                                           id="image_url" name="image_url" value="{{ old('image_url') }}" 
-                                           placeholder="https://example.com/image.jpg">
-                                    @error('image_url')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+                    <div class="field">
+                        <label for="color_picker" class="form-label">{{ __('اللون') }}<span class="req">*</span></label>
+                        <div class="color-field">
+                            <span class="swatch"><span id="color_swatch" style="background: {{ $colorHex }}"></span>
+                                <input type="color" id="color_picker" value="{{ strtolower($colorHex) }}" aria-label="{{ __('اللون') }}"></span>
+                            <input type="text" id="color_hex" class="form-control" value="{{ $colorHex }}" dir="ltr" readonly tabindex="-1" aria-label="{{ __('رمز اللون') }}">
                         </div>
+                        <input type="hidden" id="color_value" name="color_value" value="{{ $colorInt }}">
+                        @error('color_value')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
 
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
-                                       value="1" {{ old('is_active', true) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="is_active">
-                                    نشط
-                                </label>
-                            </div>
-                        </div>
+                    <x-admin.form-field name="image_url" label="رابط الصورة" type="url" dir="ltr" placeholder="https://example.com/image.jpg" :value="old('image_url', $model?->image_url)" />
+                </x-admin.card>
 
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary">
-                                رجوع
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg"></i>
-                                حفظ الفئة
-                            </button>
+                <x-admin.card title="النشر" icon="broadcast">
+                    <x-admin.form-field name="display_order" label="الترتيب" type="number" min="0" dir="ltr" :value="old('display_order', $model ? $model->display_order : 0)"
+                        help="الأرقام الأصغر تظهر أولاً" />
+                    <x-admin.toggle name="is_active" id="is_active" label="نشط" description="تظهر الفئة في التطبيق" :checked="old('is_active', $model ? $model->is_active : true)" />
+                    <x-slot:footer>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1" data-busy><i class="bi bi-check-lg"></i> {{ __('حفظ الفئة') }}</button>
+                            <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary">{{ __('إلغاء') }}</a>
                         </div>
-                    </form>
-                </div>
+                    </x-slot:footer>
+                </x-admin.card>
             </div>
         </div>
-    </div>
-</div>
+    </form>
+@endsection
 
 @push('scripts')
 <script>
-// Convert color to integer
-document.getElementById('color_picker').addEventListener('change', function(e) {
-    const hex = e.target.value.replace('#', '');
-    const int = parseInt(hex, 16);
-    document.getElementById('color_value').value = int;
-});
-
-// Convert integer to color on load
-window.addEventListener('DOMContentLoaded', function() {
-    const colorValue = document.getElementById('color_value').value;
-    if (colorValue) {
-        const hex = '#' + parseInt(colorValue).toString(16).padStart(6, '0');
-        document.getElementById('color_picker').value = hex;
+document.addEventListener('DOMContentLoaded', function () {
+    // color_value is stored as an integer (app colors may carry an alpha byte, e.g. 0xFF1E3A8A).
+    var picker = document.getElementById('color_picker');
+    var hidden = document.getElementById('color_value');
+    var swatch = document.getElementById('color_swatch');
+    var hexText = document.getElementById('color_hex');
+    var current = parseInt(hidden.value, 10) || 0;
+    var alpha = Math.floor(current / 0x1000000);
+    function sync(hex) {
+        var rgb = parseInt(hex.replace('#', ''), 16);
+        hidden.value = alpha * 0x1000000 + rgb;
+        swatch.style.background = hex;
+        hexText.value = hex.toUpperCase();
     }
+    picker.addEventListener('input', function (e) { sync(e.target.value); });
+    picker.addEventListener('change', function (e) { sync(e.target.value); });
 });
 </script>
 @endpush
-@endsection

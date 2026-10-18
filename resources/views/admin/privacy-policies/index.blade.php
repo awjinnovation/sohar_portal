@@ -2,81 +2,56 @@
 
 @section('title', 'سياسات الخصوصية')
 @section('page-title', 'إدارة سياسات الخصوصية')
+@section('page-subtitle', 'سياسة الخصوصية المعروضة في التطبيق وصفحته العامة')
+@php
+    $pageIcon = 'shield-check';
+    $breadcrumbs = ['المحتوى' => null, 'سياسة الخصوصية' => null];
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.privacy-policies.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> {{ __('إضافة سياسة خصوصية جديدة') }}
+    </a>
+@endsection
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <a href="{{ route('admin.privacy-policies.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus me-2"></i>إضافة سياسة خصوصية جديدة
-    </a>
-</div>
+    @include('admin.partials.alerts')
 
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
+    <x-admin.data-table title="جميع الإصدارات" icon="shield-check" :count="$policies->total()" :paginator="$policies">
+        <x-slot:head>
+            <th style="width: 56px">#</th>
+            <th>{{ __('العنوان') }}</th>
+            <th>{{ __('الحالة') }}</th>
+            <th>{{ __('تاريخ الإنشاء') }}</th>
+            <th>{{ __('آخر تحديث') }}</th>
+            <th class="text-end">{{ __('الإجراءات') }}</th>
+        </x-slot:head>
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>رقم</th>
-                        <th>اللغة</th>
-                        <th>العنوان</th>
-                        <th>الحالة</th>
-                        <th>تاريخ الإنشاء</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($policies as $policy)
-                    <tr>
-                        <td>{{ $policy->id }}</td>
-                        <td>
-                            <span class="badge bg-info">{{ strtoupper($policy->language) }}</span>
-                        </td>
-                        <td>{{ $policy->title }}</td>
-                        <td>
-                            @if($policy->is_active)
-                                <span class="badge bg-success">نشط</span>
-                            @else
-                                <span class="badge bg-secondary">غير نشط</span>
-                            @endif
-                        </td>
-                        <td>{{ $policy->created_at->format('Y-m-d') }}</td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <a href="{{ route('admin.privacy-policies.show', $policy) }}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.privacy-policies.edit', $policy) }}" class="btn btn-sm btn-warning">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ route('admin.privacy-policies.destroy', $policy) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذه السياسة؟')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="6" class="text-center">لا توجد سياسات خصوصية</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <div class="mt-4">
-            {{ $policies->links() }}
-        </div>
-    </div>
-</div>
+        @forelse($policies as $policy)
+            <tr>
+                <td class="num text-muted">{{ $policy->id }}</td>
+                <td>
+                    <a href="{{ route('admin.privacy-policies.show', $policy) }}" class="cell-title d-block text-decoration-none">{{ $policy->title_ar }}</a>
+                    <div class="cell-sub ltr text-start">{{ $policy->title }}</div>
+                </td>
+                <td><x-admin.status-pill domain="active" :status="$policy->is_active" /></td>
+                <td class="num text-muted">{{ $policy->created_at?->format('Y-m-d') }}</td>
+                <td class="num text-muted">{{ $policy->updated_at?->format('Y-m-d') }}</td>
+                <td class="text-end">
+                    <div class="row-actions">
+                        <a href="{{ route('admin.privacy-policies.show', $policy) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.privacy-policies.edit', $policy) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
+                        <form action="{{ route('admin.privacy-policies.destroy', $policy) }}" method="POST" data-confirm="{{ __('سيتم حذف هذه السياسة نهائيًا.') }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <x-admin.empty-row :colspan="6" icon="shield-check" title="لا توجد سياسات خصوصية" text="أضف سياسة الخصوصية لتظهر للمستخدمين في التطبيق.">
+                <a href="{{ route('admin.privacy-policies.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة سياسة') }}</a>
+            </x-admin.empty-row>
+        @endforelse
+    </x-admin.data-table>
 @endsection

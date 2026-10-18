@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserFavorite extends Model
 {
+    use \App\Tenancy\BelongsToTenant;
+
     use HasFactory;
 
     protected $fillable = [

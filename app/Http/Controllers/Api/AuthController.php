@@ -9,60 +9,77 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use App\Models\Wallet;
+use App\Tenancy\TenantContext;
 use Carbon\Carbon;
 
 class AuthController extends Controller
 {
     /**
-     * Send OTP to phone number
+     * Send OTP to phone number.
+     *
+     * Throttled (route middleware throttle:otp-send). The code is stored as
+     * an HMAC, never returned to the client unless OTP_DEBUG=true outside
+     * production.
      */
-    public function sendOtp(Request $request)
+    public function sendOtp(Request $request, TenantContext $context)
     {
         $request->validate([
             'phone_number' => 'required|string|regex:/^[0-9]{8,15}$/'
         ]);
 
         $phoneNumber = $request->phone_number;
+        $ttl = (int) config('auth.otp.ttl_minutes', 5);
 
-        // Generate 6-digit OTP.
-        // In non-production environments a fixed OTP can be enabled via the
-        // OTP_TEST_CODE env var to ease manual testing; it is NEVER honoured
-        // in production, where a fresh random code is always used.
-        $otp = random_int(100000, 999999);
-        if (!app()->environment('production') && env('OTP_TEST_CODE')) {
-            $otp = (string) env('OTP_TEST_CODE');
+        $otp = (string) random_int(100000, 999999);
+        if (!app()->environment('production') && config('auth.otp.test_code')) {
+            $otp = (string) config('auth.otp.test_code');
         }
 
-        // Delete old OTPs for this phone number
         DB::table('otp_verifications')
             ->where('phone_number', $phoneNumber)
             ->where('is_used', false)
             ->delete();
 
-        // Store OTP in database
         DB::table('otp_verifications')->insert([
             'phone_number' => $phoneNumber,
-            'otp_code' => $otp,
-            'expires_at' => Carbon::now()->addMinutes(5),
+            'otp_code' => self::hashOtp($phoneNumber, $otp),
+            'expires_at' => Carbon::now()->addMinutes($ttl),
+            'attempts' => 0,
             'created_at' => now(),
             'updated_at' => now()
         ]);
 
-        // Send OTP via SMS
-        $message = "Your OTP code for Sohar Festival is: {$otp}. Valid for 5 minutes.";
+        $tenant = $context->get();
+        $locale = app()->getLocale();
+        $template = $tenant->setting("messages.otp_sms.$locale") ?? $tenant->setting('messages.otp_sms.en');
+        $message = strtr((string) $template, [
+            ':app' => $tenant->localizedName($locale),
+            ':code' => $otp,
+            ':minutes' => (string) $ttl,
+        ]);
         SendOtpSms::dispatch($phoneNumber, $message);
 
-        return response()->json([
+        $response = [
             'success' => true,
             'message' => 'OTP sent successfully',
-            'expires_in' => 300, // 5 minutes in seconds
-            // Only exposed in local/testing to aid development, never in production.
-            'otp' => app()->environment('production') ? null : $otp
-        ]);
+            'expires_in' => $ttl * 60,
+        ];
+        if (config('auth.otp.debug') && !app()->environment('production')) {
+            $response['otp'] = $otp;
+        }
+
+        return response()->json($response);
+    }
+
+    public static function hashOtp(string $phone, string $code): string
+    {
+        return hash_hmac('sha256', $phone.'|'.$code, (string) config('app.key'));
     }
 
     /**
-     * Verify OTP and login/register user
+     * Verify OTP and login/register user (throttle:otp-verify).
+     * The current code is invalidated after auth.otp.max_attempts failures.
      */
     public function verifyOtp(Request $request)
     {
@@ -74,52 +91,70 @@ class AuthController extends Controller
         ]);
 
         $phoneNumber = $request->phone_number;
-        $otpCode = $request->otp_code ?? $request->otp;
+        $otpCode = (string) ($request->otp_code ?? $request->otp);
+        $maxAttempts = (int) config('auth.otp.max_attempts', 5);
 
-        // Check OTP validity
         $otpRecord = DB::table('otp_verifications')
             ->where('phone_number', $phoneNumber)
-            ->where('otp_code', $otpCode)
             ->where('is_used', false)
-            ->where('expires_at', '>', now())
+            ->orderByDesc('id')
             ->first();
 
-        if (!$otpRecord) {
-            // Increment attempts
-            DB::table('otp_verifications')
-                ->where('phone_number', $phoneNumber)
-                ->where('is_used', false)
-                ->increment('attempts');
-
+        if (!$otpRecord || Carbon::parse($otpRecord->expires_at)->isPast()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired OTP'
+                'message' => 'Invalid or expired OTP',
+                'code' => 'OTP_INVALID',
             ], 401);
         }
 
-        // Mark OTP as used
-        DB::table('otp_verifications')
-            ->where('id', $otpRecord->id)
-            ->update(['is_used' => true]);
+        if ((int) $otpRecord->attempts >= $maxAttempts) {
+            DB::table('otp_verifications')->where('id', $otpRecord->id)->update(['is_used' => true]);
 
-        // Find or create user
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many incorrect attempts. Please request a new code.',
+                'code' => 'OTP_ATTEMPTS_EXCEEDED',
+            ], 429);
+        }
+
+        if (!hash_equals($otpRecord->otp_code, self::hashOtp($phoneNumber, $otpCode))) {
+            DB::table('otp_verifications')->where('id', $otpRecord->id)->increment('attempts');
+            $remaining = max(0, $maxAttempts - ((int) $otpRecord->attempts + 1));
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired OTP',
+                'code' => 'OTP_INVALID',
+                'data' => ['attempts_remaining' => $remaining],
+            ], 401);
+        }
+
+        // Mark OTP as used (atomically: a concurrent verify cannot reuse it).
+        $claimed = DB::table('otp_verifications')
+            ->where('id', $otpRecord->id)
+            ->where('is_used', false)
+            ->update(['is_used' => true]);
+        if ($claimed !== 1) {
+            return response()->json(['success' => false, 'message' => 'Invalid or expired OTP', 'code' => 'OTP_INVALID'], 401);
+        }
+
+        // Users are global identities (phone); wallets/points are per tenant.
         $user = User::firstOrCreate(
             ['phone_number' => $phoneNumber],
             [
                 'name' => 'User ' . substr($phoneNumber, -4),
-                'email' => $phoneNumber . '@soharfestival.om',
-                'password' => Hash::make(Str::random(16)),
+                'email' => null,
+                'password' => Hash::make(Str::random(32)),
                 'phone_verified_at' => now()
             ]
         );
 
-        // Update device token if provided
         if ($request->device_token) {
             $user->device_token = $request->device_token;
             $user->save();
         }
 
-        // Create API token
         $token = $user->createToken('mobile-app')->plainTextToken;
 
         return response()->json([
@@ -228,5 +263,39 @@ class AuthController extends Controller
             'success' => true,
             'token' => $token
         ]);
+    }
+
+    /**
+     * Delete (anonymise) the account. Refused while any tenant wallet still
+     * holds money, so balances are refunded first. Tickets/payments are kept
+     * for accounting but no longer linked to personal data.
+     */
+    public function deleteAccount(Request $request)
+    {
+        $user = $request->user();
+
+        $funded = Wallet::withoutTenantScope()->where('user_id', $user->id)
+            ->where(fn ($q) => $q->where('balance_minor', '>', 0)->orWhere('held_minor', '>', 0))
+            ->exists();
+        if ($funded) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please request a refund of your wallet balance before deleting your account.',
+                'code' => 'WALLET_NOT_EMPTY',
+            ], 409);
+        }
+
+        DB::transaction(function () use ($user) {
+            $user->tokens()->delete();
+            $user->forceFill([
+                'name' => 'Deleted user',
+                'email' => null,
+                'phone_number' => null,
+                'device_token' => null,
+                'password' => Hash::make(Str::random(40)),
+            ])->save();
+        });
+
+        return response()->json(['success' => true, 'message' => 'Account deleted']);
     }
 }

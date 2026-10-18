@@ -2,129 +2,114 @@
 
 @section('title', 'إدارة الأدوار')
 @section('page-title', 'الأدوار والصلاحيات')
+@section('page-subtitle', 'تحدد الأدوار ما يمكن لكل عضو في الفريق الوصول إليه')
+@php
+    $pageIcon = 'shield-lock';
+    $breadcrumbs = ['المنظمة' => null, 'الأدوار والصلاحيات' => null];
+    $isSuperActor = auth()->user()->isSuperAdmin();
+    $protectedRoles = ['super-admin', 'admin'];
+@endphp
+@section('page-actions')
+    @if($isSuperActor)
+        <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> {{ __('إضافة دور جديد') }}
+        </a>
+    @endif
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+    @include('admin.partials.alerts')
 
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+    <x-admin.data-table title="قائمة الأدوار" icon="shield-lock" :count="$roles->total()" :paginator="$roles">
+        <x-slot:head>
+            <th style="width: 56px">#</th>
+            <th>{{ __('اسم الدور') }}</th>
+            <th>{{ __('عدد الصلاحيات') }}</th>
+            <th>{{ __('المستخدمون في هذه الجهة') }}</th>
+            <th>{{ __('تاريخ الإنشاء') }}</th>
+            <th class="text-end">{{ __('الإجراءات') }}</th>
+        </x-slot:head>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold">قائمة الأدوار</h5>
-                @can('assign roles')
-                <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i>
-                    إضافة دور جديد
-                </a>
-                @endcan
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>اسم الدور</th>
-                            <th>عدد الصلاحيات</th>
-                            <th>عدد المستخدمين</th>
-                            <th>تاريخ الإنشاء</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($roles as $role)
-                        <tr>
-                            <td>{{ $role->id }}</td>
-                            <td>
-                                <span class="badge bg-primary fs-6">{{ ucfirst($role->name) }}</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-info">{{ $role->permissions->count() }}</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-secondary">{{ $role->users->count() }}</span>
-                            </td>
-                            <td>{{ $role->created_at->format('Y-m-d') }}</td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{{ route('admin.roles.show', $role) }}" class="btn btn-sm btn-outline-info">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    
-                                    @if(!in_array($role->name, ['super-admin', 'admin']))
-                                        @can('assign roles')
-                                        <a href="{{ route('admin.roles.edit', $role) }}" class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        @endcan
-                                        
-                                        @can('delete users')
-                                        @if($role->users->count() == 0)
-                                        <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا الدور؟')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                        @endif
-                                        @endcan
-                                    @else
-                                        <button class="btn btn-sm btn-outline-secondary" disabled title="لا يمكن تعديل هذا الدور">
-                                            <i class="bi bi-lock"></i>
-                                        </button>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="6" class="text-center py-4">
-                                <p class="text-muted mb-0">لا توجد أدوار</p>
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="mt-4">
-                {{ $roles->links('pagination::bootstrap-5') }}
-            </div>
-        </div>
-    </div>
+        @forelse($roles as $role)
+            @php
+                $isProtected = in_array($role->name, $protectedRoles, true);
+                $memberCount = (int) ($tenantUserCounts[$role->id] ?? 0);
+            @endphp
+            <tr>
+                <td class="num text-muted">{{ $role->id }}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <a href="{{ route('admin.roles.show', $role) }}" class="pill pill-brand text-decoration-none"><span class="ltr">{{ $role->name }}</span></a>
+                        @if($isProtected)
+                            <span class="pill pill-neutral pill-sm" title="{{ __('دور محمي من النظام') }}"><i class="bi bi-lock-fill"></i>{{ __('محمي') }}</span>
+                        @endif
+                    </div>
+                </td>
+                <td>
+                    <span class="num fw-semibold">{{ $role->permissions->count() }}</span>
+                    <span class="cell-sub">{{ __('صلاحية') }}</span>
+                </td>
+                <td>
+                    @if($memberCount > 0)
+                        <span class="d-inline-flex align-items-center gap-1"><i class="bi bi-people text-muted"></i><span class="num fw-semibold">{{ $memberCount }}</span></span>
+                    @else
+                        <span class="text-muted">—</span>
+                    @endif
+                </td>
+                <td class="num text-muted">{{ $role->created_at->format('Y-m-d') }}</td>
+                <td class="text-end">
+                    <div class="row-actions">
+                        <a href="{{ route('admin.roles.show', $role) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
+                        @if($isProtected)
+                            <span class="icon-btn" title="{{ __('لا يمكن تعديل هذا الدور') }}" aria-disabled="true"><i class="bi bi-lock"></i></span>
+                        @elseif($isSuperActor)
+                            <a href="{{ route('admin.roles.edit', $role) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
+                            @if($memberCount === 0)
+                                <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" data-confirm="{{ __('سيتم حذف الدور «:name» نهائيًا من جميع الجهات.', ['name' => $role->name]) }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
+                                </form>
+                            @endif
+                        @endif
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <x-admin.empty-row :colspan="6" icon="shield-lock" title="لا توجد أدوار" text="أنشئ دورًا وحدد صلاحياته لتعيينه للمستخدمين.">
+                @if($isSuperActor)
+                    <a href="{{ route('admin.roles.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة دور') }}</a>
+                @endif
+            </x-admin.empty-row>
+        @endforelse
+    </x-admin.data-table>
 
-    <div class="card border-0 shadow-sm mt-4">
-        <div class="card-header bg-white py-3">
-            <h5 class="mb-0 fw-bold">ملاحظات النظام</h5>
-        </div>
-        <div class="card-body">
-            <div class="alert alert-info mb-0">
-                <h6 class="alert-heading">
-                    <i class="bi bi-info-circle"></i>
-                    معلومات مهمة حول الأدوار
-                </h6>
-                <ul class="mb-0 mt-2">
-                    <li>الأدوار <strong>super-admin</strong> و <strong>admin</strong> محمية ولا يمكن تعديلها أو حذفها</li>
-                    <li>لا يمكن حذف دور مرتبط بمستخدمين نشطين</li>
-                    <li>كل دور يمكن أن يحتوي على صلاحيات متعددة</li>
-                    <li>المستخدم يمكن أن يمتلك أكثر من دور واحد</li>
-                </ul>
+    <x-admin.card title="معلومات مهمة حول الأدوار" icon="info-circle">
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-3">
+                <div class="d-flex gap-2">
+                    <i class="bi bi-lock text-primary"></i>
+                    <div class="small">{!! __('الأدوار :first و :second محمية ولا يمكن تعديلها أو حذفها', ['first' => '<code>super-admin</code>', 'second' => '<code>admin</code>']) !!}</div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="d-flex gap-2">
+                    <i class="bi bi-people text-primary"></i>
+                    <div class="small">{{ __('لا يمكن حذف دور مرتبط بمستخدمين نشطين') }}</div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="d-flex gap-2">
+                    <i class="bi bi-ui-checks-grid text-primary"></i>
+                    <div class="small">{{ __('كل دور يمكن أن يحتوي على صلاحيات متعددة') }}</div>
+                </div>
+            </div>
+            <div class="col-md-6 col-xl-3">
+                <div class="d-flex gap-2">
+                    <i class="bi bi-person-badge text-primary"></i>
+                    <div class="small">{{ __('المستخدم يمكن أن يمتلك أكثر من دور واحد') }}</div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
+    </x-admin.card>
 @endsection

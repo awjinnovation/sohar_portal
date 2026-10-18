@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\TenantValidation;
 use App\Http\Controllers\Controller;
-use App\Models\Event;
 use App\Models\Category;
+use App\Models\Event;
+use App\Models\MapLocation;
 use Illuminate\Http\Request;
 
 class EventController extends Controller
 {
+    use TenantValidation;
+
     public function index(Request $request)
     {
         $view = $request->get('view', 'list'); // list or calendar
@@ -20,15 +24,17 @@ class EventController extends Controller
                 ->orderBy('start_time')
                 ->get();
 
-            // Format events for FullCalendar
-            $calendarEvents = $events->map(function($event) {
+            // Format events for FullCalendar (tenant brand colors)
+            $primary = $this->currentTenant()?->setting('theme.colors.primary') ?: '#4A90E2';
+            $secondary = $this->currentTenant()?->setting('theme.colors.secondary') ?: '#FFA726';
+            $calendarEvents = $events->map(function($event) use ($primary, $secondary) {
                 return [
                     'id' => $event->id,
                     'title' => $event->title_ar,
-                    'start' => $event->start_time->toIso8601String(),
-                    'end' => $event->end_time->toIso8601String(),
-                    'backgroundColor' => $event->is_featured ? '#FFA726' : '#4A90E2',
-                    'borderColor' => $event->is_featured ? '#FF9800' : '#3A7BC8',
+                    'start' => \App\Support\TenantTime::iso($event->start_time),
+                    'end' => \App\Support\TenantTime::iso($event->end_time),
+                    'backgroundColor' => $event->is_featured ? $secondary : $primary,
+                    'borderColor' => $event->is_featured ? $secondary : $primary,
                     'extendedProps' => [
                         'location' => $event->location_ar,
                         'category' => $event->category->name_ar ?? '',
@@ -53,36 +59,14 @@ class EventController extends Controller
     public function create()
     {
         $categories = Category::active()->ordered()->get();
-        $mapLocations = \App\Models\MapLocation::where('is_active', true)->get();
+        $mapLocations = MapLocation::where('is_active', true)->get();
         return view('admin.events.create', compact('categories', 'mapLocations'));
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|max:255',
-            'title_ar' => 'required|max:255',
-            'description' => 'required',
-            'description_ar' => 'required',
-            'category_id' => 'required|exists:categories,id',
-            'start_time' => 'required|date',
-            'end_time' => 'required|date|after:start_time',
-            'location' => 'required|max:255',
-            'location_ar' => 'nullable|max:255',
-            'map_location_id' => 'nullable|exists:map_locations,id',
-            'image_url' => 'nullable|url|max:500',
-            'images' => 'nullable|json',
-            'price' => 'required|numeric|min:0',
-            'currency' => 'nullable|in:OMR,USD,EUR',
-            'available_tickets' => 'nullable|integer|min:0',
-            'total_tickets' => 'nullable|integer|min:0',
-            'organizer_name' => 'nullable|max:255',
-            'organizer_name_ar' => 'nullable|max:255',
-            'is_featured' => 'boolean',
-            'is_active' => 'boolean'
-        ]);
-
-        $validated['currency'] = $validated['currency'] ?? 'OMR';
+        $validated = $request->validate($this->rules());
+        $validated['currency'] = $validated['currency'] ?? $this->currentTenant()?->currency() ?? 'OMR';
 
         // Parse images JSON if provided
         if (isset($validated['images'])) {
@@ -107,36 +91,14 @@ class EventController extends Controller
     public function edit(Event $event)
     {
         $categories = Category::active()->ordered()->get();
-        $mapLocations = \App\Models\MapLocation::where('is_active', true)->get();
+        $mapLocations = MapLocation::where('is_active', true)->get();
         return view('admin.events.edit', compact('event', 'categories', 'mapLocations'));
     }
 
     public function update(Request $request, Event $event)
     {
-        $validated = $request->validate([
-            'title' => 'required|max:255',
-            'title_ar' => 'required|max:255',
-            'description' => 'required',
-            'description_ar' => 'required',
-            'category_id' => 'required|exists:categories,id',
-            'start_time' => 'required|date',
-            'end_time' => 'required|date|after:start_time',
-            'location' => 'required|max:255',
-            'location_ar' => 'nullable|max:255',
-            'map_location_id' => 'nullable|exists:map_locations,id',
-            'image_url' => 'nullable|url|max:500',
-            'images' => 'nullable|json',
-            'price' => 'required|numeric|min:0',
-            'currency' => 'nullable|in:OMR,USD,EUR',
-            'available_tickets' => 'nullable|integer|min:0',
-            'total_tickets' => 'nullable|integer|min:0',
-            'organizer_name' => 'nullable|max:255',
-            'organizer_name_ar' => 'nullable|max:255',
-            'is_featured' => 'boolean',
-            'is_active' => 'boolean'
-        ]);
-
-        $validated['currency'] = $validated['currency'] ?? 'OMR';
+        $validated = $request->validate($this->rules());
+        $validated['currency'] = $validated['currency'] ?? $this->currentTenant()?->currency() ?? 'OMR';
 
         // Parse images JSON if provided
         if (isset($validated['images'])) {
@@ -160,5 +122,31 @@ class EventController extends Controller
 
         return redirect()->route('admin.events.index')
             ->with('success', 'تم حذف الفعالية بنجاح');
+    }
+
+    private function rules(): array
+    {
+        return [
+            'title' => 'required|max:255',
+            'title_ar' => 'required|max:255',
+            'description' => 'required',
+            'description_ar' => 'required',
+            'category_id' => ['required', $this->tenantExists('categories')],
+            'start_time' => 'required|date',
+            'end_time' => 'required|date|after:start_time',
+            'location' => 'required|max:255',
+            'location_ar' => 'nullable|max:255',
+            'map_location_id' => ['nullable', $this->tenantExists('map_locations')],
+            'image_url' => 'nullable|url|max:500',
+            'images' => 'nullable|json',
+            'price' => 'required|numeric|min:0',
+            'currency' => 'nullable|in:OMR,USD,EUR',
+            'available_tickets' => 'nullable|integer|min:0',
+            'total_tickets' => 'nullable|integer|min:0',
+            'organizer_name' => 'nullable|max:255',
+            'organizer_name_ar' => 'nullable|max:255',
+            'is_featured' => 'boolean',
+            'is_active' => 'boolean',
+        ];
     }
 }

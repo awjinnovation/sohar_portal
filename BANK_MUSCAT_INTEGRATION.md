@@ -51,7 +51,7 @@ BANK_MUSCAT_MERCHANT_ID=<set in .env — do not commit>
   "transaction_id": "TXNE0K5WAJ95M",
   "checkout_url": "http://localhost/payment/redirect/TXNE0K5WAJ95M",
   "encrypted_data": "...",
-  "access_code": "AVSH00MK65AS84HSSA",
+  "access_code": "<ACCESS_CODE>",
   "gateway_url": "https://services.bng.gov.om:8989/transaction.do?command=initiateTransaction",
   "redirect_required": true
 }
@@ -220,6 +220,6 @@ echo $encrypted;
 ## Support
 
 For Bank Muscat integration issues, contact their support with:
-- Merchant ID: 4158
-- Access Code: AVSH00MK65AS84HSSA
+- Merchant ID: <MERCHANT_ID> (configure per tenant in the admin panel or .env)
+- Access Code: <ACCESS_CODE>
 - Integration Type: Non-Seamless (CCAvenue)

@@ -8,6 +8,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Restaurant extends Model implements HasMedia
 {
+    use \App\Tenancy\BelongsToTenant;
+
     use InteractsWithMedia;
     protected $fillable = [
         'name', 'name_ar', 'description', 'description_ar', 'cuisine', 'cuisine_ar',

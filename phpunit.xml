@@ -27,6 +27,10 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <env name="PAYMENT_DRIVER" value="fake"/>
+        <env name="OTP_DEBUG" value="false"/>
+        <env name="OTP_TEST_CODE" value=""/>
+        <env name="ISMARTSMS_USER_ID" value=""/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

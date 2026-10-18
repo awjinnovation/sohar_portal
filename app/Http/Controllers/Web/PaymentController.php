@@ -4,271 +4,243 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\PointsTransaction;
+use App\Models\Tenant;
+use App\Models\Ticket;
 use App\Services\BankMuscatPaymentService;
+use App\Services\Payments\BankMuscatCallbackHandler;
+use App\Services\Payments\PaymentFulfillmentService;
+use App\Tenancy\TenantContext;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 
+/**
+ * Browser-facing payment pages (opened by the app's web view).
+ *
+ * - /payment/redirect/{tx}  signed link: auto-posts to Bank Muscat, or shows
+ *                           the fake gateway page (PAYMENT_DRIVER=fake).
+ * - /payment/success|cancel gateway returns here; state only changes when an
+ *                           encrypted gateway response verifies.
+ */
 class PaymentController extends Controller
 {
-    private BankMuscatPaymentService $bankMuscatService;
+    /** Error codes of the payment result pages (see payment/error.blade.php). */
+    public const ERR_NOT_PENDING = 'not_pending';
 
-    public function __construct(BankMuscatPaymentService $bankMuscatService)
+    public const ERR_NOT_COMPLETED = 'not_completed';
+
+    public const ERR_NO_RESPONSE = 'no_response';
+
+    public const ERR_VERIFICATION_FAILED = 'verification_failed';
+
+    public const ERR_PAYMENT_FAILED = 'payment_failed';
+
+    public const ERR_SERVER_ERROR = 'server_error';
+
+    public function __construct(private TenantContext $context)
     {
-        $this->bankMuscatService = $bankMuscatService;
     }
 
-    /**
-     * Redirect to Bank Muscat payment gateway with auto-submit form
-     */
-    public function redirectToGateway($transactionId)
+    private function paymentByTransaction(string $transactionId): Payment
     {
-        // Find payment by transaction_id
-        $payment = Payment::where('transaction_id', $transactionId)->firstOrFail();
+        $payment = Payment::withoutTenantScope()->where('transaction_id', $transactionId)->firstOrFail();
+        $this->context->set(Tenant::findOrFail($payment->tenant_id));
 
-        // Prepare payment data
-        $paymentData = $this->bankMuscatService->preparePaymentData($payment);
+        return $payment;
+    }
 
-        // Generate encrypted request
-        $encryptedData = $this->bankMuscatService->generateEncryptedRequest($paymentData);
+    public function redirectToGateway(string $transactionId)
+    {
+        $payment = $this->paymentByTransaction($transactionId);
 
-        // Update payment with Bank Muscat TID if not already set
-        if (!$payment->bank_muscat_tid) {
+        if ($payment->status !== 'pending') {
+            return $payment->status === 'completed'
+                ? redirect()->route('payment.success', ['transaction_id' => $payment->transaction_id])
+                : $this->errorView(self::ERR_NOT_PENDING, $payment);
+        }
+
+        if ($payment->gateway === 'fake') {
+            return view('payment.fake', [
+                'payment' => $payment,
+                'completeUrl' => URL::temporarySignedRoute('payment.fake.complete', now()->addMinutes((int) config('payments.link_ttl_minutes', 60)), [
+                    'transaction_id' => $payment->transaction_id,
+                ]),
+            ]);
+        }
+
+        $service = BankMuscatPaymentService::forTenant($this->context->get());
+        $paymentData = $service->preparePaymentData($payment);
+        $encryptedData = $service->generateEncryptedRequest($paymentData);
+
+        if (! $payment->bank_muscat_tid) {
             $payment->update([
                 'bank_muscat_tid' => $paymentData['tid'],
-                'bank_muscat_order_id' => $paymentData['order_id']
+                'bank_muscat_order_id' => $paymentData['order_id'],
             ]);
         }
 
-        // Return HTML page with auto-submit form
         return response()->view('payment.redirect', [
-            'gatewayUrl' => $this->bankMuscatService->getGatewayUrl(),
+            'gatewayUrl' => $service->getGatewayUrl(),
             'encRequest' => $encryptedData,
-            'accessCode' => $this->bankMuscatService->getAccessCode()
+            'accessCode' => $service->getAccessCode(),
         ]);
     }
 
     /**
-     * Payment success page - User is redirected here after successful payment from Bank Muscat
+     * Fake driver: "Simulate success / failure" (signed URL, non-production only).
      */
-    public function success(Request $request)
+    public function fakeComplete(Request $request, string $transactionId, PaymentFulfillmentService $fulfillment)
     {
-        try {
-            // Bank Muscat sends encrypted response
-            $encResponse = $request->input('encResp');
+        abort_if(app()->environment('production'), 404);
+        $payment = $this->paymentByTransaction($transactionId);
+        abort_unless($payment->gateway === 'fake', 404);
 
-            if (!$encResponse) {
-                // If no encrypted response, check for transaction_id in query string
-                $transactionId = $request->query('transaction_id');
+        $result = $request->input('result', 'success');
+        $response = [
+            'order_id' => $payment->transaction_id,
+            'order_status' => $result === 'success' ? 'Success' : 'Failure',
+            'amount' => $this->context->get()->formatMoney((int) $payment->amount_minor),
+            'currency' => $payment->currency,
+            'payment_mode' => 'fake',
+            'tracking_id' => 'FAKE'.now()->timestamp,
+        ];
 
-                if ($transactionId) {
-                    $payment = Payment::where('transaction_id', $transactionId)->first();
+        if ($result === 'success') {
+            $fulfillment->complete($payment, $response, 'fake');
 
-                    if ($payment && $payment->status === 'completed') {
-                        return view('payment.success', [
-                            'payment' => $payment,
-                            'sessionData' => $payment->bank_muscat_response ?? [],
-                            'transactionId' => $payment->transaction_id
-                        ]);
-                    }
-                }
-
-                return view('payment.error', [
-                    'message' => 'No payment response received'
-                ]);
-            }
-
-            // Decrypt the response from Bank Muscat
-            $responseData = $this->bankMuscatService->decryptResponse($encResponse);
-
-            // Find payment by order_id (transaction_id)
-            $payment = Payment::where('transaction_id', $responseData['order_id'] ?? '')->first();
-
-            if (!$payment) {
-                return view('payment.error', [
-                    'message' => 'Payment not found'
-                ]);
-            }
-
-            // Validate the response
-            if (!$this->bankMuscatService->validateResponse($responseData, $payment)) {
-                return view('payment.error', [
-                    'message' => 'Security Error. Illegal access detected'
-                ]);
-            }
-
-            // Get payment status
-            $status = $this->bankMuscatService->getPaymentStatus($responseData);
-
-            // Update payment record
-            $payment->update([
-                'status' => $status,
-                'bank_muscat_response' => $responseData,
-                'payment_method' => $responseData['payment_mode'] ?? 'card',
-                'paid_at' => $status === 'completed' ? now() : null
-            ]);
-
-            // Handle different statuses
-            if ($status === 'completed') {
-                // Create tickets if needed
-                $this->processPayment($payment);
-
-                return view('payment.success', [
-                    'payment' => $payment,
-                    'sessionData' => $responseData,
-                    'transactionId' => $payment->transaction_id
-                ]);
-            } elseif ($status === 'cancelled') {
-                return view('payment.cancel', [
-                    'sessionId' => null,
-                    'payment' => $payment,
-                    'message' => 'Payment has been aborted'
-                ]);
-            } else {
-                return view('payment.error', [
-                    'message' => 'Payment has failed. Please try again.',
-                    'status' => $responseData['order_status'] ?? 'unknown'
-                ]);
-            }
-
-        } catch (\Exception $e) {
-            \Log::error('Payment success page error: ' . $e->getMessage());
-
-            return view('payment.error', [
-                'message' => 'An error occurred while processing your payment',
-                'error' => $e->getMessage()
-            ]);
+            return redirect()->route('payment.success', ['transaction_id' => $payment->transaction_id]);
         }
+
+        $fulfillment->fail($payment, $result === 'cancel' ? 'cancelled' : 'failed', $response);
+
+        return redirect()->route('payment.cancel', ['transaction_id' => $payment->transaction_id]);
     }
 
-    /**
-     * Payment cancel page - User is redirected here when canceling payment
-     */
-    public function cancel(Request $request)
+    public function success(Request $request, BankMuscatCallbackHandler $handler)
     {
         try {
-            // Bank Muscat sends encrypted response even for cancellation
-            $encResponse = $request->input('encResp');
+            $encResponse = (string) $request->input('encResp', '');
 
-            if ($encResponse) {
-                // Decrypt the response
-                $responseData = $this->bankMuscatService->decryptResponse($encResponse);
-
-                // Find payment by order_id
-                $payment = Payment::where('transaction_id', $responseData['order_id'] ?? '')->first();
-
+            if ($encResponse === '') {
+                // Plain revisit (e.g. app polling page): display only, never mutate.
+                $transactionId = (string) $request->query('transaction_id', '');
+                $payment = $transactionId ? Payment::withoutTenantScope()->where('transaction_id', $transactionId)->first() : null;
                 if ($payment) {
-                    $status = $this->bankMuscatService->getPaymentStatus($responseData);
-
-                    $payment->update([
-                        'status' => $status,
-                        'bank_muscat_response' => $responseData
-                    ]);
-
-                    return view('payment.cancel', [
-                        'sessionId' => null,
-                        'payment' => $payment,
-                        'message' => $responseData['status_message'] ?? 'Payment cancelled'
-                    ]);
+                    $this->context->set(Tenant::find($payment->tenant_id));
                 }
+                if ($payment && $payment->status === 'completed') {
+                    return $this->successView($payment);
+                }
+
+                return $this->errorView($payment ? self::ERR_NOT_COMPLETED : self::ERR_NO_RESPONSE, $payment);
             }
 
-            // Fallback to query parameter
-            $transactionId = $request->query('transaction_id');
-
-            if (!$transactionId) {
-                return view('payment.cancel', [
-                    'sessionId' => null,
-                    'payment' => null
-                ]);
+            $result = $handler->handle($encResponse, $request->query('transaction_id'));
+            if (! $result) {
+                return $this->errorView(self::ERR_VERIFICATION_FAILED);
             }
 
-            // Find payment by transaction_id
-            $payment = Payment::where('transaction_id', $transactionId)->first();
+            $payment = $result['payment'];
+            $this->context->set(Tenant::find($payment->tenant_id));
 
-            // Update payment status to cancelled if it's still pending
-            if ($payment && $payment->status === 'pending') {
-                $payment->update(['status' => 'cancelled']);
-            }
+            return match ($result['status']) {
+                'completed' => $this->successView($payment),
+                'cancelled' => view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
+                default => $this->errorView(self::ERR_PAYMENT_FAILED, $payment, ['status' => $result['response']['order_status'] ?? 'unknown']),
+            };
+        } catch (\Throwable $e) {
+            Log::error('Payment success page error: '.$e->getMessage());
 
-            return view('payment.cancel', [
-                'sessionId' => null,
-                'payment' => $payment
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Payment cancel page error: ' . $e->getMessage());
-
-            return view('payment.cancel', [
-                'sessionId' => null,
-                'payment' => null,
-                'message' => 'Payment cancelled'
+            return $this->errorView(self::ERR_SERVER_ERROR, null, [
+                'error' => config('app.debug') ? $e->getMessage() : null,
             ]);
         }
     }
 
     /**
-     * Download ticket page
+     * Result pages get an error *code*; resources/views/payment/error.blade.php
+     * maps it to localized text (ar/en).
      */
-    public function downloadTicket($transactionId)
+    private function errorView(string $code, ?Payment $payment = null, array $extra = [])
     {
-        $payment = Payment::where('transaction_id', $transactionId)
-            ->where('status', 'completed')
-            ->firstOrFail();
+        return view('payment.error', array_merge(['code' => $code, 'payment' => $payment], $extra));
+    }
 
-        $tickets = \App\Models\Ticket::where('transaction_id', $transactionId)->get();
+    private function successView(Payment $payment)
+    {
+        $isTicket = $payment->payment_type === Payment::TYPE_TICKET;
+        $tickets = $isTicket
+            ? Ticket::with('event')->where('transaction_id', $payment->transaction_id)->orderBy('id')->get()
+            : collect();
+        $pointsEarned = (int) PointsTransaction::where('reference_type', $payment->getMorphClass())
+            ->where('reference_id', $payment->getKey())
+            ->where('type', 'earn')
+            ->sum('points');
 
-        return view('payment.download', [
+        return view('payment.success', [
             'payment' => $payment,
-            'tickets' => $tickets
+            'transactionId' => $payment->transaction_id,
+            'tickets' => $tickets,
+            'pointsEarned' => $pointsEarned,
+            'downloadUrl' => $isTicket
+                ? URL::temporarySignedRoute('payment.download', now()->addDays(30), ['transactionId' => $payment->transaction_id])
+                : null,
         ]);
     }
 
     /**
-     * Download single ticket
+     * Gateway cancel return. Only an encrypted, verified gateway response
+     * changes the payment; a bare ?transaction_id= just renders the page
+     * (the app cancels its own checkout via the authenticated API).
      */
-    public function downloadSingleTicket($qrCode)
+    public function cancel(Request $request, BankMuscatCallbackHandler $handler)
     {
-        $ticket = \App\Models\Ticket::with(['event.mapLocation', 'user', 'payment'])
+        $encResponse = (string) $request->input('encResp', '');
+        $payment = null;
+
+        if ($encResponse !== '') {
+            $result = $handler->handle($encResponse, $request->query('transaction_id'));
+            $payment = $result['payment'] ?? null;
+        } elseif ($transactionId = $request->query('transaction_id')) {
+            $payment = Payment::withoutTenantScope()->where('transaction_id', $transactionId)->first();
+        }
+
+        if ($payment) {
+            $this->context->set(Tenant::find($payment->tenant_id));
+        }
+
+        return view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']);
+    }
+
+    /** Signed link from the success page. */
+    public function downloadTicket(string $transactionId)
+    {
+        $payment = $this->paymentByTransaction($transactionId);
+        abort_unless($payment->status === 'completed', 404);
+
+        $tickets = Ticket::with('event')->where('transaction_id', $transactionId)->get();
+
+        return view('payment.download', ['payment' => $payment, 'tickets' => $tickets]);
+    }
+
+    /**
+     * Public ticket page; the QR code itself is the (unguessable) bearer
+     * secret. Used / cancelled tickets are shown too, with their status.
+     */
+    public function downloadSingleTicket(string $qrCode)
+    {
+        $ticket = Ticket::withoutTenantScope()
             ->where('qr_code', $qrCode)
-            ->where('status', 'active')
             ->firstOrFail();
+        $this->context->set(Tenant::find($ticket->tenant_id));
+        $ticket->load(['event.mapLocation', 'user', 'payment']);
 
         return view('payment.single-ticket', [
-            'ticket' => $ticket
+            'ticket' => $ticket,
+            'downloadUrl' => $ticket->transaction_id
+                ? URL::temporarySignedRoute('payment.download', now()->addDays(30), ['transactionId' => $ticket->transaction_id])
+                : null,
         ]);
-    }
-
-    /**
-     * Process payment and create tickets
-     */
-    private function processPayment($payment)
-    {
-        if ($payment->payment_type === 'ticket') {
-            $metadata = $payment->metadata;
-            $quantity = $metadata['quantity'] ?? 1;
-
-            // Check if tickets already created
-            $existingTickets = \App\Models\Ticket::where('transaction_id', $payment->transaction_id)->count();
-
-            if ($existingTickets === 0) {
-                $bookingDate = $metadata['booking_date'] ?? null;
-
-                for ($i = 0; $i < $quantity; $i++) {
-                    \App\Models\Ticket::create([
-                        'user_id' => $payment->user_id,
-                        'event_id' => $payment->payable_id,
-                        'transaction_id' => $payment->transaction_id,
-                        'booking_date' => $bookingDate,
-                        'ticket_type' => 'standard',
-                        'status' => 'active',
-                        'price' => $payment->amount / $quantity,
-                        'currency' => $payment->currency,
-                        'holder_name' => $payment->user->name,
-                        'qr_code' => \Str::uuid(),
-                        'purchase_date' => now()
-                    ]);
-                }
-            }
-        }
     }
 }

@@ -1,145 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Successful - Sohar Festival</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .success-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 600px;
-            width: 100%;
-            overflow: hidden;
-        }
-        .success-header {
-            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-            color: white;
-            padding: 40px 20px;
-            text-align: center;
-        }
-        .success-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-            animation: scaleIn 0.5s ease-out;
-        }
-        @keyframes scaleIn {
-            from { transform: scale(0); }
-            to { transform: scale(1); }
-        }
-        .success-body {
-            padding: 40px;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .info-row:last-child {
-            border-bottom: none;
-        }
-        .info-label {
-            color: #666;
-            font-weight: 500;
-        }
-        .info-value {
-            color: #333;
-            font-weight: 600;
-        }
-        .btn-download {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            padding: 15px 40px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 16px;
-            color: white;
-            text-decoration: none;
-            display: inline-block;
-            transition: transform 0.2s;
-        }
-        .btn-download:hover {
-            transform: translateY(-2px);
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <div class="success-card">
-        <div class="success-header">
-            <i class="bi bi-check-circle-fill success-icon"></i>
-            <h1>Payment Successful!</h1>
-            <p class="mb-0">Your tickets have been purchased successfully</p>
+@extends('layouts.public')
+@php
+    $lang = \App\View\PublicPage::locale($brand ?? null);
+    $isAr = $lang === 'ar';
+    $t = fn ($ar, $en) => $isAr ? $ar : $en;
+    $isTicket = $payment->payment_type === 'ticket';
+    $paidAt = $payment->paid_at ?? $payment->updated_at;
+    $tz = $brand?->setting('tenant.timezone') ?: config('app.timezone');
+    $tickets = collect($tickets ?? []);
+    $pointsEarned = (int) ($pointsEarned ?? 0);
+    $qty = $tickets->isNotEmpty() ? $tickets->count() : (int) ($payment->metadata['quantity'] ?? 1);
+    $pointsLabel = $brand ? (string) ($brand->setting('points.label.'.$lang) ?: $t('نقاط', 'Points')) : $t('نقاط', 'Points');
+@endphp
+@section('title', $t('تم الدفع بنجاح', 'Payment successful'))
+@section('band-sub', $t('إيصال الدفع', 'Payment receipt'))
+
+@section('content')
+    <section class="s-card">
+        <div class="result">
+            <div class="result-ico ok"><i class="bi bi-check-lg"></i></div>
+            <h1>{{ $t('تم الدفع بنجاح', 'Payment successful') }}</h1>
+            <p>{{ $isTicket ? $t('تم تأكيد حجزك. ستجد تذاكرك في التطبيق ويمكنك تنزيلها من هنا.', 'Your booking is confirmed. Your tickets are in the app and can be downloaded here.') : $t('تمت إضافة المبلغ إلى رصيد محفظتك.', 'The amount has been added to your wallet balance.') }}</p>
+            <x-admin.money :minor="(int) $payment->amount_minor" :currency="$payment->currency" size="lg" />
         </div>
 
-        <div class="success-body">
-            <div class="info-row">
-                <span class="info-label">Transaction ID</span>
-                <span class="info-value">{{ $transactionId }}</span>
-            </div>
-
-            <div class="info-row">
-                <span class="info-label">Amount Paid</span>
-                <span class="info-value">{{ $payment->amount }} {{ $payment->currency }}</span>
-            </div>
-
-            <div class="info-row">
-                <span class="info-label">Payment Status</span>
-                <span class="info-value text-success">
-                    <i class="bi bi-check-circle"></i> Completed
-                </span>
-            </div>
-
-            <div class="info-row">
-                <span class="info-label">Payment Date</span>
-                <span class="info-value">{{ $payment->paid_at->format('d M Y, h:i A') }}</span>
-            </div>
-
-            @if($payment->payment_type === 'ticket')
-            <div class="info-row">
-                <span class="info-label">Tickets Quantity</span>
-                <span class="info-value">{{ $payment->metadata['quantity'] ?? 1 }}</span>
-            </div>
+        <dl class="rows">
+            <div><dt>{{ $t('رقم العملية', 'Transaction ID') }}</dt><dd class="mono ltr">{{ $transactionId }}</dd></div>
+            <div><dt>{{ $t('النوع', 'Type') }}</dt><dd>{{ $isTicket ? $t('شراء تذاكر', 'Ticket purchase') : $t('شحن المحفظة', 'Wallet top-up') }}</dd></div>
+            @if($isTicket)
+                <div><dt>{{ $t('عدد التذاكر', 'Tickets') }}</dt><dd class="num">{{ $qty }}</dd></div>
             @endif
+            @if($paidAt)
+                <div><dt>{{ $t('التاريخ', 'Date') }}</dt><dd><span class="num">{{ $paidAt->copy()->setTimezone($tz)->locale($lang)->translatedFormat('j F Y') }} · {{ $paidAt->copy()->setTimezone($tz)->format('H:i') }}</span></dd></div>
+            @endif
+            <div><dt>{{ $t('طريقة الدفع', 'Method') }}</dt><dd>{{ $payment->method === 'wallet' ? $t('المحفظة', 'Wallet') : $t('بطاقة', 'Card') }}</dd></div>
+            @if($pointsEarned > 0)
+                <div><dt>{{ $t('النقاط المكتسبة', 'Points earned') }}</dt><dd><span class="pill pill-success" data-points-earned="{{ $pointsEarned }}"><i class="bi bi-stars"></i><span class="num">+{{ number_format($pointsEarned) }}</span> {{ $pointsLabel }}</span></dd></div>
+            @endif
+            <div><dt>{{ $t('الحالة', 'Status') }}</dt><dd><span class="pill pill-success"><span class="dot"></span>{{ $t('مكتملة', 'Completed') }}</span></dd></div>
+        </dl>
 
-            <div class="text-center mt-4">
-                <a href="{{ route('payment.download', $transactionId) }}" class="btn-download">
-                    <i class="bi bi-download"></i> Download Tickets
-                </a>
-            </div>
+        @if($tickets->isNotEmpty())
+            <h2 style="font-size: 15px; margin: 18px 0 8px">{{ $t('التذاكر الصادرة', 'Tickets issued') }}</h2>
+            <dl class="rows" data-tickets-issued="{{ $tickets->count() }}">
+                @foreach($tickets as $issued)
+                    <div>
+                        <dt>
+                            {{ \App\View\PublicPage::pick($issued->event, 'title', $lang) ?: $t('تذكرة', 'Ticket') }}
+                            @if($issued->booking_date)<span class="muted num" style="display:block; font-size: 12.5px">{{ $issued->booking_date->locale($lang)->translatedFormat('j F Y') }}</span>@endif
+                        </dt>
+                        <dd><a href="{{ route('payment.ticket.single', $issued->qr_code) }}?lang={{ $lang }}" class="mono ltr">{{ $issued->ticket_number ?: \Illuminate\Support\Str::limit($issued->qr_code, 16) }}</a></dd>
+                    </div>
+                @endforeach
+            </dl>
+        @endif
+    </section>
 
-            <div class="alert alert-info mt-4">
-                <i class="bi bi-info-circle"></i>
-                <small>A confirmation has been sent to your registered phone number. You can download your tickets anytime using the button above.</small>
-            </div>
-        </div>
+    <div class="actions">
+        @if(! empty($downloadUrl))
+            <a href="{{ $downloadUrl }}{{ str_contains($downloadUrl, '?') ? '&' : '?' }}lang={{ $lang }}" class="btn btn-primary"><i class="bi bi-ticket-perforated"></i> {{ $t('عرض التذاكر وتنزيلها', 'View & download tickets') }}</a>
+        @endif
+        <p class="muted" style="text-align:center; margin: 8px 0 0; font-size: 13.5px">{{ $t('يمكنك إغلاق هذه الصفحة والعودة إلى التطبيق.', 'You can close this page and return to the app.') }}</p>
     </div>
-
-    <script>
-        // Track successful payment
-        if (typeof gtag !== 'undefined') {
-            gtag('event', 'purchase', {
-                transaction_id: '{{ $transactionId }}',
-                value: {{ $payment->amount }},
-                currency: '{{ $payment->currency }}',
-                items: [{
-                    item_name: '{{ $payment->payment_type === "ticket" ? "Festival Ticket" : "Workshop Registration" }}',
-                    quantity: {{ $payment->metadata['quantity'] ?? 1 }}
-                }]
-            });
-        }
-    </script>
-</body>
-</html>
+@endsection

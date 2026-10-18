@@ -2,506 +2,261 @@
 
 @section('title', 'تعديل الفعالية')
 @section('page-title', 'تعديل الفعالية')
+@section('page-subtitle', $event->title_ar)
+@php
+    $pageIcon = 'calendar-event';
+    $breadcrumbs = ['الفعاليات والتذاكر' => null, 'الفعاليات' => route('admin.events.index'), 'تعديل' => null];
+    $model = $event;
+    $mainImage = old('image_url', $event->image_url);
+    $galleryJson = old('images', json_encode($event->images ?? []));
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.events.show', $event) }}" class="btn"><i class="bi bi-eye"></i> {{ __('عرض') }}</a>
+    <a href="{{ route('admin.events.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">تعديل معلومات الفعالية</h5>
-                </div>
-                <div class="card-body">
-                    <form action="{{ route('admin.events.update', $event) }}" method="POST">
-                        @csrf
-                        @method('PUT')
-                        
-                        <ul class="nav nav-tabs mb-4" role="tablist">
-                            <li class="nav-item">
-                                <a class="nav-link active" data-bs-toggle="tab" href="#arabic-content">
-                                    <i class="bi bi-translate"></i> العربية
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" data-bs-toggle="tab" href="#english-content">
-                                    <i class="bi bi-globe"></i> English
-                                </a>
-                            </li>
-                        </ul>
+    @include('admin.partials.alerts')
 
-                        <div class="tab-content">
-                            <div class="tab-pane fade show active" id="arabic-content">
-                                <div class="mb-3">
-                                    <label for="title_ar" class="form-label">عنوان الفعالية <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('title_ar') is-invalid @enderror" 
-                                           id="title_ar" name="title_ar" value="{{ old('title_ar', $event->title_ar) }}" required>
-                                    @error('title_ar')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="description_ar" class="form-label">الوصف <span class="text-danger">*</span></label>
-                                    <textarea class="form-control @error('description_ar') is-invalid @enderror"
-                                              id="description_ar" name="description_ar" rows="4" required>{{ old('description_ar', $event->description_ar) }}</textarea>
-                                    @error('description_ar')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="location_ar" class="form-label">الموقع</label>
-                                            <input type="text" class="form-control @error('location_ar') is-invalid @enderror" 
-                                                   id="location_ar" name="location_ar" value="{{ old('location_ar', $event->location_ar) }}">
-                                            @error('location_ar')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="organizer_name_ar" class="form-label">اسم المنظم</label>
-                                            <input type="text" class="form-control @error('organizer_name_ar') is-invalid @enderror" 
-                                                   id="organizer_name_ar" name="organizer_name_ar" value="{{ old('organizer_name_ar', $event->organizer_name_ar) }}">
-                                            @error('organizer_name_ar')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="tab-pane fade" id="english-content">
-                                <div class="mb-3">
-                                    <label for="title" class="form-label">Event Title <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('title') is-invalid @enderror" 
-                                           id="title" name="title" value="{{ old('title', $event->title) }}" required>
-                                    @error('title')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-                                    <textarea class="form-control @error('description') is-invalid @enderror"
-                                              id="description" name="description" rows="4" required>{{ old('description', $event->description) }}</textarea>
-                                    @error('description')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="location" class="form-label">Location <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control @error('location') is-invalid @enderror" 
-                                                   id="location" name="location" value="{{ old('location', $event->location) }}" required>
-                                            @error('location')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label for="organizer_name" class="form-label">Organizer Name</label>
-                                            <input type="text" class="form-control @error('organizer_name') is-invalid @enderror" 
-                                                   id="organizer_name" name="organizer_name" value="{{ old('organizer_name', $event->organizer_name) }}">
-                                            @error('organizer_name')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                </div>
+    <form action="{{ route('admin.events.update', $event) }}" method="POST">
+        @csrf
+        @method('PUT')
+        <div class="row g-4">
+            <div class="col-xl-8">
+                <x-admin.card title="معلومات الفعالية" icon="translate" subtitle="يظهر النص العربي أو الإنجليزي حسب لغة المستخدم">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="arabic-tab" data-bs-toggle="tab" data-bs-target="#arabic-content" type="button" role="tab">{{ __('العربية') }}</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="english-tab" data-bs-toggle="tab" data-bs-target="#english-content" type="button" role="tab">English</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content border border-top-0 p-3">
+                        <div class="tab-pane fade show active" id="arabic-content" role="tabpanel">
+                            <x-admin.form-field name="title_ar" label="عنوان الفعالية" :value="old('title_ar', $model?->title_ar)" required />
+                            <x-admin.form-field name="description_ar" label="الوصف" type="textarea" rows="5" :value="old('description_ar', $model?->description_ar)" required />
+                            <div class="row">
+                                <x-admin.form-field col="col-md-6" name="location_ar" label="الموقع" :value="old('location_ar', $model?->location_ar)" />
+                                <x-admin.form-field col="col-md-6" name="organizer_name_ar" label="اسم المنظم" :value="old('organizer_name_ar', $model?->organizer_name_ar)" />
                             </div>
                         </div>
-
-                        <hr class="my-4">
-                        
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="category_id" class="form-label">الفئة <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('category_id') is-invalid @enderror" 
-                                            id="category_id" name="category_id" required>
-                                        <option value="">اختر الفئة</option>
-                                        @foreach($categories as $category)
-                                        <option value="{{ $category->id }}" {{ old('category_id', $event->category_id) == $category->id ? 'selected' : '' }}>
-                                            {{ $category->name_ar }}
-                                        </option>
-                                        @endforeach
-                                    </select>
-                                    @error('category_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="start_time" class="form-label">تاريخ البداية <span class="text-danger">*</span></label>
-                                    <input type="datetime-local" class="form-control @error('start_time') is-invalid @enderror" 
-                                           id="start_time" name="start_time" value="{{ old('start_time', $event->start_time ? $event->start_time->format('Y-m-d\TH:i') : '') }}" required>
-                                    @error('start_time')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label for="end_time" class="form-label">تاريخ النهاية <span class="text-danger">*</span></label>
-                                    <input type="datetime-local" class="form-control @error('end_time') is-invalid @enderror" 
-                                           id="end_time" name="end_time" value="{{ old('end_time', $event->end_time ? $event->end_time->format('Y-m-d\TH:i') : '') }}" required>
-                                    @error('end_time')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                        <div class="tab-pane fade" id="english-content" role="tabpanel" dir="ltr">
+                            <x-admin.form-field name="title" label="Event Title" :value="old('title', $model?->title)" required />
+                            <x-admin.form-field name="description" label="Description" type="textarea" rows="5" :value="old('description', $model?->description)" required />
+                            <div class="row">
+                                <x-admin.form-field col="col-md-6" name="location" label="Location" :value="old('location', $model?->location)" required />
+                                <x-admin.form-field col="col-md-6" name="organizer_name" label="Organizer Name" :value="old('organizer_name', $model?->organizer_name)" />
                             </div>
                         </div>
+                    </div>
+                </x-admin.card>
 
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="price" class="form-label">السعر <span class="text-danger">*</span></label>
-                                    <input type="number" step="0.001" class="form-control @error('price') is-invalid @enderror" 
-                                           id="price" name="price" value="{{ old('price', $event->price) }}" min="0" required>
-                                    @error('price')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                <x-admin.card title="الصور" icon="images" subtitle="الصورة الرئيسية تظهر في البطاقات، والمعرض في صفحة الفعالية">
+                    <div class="field">
+                        <label class="form-label" for="main-image-input">{{ __('الصورة الرئيسية') }}</label>
+                        <div id="main-image-zone" class="upload {{ $mainImage ? 'd-none' : '' }}" role="button" tabindex="0">
+                            <div class="preview"><i class="bi bi-image"></i></div>
+                            <div>
+                                <div class="u-title">{{ __('اضغط لتحميل الصورة الرئيسية') }}</div>
+                                <div class="u-help">{{ __('PNG, JPG, JPEG حتى 10MB') }}</div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="currency" class="form-label">العملة</label>
-                                    <select class="form-select @error('currency') is-invalid @enderror" 
-                                            id="currency" name="currency">
-                                        <option value="OMR" {{ old('currency', $event->currency) == 'OMR' ? 'selected' : '' }}>OMR</option>
-                                        <option value="USD" {{ old('currency', $event->currency) == 'USD' ? 'selected' : '' }}>USD</option>
-                                        <option value="EUR" {{ old('currency', $event->currency) == 'EUR' ? 'selected' : '' }}>EUR</option>
-                                    </select>
-                                    @error('currency')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="available_tickets" class="form-label">التذاكر المتاحة</label>
-                                    <input type="number" class="form-control @error('available_tickets') is-invalid @enderror" 
-                                           id="available_tickets" name="available_tickets" value="{{ old('available_tickets', $event->available_tickets) }}" min="0">
-                                    @error('available_tickets')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-                                    <label for="total_tickets" class="form-label">إجمالي التذاكر</label>
-                                    <input type="number" class="form-control @error('total_tickets') is-invalid @enderror" 
-                                           id="total_tickets" name="total_tickets" value="{{ old('total_tickets', $event->total_tickets) }}" min="0">
-                                    @error('total_tickets')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+                            <input type="file" id="main-image-input" accept="image/*" class="d-none">
                         </div>
-
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="mb-3">
-                                    <label for="map_location_id" class="form-label">موقع الخريطة (خط العرض والطول)</label>
-                                    <select class="form-select @error('map_location_id') is-invalid @enderror"
-                                            id="map_location_id" name="map_location_id">
-                                        <option value="">اختر الموقع على الخريطة</option>
-                                        @foreach($mapLocations as $mapLocation)
-                                        <option value="{{ $mapLocation->id }}" {{ old('map_location_id', $event->map_location_id) == $mapLocation->id ? 'selected' : '' }}>
-                                            {{ $mapLocation->name_ar }} ({{ $mapLocation->latitude }}, {{ $mapLocation->longitude }})
-                                        </option>
-                                        @endforeach
-                                    </select>
-                                    @error('map_location_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                        <div id="main-image-preview" class="{{ $mainImage ? '' : 'd-none' }}">
+                            <div class="ratio ratio-21x9 rounded overflow-hidden border bg-light">
+                                <img id="main-image-display" src="{{ $mainImage }}" alt="" class="object-fit-cover">
                             </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">الصورة الرئيسية</label>
-                            <div class="card">
-                                <div class="card-body">
-                                    <div id="main-image-zone" class="border border-2 border-dashed rounded p-3 text-center mb-2" style="cursor: pointer; background: #f8f9fa; {{ old('image_url', $event->image_url) ? 'display: none;' : '' }}">
-                                        <i class="bi bi-image" style="font-size: 2rem; color: #6c757d;"></i>
-                                        <p class="mb-1 mt-2"><strong>اضغط لتحميل الصورة الرئيسية</strong></p>
-                                        <p class="text-muted small mb-0">PNG, JPG, JPEG حتى 10MB</p>
-                                        <input type="file" id="main-image-input" accept="image/*" style="display: none;">
-                                    </div>
-                                    <div id="main-image-preview" class="text-center" style="{{ old('image_url', $event->image_url) ? '' : 'display: none;' }}">
-                                        <img id="main-image-display" src="{{ old('image_url', $event->image_url) }}" class="img-fluid rounded" style="max-height: 200px;">
-                                        <button type="button" class="btn btn-sm btn-danger mt-2" id="remove-main-image">
-                                            <i class="bi bi-trash"></i> حذف الصورة
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <input type="hidden" name="image_url" id="image_url" value="{{ old('image_url', $event->image_url) }}">
-                            @error('image_url')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">معرض الصور الإضافية</label>
-                            <div class="card">
-                                <div class="card-body">
-                                    <!-- Upload Zone -->
-                                    <div id="upload-zone" class="border border-2 border-dashed rounded p-4 text-center mb-3" style="cursor: pointer; background: #f8f9fa;">
-                                        <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #6c757d;"></i>
-                                        <p class="mb-2 mt-2"><strong>اسحب الصور هنا أو اضغط للتحميل</strong></p>
-                                        <p class="text-muted small mb-0">PNG, JPG, JPEG حتى 10MB</p>
-                                        <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
-                                    </div>
-
-                                    <!-- Upload Progress -->
-                                    <div id="upload-progress" class="progress mb-3" style="display: none; height: 25px;">
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">0%</div>
-                                    </div>
-
-                                    <!-- Gallery Preview -->
-                                    <div id="image-gallery-preview" class="row g-3">
-                                        <!-- Images will be displayed here -->
-                                    </div>
-                                </div>
-                            </div>
-                            <input type="hidden" name="images" id="images-input" value='{{ old('images', json_encode($event->images ?? [])) }}'>
-                            @error('images')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active"
-                                           value="1" {{ old('is_active', $event->is_active) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_active">
-                                        نشط
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured"
-                                           value="1" {{ old('is_featured', $event->is_featured) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_featured">
-                                        مميز
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('admin.events.index') }}" class="btn btn-secondary">
-                                رجوع
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg"></i>
-                                حفظ التغييرات
+                            <button type="button" class="btn btn-sm btn-outline-danger mt-2" id="remove-main-image">
+                                <i class="bi bi-trash"></i> {{ __('حذف الصورة') }}
                             </button>
                         </div>
-                    </form>
-                </div>
+                        <input type="hidden" name="image_url" id="image_url" value="{{ $mainImage }}">
+                        @error('image_url')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="field mb-0">
+                        <label class="form-label" for="file-input">{{ __('معرض الصور الإضافية') }}</label>
+                        <div id="upload-zone" class="upload" role="button" tabindex="0">
+                            <div class="preview"><i class="bi bi-cloud-arrow-up"></i></div>
+                            <div>
+                                <div class="u-title">{{ __('اسحب الصور هنا أو اضغط للتحميل') }}</div>
+                                <div class="u-help">{{ __('يمكن اختيار عدة صور · PNG, JPG, JPEG حتى 10MB') }}</div>
+                            </div>
+                            <input type="file" id="file-input" multiple accept="image/*" class="d-none">
+                        </div>
+                        <div id="upload-progress" class="progress mt-3 d-none" role="progressbar" aria-label="{{ __('تقدم التحميل') }}">
+                            <div class="progress-bar bg-primary" style="width: 0%">0%</div>
+                        </div>
+                        <div id="image-gallery-preview" class="row g-3 mt-0"></div>
+                        <input type="hidden" name="images" id="images-input" value="{{ $galleryJson }}">
+                        @error('images')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                </x-admin.card>
+            </div>
+
+            <div class="col-xl-4">
+                <x-admin.card title="الموعد والمكان" icon="calendar3">
+                    <x-admin.form-field name="category_id" label="الفئة" type="select" required placeholder="اختر الفئة"
+                        :value="old('category_id', $model?->category_id)" :options="$categories->pluck('name_ar', 'id')->all()" />
+                    <x-admin.form-field name="start_time" label="تاريخ البداية" type="datetime-local" required
+                        :value="old('start_time', $model?->start_time?->format('Y-m-d\TH:i'))" />
+                    <x-admin.form-field name="end_time" label="تاريخ النهاية" type="datetime-local" required
+                        :value="old('end_time', $model?->end_time?->format('Y-m-d\TH:i'))" />
+                    <x-admin.form-field name="map_location_id" label="موقع الخريطة" type="select" placeholder="اختر الموقع على الخريطة"
+                        :value="old('map_location_id', $model?->map_location_id)"
+                        :options="$mapLocations->mapWithKeys(fn ($loc) => [$loc->id => $loc->name_ar.' ('.$loc->latitude.', '.$loc->longitude.')'])->all()"
+                        help="يُستخدم لعرض الفعالية على خريطة التطبيق (خط العرض والطول)" />
+                </x-admin.card>
+
+                <x-admin.card title="التذاكر والسعر" icon="ticket-perforated">
+                    <div class="row">
+                        <x-admin.form-field col="col-7" name="price" label="السعر" type="number" step="0.001" min="0" dir="ltr" required
+                            :value="old('price', $model ? $model->price : 0)" />
+                        <x-admin.form-field col="col-5" name="currency" label="العملة" type="select"
+                            :value="old('currency', $model?->currency)" :options="['OMR' => 'OMR', 'USD' => 'USD', 'EUR' => 'EUR']" />
+                    </div>
+                    <div class="row">
+                        <x-admin.form-field col="col-6" name="available_tickets" label="التذاكر المتاحة" type="number" min="0" dir="ltr"
+                            :value="old('available_tickets', $model?->available_tickets)" />
+                        <x-admin.form-field col="col-6" name="total_tickets" label="إجمالي التذاكر" type="number" min="0" dir="ltr"
+                            :value="old('total_tickets', $model?->total_tickets)" />
+                    </div>
+                    <div class="form-text mt-n2">{{ __('السعر 0 يعني فعالية مجانية.') }}</div>
+                </x-admin.card>
+
+                <x-admin.card title="النشر" icon="broadcast">
+                    <x-admin.toggle name="is_active" id="is_active" label="نشط" description="تظهر الفعالية في التطبيق" :checked="old('is_active', $model ? $model->is_active : true)" />
+                    <x-admin.toggle name="is_featured" id="is_featured" label="مميز" description="تظهر في قسم الفعاليات المميزة" :checked="old('is_featured', $model?->is_featured)" />
+                    <x-slot:footer>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1" data-busy><i class="bi bi-check-lg"></i> {{ __('حفظ التغييرات') }}</button>
+                            <a href="{{ route('admin.events.index') }}" class="btn btn-secondary">{{ __('إلغاء') }}</a>
+                        </div>
+                    </x-slot:footer>
+                </x-admin.card>
             </div>
         </div>
-    </div>
-</div>
+    </form>
 @endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    let images = [];
-    let mainImageUrl = '{{ old('image_url', $event->image_url) }}';
-    const uploadZone = document.getElementById('upload-zone');
-    const fileInput = document.getElementById('file-input');
-    const mainImageZone = document.getElementById('main-image-zone');
-    const mainImageInput = document.getElementById('main-image-input');
-    const mainImagePreview = document.getElementById('main-image-preview');
-    const mainImageDisplay = document.getElementById('main-image-display');
-    const removeMainImageBtn = document.getElementById('remove-main-image');
-    const progressBar = document.getElementById('upload-progress');
-    const progressBarInner = progressBar.querySelector('.progress-bar');
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+document.addEventListener('DOMContentLoaded', function () {
+    var csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    var uploadUrl = @json(route('admin.media.upload'));
+    var maxBytes = 10 * 1024 * 1024;
 
-    // Load existing images
+    var mainZone = document.getElementById('main-image-zone');
+    var mainInput = document.getElementById('main-image-input');
+    var mainPreview = document.getElementById('main-image-preview');
+    var mainDisplay = document.getElementById('main-image-display');
+    var mainHidden = document.getElementById('image_url');
+    var removeMain = document.getElementById('remove-main-image');
+
+    var zone = document.getElementById('upload-zone');
+    var fileInput = document.getElementById('file-input');
+    var progress = document.getElementById('upload-progress');
+    var bar = progress.querySelector('.progress-bar');
+    var gallery = document.getElementById('image-gallery-preview');
+    var imagesInput = document.getElementById('images-input');
+
+    var images = [];
     try {
-        const existingImages = document.getElementById('images-input').value;
-        if (existingImages && existingImages !== '[]') {
-            images = JSON.parse(existingImages);
-            renderGallery();
-        }
-    } catch (e) {
-        console.error('Error parsing existing images:', e);
-    }
+        var parsed = JSON.parse(imagesInput.value || '[]');
+        if (Array.isArray(parsed)) images = parsed;
+    } catch (e) { images = []; }
 
-    // Main image upload
-    mainImageZone.addEventListener('click', () => mainImageInput.click());
-
-    mainImageInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            alert('الرجاء اختيار ملف صورة صحيح');
-            return;
-        }
-
-        if (file.size > 10 * 1024 * 1024) {
-            alert('حجم الملف أكبر من 10MB');
-            return;
-        }
-
-        try {
-            mainImageUrl = await uploadFile(file);
-            document.getElementById('image_url').value = mainImageUrl;
-            showMainImage();
-        } catch (error) {
-            alert('فشل تحميل الصورة');
-        }
-    });
-
-    removeMainImageBtn.addEventListener('click', () => {
-        if (confirm('هل تريد حذف الصورة الرئيسية؟')) {
-            mainImageUrl = '';
-            document.getElementById('image_url').value = '';
-            mainImageZone.style.display = 'block';
-            mainImagePreview.style.display = 'none';
-        }
-    });
-
-    function showMainImage() {
-        mainImageDisplay.src = mainImageUrl;
-        mainImageZone.style.display = 'none';
-        mainImagePreview.style.display = 'block';
-    }
-
-    // Gallery images upload
-    uploadZone.addEventListener('click', () => fileInput.click());
-
-    // File selection
-    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-    // Drag and drop
-    uploadZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadZone.style.background = '#e9ecef';
-    });
-
-    uploadZone.addEventListener('dragleave', () => {
-        uploadZone.style.background = '#f8f9fa';
-    });
-
-    uploadZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadZone.style.background = '#f8f9fa';
-        handleFiles(e.dataTransfer.files);
-    });
-
-    async function handleFiles(files) {
-        if (!files.length) return;
-
-        progressBar.style.display = 'block';
-        const totalFiles = files.length;
-        let uploadedFiles = 0;
-
-        for (let file of files) {
-            if (!file.type.startsWith('image/')) {
-                alert(`${file.name} ليس ملف صورة صحيح`);
-                continue;
-            }
-
-            if (file.size > 10 * 1024 * 1024) {
-                alert(`${file.name} حجم الملف أكبر من 10MB`);
-                continue;
-            }
-
-            try {
-                const url = await uploadFile(file);
-                images.push(url);
-                uploadedFiles++;
-
-                // Update progress
-                const progress = (uploadedFiles / totalFiles) * 100;
-                progressBarInner.style.width = progress + '%';
-                progressBarInner.textContent = Math.round(progress) + '%';
-
-            } catch (error) {
-                console.error('Upload error:', error);
-                alert(`فشل تحميل ${file.name}`);
-            }
-        }
-
-        // Hide progress bar after 1 second
-        setTimeout(() => {
-            progressBar.style.display = 'none';
-            progressBarInner.style.width = '0%';
-            progressBarInner.textContent = '0%';
-        }, 1000);
-
-        renderGallery();
-        fileInput.value = ''; // Reset input
+    function validFile(file) {
+        if (!file.type.startsWith('image/')) { alert(@json(__(':name ليس ملف صورة صحيح')).replace(':name', file.name)); return false; }
+        if (file.size > maxBytes) { alert(@json(__(':name حجم الملف أكبر من 10MB')).replace(':name', file.name)); return false; }
+        return true;
     }
 
     async function uploadFile(file) {
-        const formData = new FormData();
+        var formData = new FormData();
         formData.append('file', file);
-
-        const response = await fetch('{{ route('admin.media.upload') }}', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: formData
-        });
-
-        if (!response.ok) {
-            throw new Error('Upload failed');
-        }
-
-        const data = await response.json();
+        var response = await fetch(uploadUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }, body: formData });
+        if (!response.ok) throw new Error('Upload failed');
+        var data = await response.json();
         return data.url;
     }
 
-    function renderGallery() {
-        const gallery = document.getElementById('image-gallery-preview');
-        gallery.innerHTML = '';
-
-        images.forEach((url, index) => {
-            const col = document.createElement('div');
-            col.className = 'col-md-3 col-sm-6';
-            col.innerHTML = `
-                <div class="card h-100 shadow-sm">
-                    <img src="${url}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="صورة ${index + 1}">
-                    <div class="card-body p-2 text-center">
-                        <button type="button" class="btn btn-sm btn-danger w-100" onclick="removeImage(${index})">
-                            <i class="bi bi-trash"></i> حذف
-                        </button>
-                    </div>
-                </div>
-            `;
-            gallery.appendChild(col);
-        });
-
-        // Update hidden input
-        document.getElementById('images-input').value = JSON.stringify(images);
+    function bindZone(el, input) {
+        el.addEventListener('click', function () { input.click(); });
+        el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+        el.addEventListener('dragover', function (e) { e.preventDefault(); el.classList.add('drag'); });
+        el.addEventListener('dragleave', function () { el.classList.remove('drag'); });
     }
 
-    window.removeImage = function(index) {
-        if (confirm('هل تريد حذف هذه الصورة؟')) {
-            images.splice(index, 1);
-            renderGallery();
+    /* main image */
+    function showMain(url) {
+        mainHidden.value = url || '';
+        mainDisplay.src = url || '';
+        mainZone.classList.toggle('d-none', !!url);
+        mainPreview.classList.toggle('d-none', !url);
+    }
+    bindZone(mainZone, mainInput);
+    mainZone.addEventListener('drop', function (e) {
+        e.preventDefault(); mainZone.classList.remove('drag');
+        if (e.dataTransfer.files[0]) handleMain(e.dataTransfer.files[0]);
+    });
+    mainInput.addEventListener('change', function (e) { if (e.target.files[0]) handleMain(e.target.files[0]); mainInput.value = ''; });
+    async function handleMain(file) {
+        if (!validFile(file)) return;
+        try { showMain(await uploadFile(file)); } catch (err) { alert(@json(__('فشل تحميل الصورة'))); }
+    }
+    removeMain.addEventListener('click', function () { showMain(''); });
+
+    /* gallery */
+    bindZone(zone, fileInput);
+    zone.addEventListener('drop', function (e) { e.preventDefault(); zone.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+    fileInput.addEventListener('change', function (e) { handleFiles(e.target.files); });
+
+    async function handleFiles(files) {
+        if (!files.length) return;
+        progress.classList.remove('d-none');
+        var total = files.length, done = 0;
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (validFile(file)) {
+                try { images.push(await uploadFile(file)); } catch (err) { alert(@json(__('فشل تحميل :name')).replace(':name', file.name)); }
+            }
+            done++;
+            var pct = Math.round((done / total) * 100);
+            bar.style.width = pct + '%';
+            bar.textContent = pct + '%';
         }
-    };
+        setTimeout(function () { progress.classList.add('d-none'); bar.style.width = '0%'; bar.textContent = '0%'; }, 800);
+        renderGallery();
+        fileInput.value = '';
+    }
+
+    function renderGallery() {
+        gallery.innerHTML = '';
+        images.forEach(function (url, index) {
+            var col = document.createElement('div');
+            col.className = 'col-6 col-md-4 col-xxl-3';
+            var wrap = document.createElement('div');
+            wrap.className = 'position-relative rounded overflow-hidden border';
+            var ratio = document.createElement('div');
+            ratio.className = 'ratio ratio-4x3 bg-light';
+            var img = document.createElement('img');
+            img.src = url; img.alt = @json(__('صورة :number')).replace(':number', index + 1); img.className = 'object-fit-cover'; img.loading = 'lazy';
+            ratio.appendChild(img);
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-danger position-absolute top-0 end-0 m-2 px-2';
+            btn.title = @json(__('حذف')); btn.setAttribute('aria-label', @json(__('حذف الصورة :number')).replace(':number', index + 1));
+            btn.innerHTML = '<i class="bi bi-trash"></i>';
+            btn.addEventListener('click', function () { images.splice(index, 1); renderGallery(); });
+            wrap.appendChild(ratio); wrap.appendChild(btn); col.appendChild(wrap);
+            gallery.appendChild(col);
+        });
+        imagesInput.value = JSON.stringify(images);
+    }
+
+    renderGallery();
 });
 </script>
 @endpush

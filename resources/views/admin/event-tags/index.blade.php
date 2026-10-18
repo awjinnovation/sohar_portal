@@ -1,83 +1,68 @@
 @extends('layouts.admin')
 
+@section('title', 'وسوم الفعاليات')
+@section('page-title', 'إدارة وسوم الفعاليات')
+@section('page-subtitle', 'كلمات قصيرة تصف الفعاليات وتساعد الزوار على التصفية')
+@php
+    $pageIcon = 'tags';
+    $breadcrumbs = ['الفعاليات والتذاكر' => null, 'الوسوم' => null];
+    $filteredEvent = request()->filled('event_id') ? $tags->first()?->event : null;
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.event-tags.create', request()->filled('event_id') ? ['event_id' => request('event_id')] : []) }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> {{ __('إضافة وسم جديد') }}
+    </a>
+@endsection
+
 @section('content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">وسوم الفعاليات</h1>
-        <a href="{{ route('admin.event-tags.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> إضافة وسم جديد
-        </a>
-    </div>
+    @include('admin.partials.alerts')
 
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+    <x-admin.data-table title="جميع الوسوم" icon="tags" :count="$tags->total()" :paginator="$tags">
+        @if(request()->filled('event_id'))
+            <x-slot:actions>
+                <span class="pill pill-brand">
+                    <i class="bi bi-funnel"></i>
+                    {{ $filteredEvent ? ($filteredEvent->title_ar ?: $filteredEvent->title) : __('فعالية محددة') }}
+                    <a href="{{ route('admin.event-tags.index') }}" class="text-reset ms-1" aria-label="{{ __('إزالة التصفية') }}"><i class="bi bi-x-lg"></i></a>
+                </span>
+            </x-slot:actions>
+        @endif
+        <x-slot:head>
+            <th>{{ __('الوسم') }}</th>
+            <th>Tag</th>
+            <th>{{ __('الفعالية') }}</th>
+            <th>{{ __('تاريخ الإضافة') }}</th>
+            <th class="text-end">{{ __('الإجراءات') }}</th>
+        </x-slot:head>
 
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>الوسم</th>
-                            <th>اللون</th>
-                            <th>عدد الفعاليات</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($tags as $tag)
-                            <tr>
-                                <td>{{ $tag->tag_name_ar }}</td>
-                                <td>
-                                    @if($tag->color_hex)
-                                        <span class="badge" style="background-color: {{ $tag->color_hex }}; color: white;">
-                                            {{ $tag->color_hex }}
-                                        </span>
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td>{{ $tag->events_count }}</td>
-                                <td>
-                                    @if($tag->is_active)
-                                        <span class="badge bg-success">نشط</span>
-                                    @else
-                                        <span class="badge bg-danger">غير نشط</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.event-tags.show', $tag) }}" class="btn btn-sm btn-info">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a href="{{ route('admin.event-tags.edit', $tag) }}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <form action="{{ route('admin.event-tags.destroy', $tag) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center">لا توجد وسوم</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            {{ $tags->links() }}
-        </div>
-    </div>
-</div>
+        @forelse($tags as $tag)
+            <tr>
+                <td><span class="pill pill-neutral"><i class="bi bi-tag"></i>{{ $tag->tag_ar }}</span></td>
+                <td><span dir="ltr">{{ $tag->tag }}</span></td>
+                <td>
+                    @if($tag->event)
+                        <a href="{{ route('admin.events.show', $tag->event) }}" class="cell-title">{{ $tag->event->title_ar ?: $tag->event->title }}</a>
+                    @else
+                        <span class="text-muted">—</span>
+                    @endif
+                </td>
+                <td class="num text-muted">{{ $tag->created_at?->format('Y-m-d') ?? '—' }}</td>
+                <td class="text-end">
+                    <div class="row-actions">
+                        <a href="{{ route('admin.event-tags.show', $tag) }}" class="icon-btn" title="{{ __('عرض') }}" aria-label="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.event-tags.edit', $tag) }}" class="icon-btn brand" title="{{ __('تعديل') }}" aria-label="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
+                        <form action="{{ route('admin.event-tags.destroy', $tag) }}" method="POST" data-confirm="{{ __('سيتم حذف الوسم «:name» نهائيًا.', ['name' => $tag->tag_ar]) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}" aria-label="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <x-admin.empty-row :colspan="5" icon="tags" title="لا توجد وسوم" text="أضف وسومًا لوصف الفعاليات ومساعدة الزوار على التصفية.">
+                <a href="{{ route('admin.event-tags.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة وسم') }}</a>
+            </x-admin.empty-row>
+        @endforelse
+    </x-admin.data-table>
 @endsection

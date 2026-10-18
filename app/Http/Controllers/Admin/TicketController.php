@@ -3,84 +3,58 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Ticket;
+use App\Models\AuditLog;
 use App\Models\Event;
+use App\Models\Ticket;
 use Illuminate\Http\Request;
 
+/**
+ * Issued tickets (read-only + cancel/reactivate). Tickets are only created
+ * by the checkout (App\Services\Payments\TicketIssuer); prices live on the
+ * event (price / pricing JSON).
+ */
 class TicketController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $tickets = Ticket::with(['event', 'user'])->latest()->paginate(20);
-        return view('admin.tickets.index', compact('tickets'));
-    }
+        $tickets = Ticket::with(['event', 'user'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
+            ->when($request->filled('event_id'), fn ($q) => $q->where('event_id', $request->integer('event_id')))
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $term = '%'.$request->input('q').'%';
+                $q->where(fn ($w) => $w->where('ticket_number', 'like', $term)
+                    ->orWhere('holder_name', 'like', $term)
+                    ->orWhere('transaction_id', 'like', $term));
+            })
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
 
-    public function create()
-    {
-        $events = Event::active()->get();
-        return view('admin.tickets.create', compact('events'));
-    }
+        $events = Event::orderBy('title')->get(['id', 'title', 'title_ar']);
 
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'event_id' => 'required|exists:events,id',
-            'ticket_type' => 'required|string|max:100',
-            'description' => 'nullable|string',
-            'total_quantity' => 'required|integer|min:1',
-            'available_quantity' => 'required|integer|min:0',
-            'min_purchase' => 'nullable|integer|min:1',
-            'max_purchase' => 'nullable|integer|min:1',
-            'sale_start_date' => 'nullable|date',
-            'sale_end_date' => 'nullable|date|after:sale_start_date',
-            'is_active' => 'nullable|boolean'
-        ]);
-
-        $validated['is_active'] = $request->has('is_active');
-        Ticket::create($validated);
-
-        return redirect()->route('admin.tickets.index')
-            ->with('success', 'تم إضافة التذكرة بنجاح');
+        return view('admin.tickets.index', compact('tickets', 'events'));
     }
 
     public function show(Ticket $ticket)
     {
         $ticket->load(['event', 'user', 'payment']);
+
         return view('admin.tickets.show', compact('ticket'));
     }
 
-    public function edit(Ticket $ticket)
-    {
-        $events = Event::active()->get();
-        return view('admin.tickets.edit', compact('ticket', 'events'));
-    }
-
+    /** Cancel / reactivate a ticket (status only). */
     public function update(Request $request, Ticket $ticket)
     {
-        $validated = $request->validate([
-            'event_id' => 'required|exists:events,id',
-            'ticket_type' => 'required|string|max:100',
-            'description' => 'nullable|string',
-            'total_quantity' => 'required|integer|min:1',
-            'available_quantity' => 'required|integer|min:0',
-            'min_purchase' => 'nullable|integer|min:1',
-            'max_purchase' => 'nullable|integer|min:1',
-            'sale_start_date' => 'nullable|date',
-            'sale_end_date' => 'nullable|date|after:sale_start_date',
-            'is_active' => 'nullable|boolean'
-        ]);
+        $data = $request->validate(['status' => 'required|in:active,cancelled']);
 
-        $validated['is_active'] = $request->has('is_active');
-        $ticket->update($validated);
+        if ($ticket->status === 'used') {
+            return back()->with('error', 'لا يمكن تعديل تذكرة مستخدمة');
+        }
 
-        return redirect()->route('admin.tickets.index')
-            ->with('success', 'تم تحديث التذكرة بنجاح');
-    }
+        $old = $ticket->status;
+        $ticket->update(['status' => $data['status']]);
+        AuditLog::record('ticket.status', $ticket, ['from' => $old, 'to' => $data['status']]);
 
-    public function destroy(Ticket $ticket)
-    {
-        $ticket->delete();
-        return redirect()->route('admin.tickets.index')
-            ->with('success', 'تم حذف التذكرة بنجاح');
+        return redirect()->route('admin.tickets.show', $ticket)->with('success', 'تم تحديث حالة التذكرة');
     }
 }

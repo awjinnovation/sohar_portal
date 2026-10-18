@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\UserFavorite;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Support\TenantTime;
 
 class EventController extends Controller
 {
@@ -98,7 +99,7 @@ class EventController extends Controller
     public function upcoming()
     {
         $events = Event::with(['category', 'tags', 'mapLocation'])
-            ->where('start_time', '>=', now())
+            ->where('start_time', '>=', TenantTime::localNow())
             ->where('is_active', true)
             ->orderBy('start_time')
             ->limit(10)
@@ -115,7 +116,7 @@ class EventController extends Controller
      */
     public function today()
     {
-        $today = Carbon::today();
+        $today = TenantTime::today();
         $events = Event::with(['category', 'tags', 'mapLocation'])
             ->where(function($q) use ($today) {
                 $q->whereDate('start_time', '<=', $today)

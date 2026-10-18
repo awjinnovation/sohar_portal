@@ -35,12 +35,8 @@ return [
         ],
     ],
 
-    'thawani' => [
-        'url' => env('THAWANI_URL', 'https://uatcheckout.thawani.om'),
-        'secret_key' => env('THAWANI_SECRET_KEY'),
-        'publishable_key' => env('THAWANI_PUBLISHABLE_KEY'),
-    ],
-
+    // Platform-level fallback; each tenant can override these in
+    // tenants.gateway_credentials.bank_muscat (encrypted, admin panel).
     'bank_muscat' => [
         'gateway_url' => env('BANK_MUSCAT_GATEWAY_URL', 'https://spayuattrns.bmtest.om/transaction.do?command=initiateTransaction'),
         'access_code' => env('BANK_MUSCAT_ACCESS_CODE'),

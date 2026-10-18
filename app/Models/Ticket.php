@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Ticket extends Model
 {
+    use \App\Tenancy\BelongsToTenant;
+
     protected $fillable = [
         'ticket_number', 'event_id', 'user_id', 'transaction_id', 'booking_date', 'quantity', 'ticket_type', 'status', 'price', 'currency',
         'holder_name', 'seat_number', 'qr_code', 'purchase_date', 'used_at', 'validated_by', 'check_in_count',
@@ -172,7 +174,10 @@ class Ticket extends Model
         $year = now()->year;
 
         // Get the last ticket number for this year
-        $lastTicket = static::where('ticket_number', 'like', "{$prefix}-{$year}-%")
+        // Ticket numbers are unique platform-wide (they are the QR payload),
+        // so look across all tenants.
+        $lastTicket = static::withoutTenantScope()
+            ->where('ticket_number', 'like', "{$prefix}-{$year}-%")
             ->orderBy('ticket_number', 'desc')
             ->first();
 
@@ -199,8 +204,10 @@ class Ticket extends Model
                 $ticket->ticket_number = static::generateTicketNumber();
             }
 
+            // QR payload = ticket number + random suffix: human readable for
+            // gate staff, but not guessable/forgeable from the sequence.
             if (empty($ticket->qr_code)) {
-                $ticket->qr_code = $ticket->ticket_number;
+                $ticket->qr_code = $ticket->ticket_number.'-'.\Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(12));
             }
         });
     }

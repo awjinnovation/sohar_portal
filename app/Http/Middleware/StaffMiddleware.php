@@ -7,28 +7,33 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Restricts an API route to festival staff.
+ * Restricts an API route to gate staff of the *current tenant*.
  *
- * Unlike AdminMiddleware (which redirects browser sessions to the admin
- * login), this returns a JSON 403 suitable for the mobile app / API clients.
- * A user counts as staff if they hold the admin, super-admin or staff role,
- * or the explicit "validate-tickets" permission.
+ * Returns a JSON 403 (not a redirect). A user counts as staff if they are a
+ * platform super-admin, hold the admin/staff role in this tenant, or have
+ * the "validate tickets" permission in this tenant (roles/permissions are
+ * team-scoped, team = tenant, set by ResolveTenant).
  */
 class StaffMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
+        // Roles are team (tenant) scoped: never reuse a relation loaded for another tenant.
+        $user?->unsetRelation('roles')->unsetRelation('permissions');
 
-        $authorized = $user
-            && ($user->hasAnyRole(['admin', 'super-admin', 'staff'])
-                || $user->can('validate-tickets'));
+        $authorized = $user && (
+            $user->isSuperAdmin()
+            || $user->hasAnyRole(['admin', 'staff'])
+            || $user->checkPermissionTo('validate tickets')
+        );
 
-        if (!$authorized) {
+        if (! $authorized) {
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to perform ticket validation',
                 'error_code' => 'FORBIDDEN',
+                'code' => 'FORBIDDEN',
             ], 403);
         }
 

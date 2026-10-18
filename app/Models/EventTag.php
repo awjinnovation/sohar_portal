@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class EventTag extends Model
 {
+    use \App\Tenancy\BelongsToTenant;
+
     protected $fillable = ['event_id', 'tag', 'tag_ar'];
 
     public function event()

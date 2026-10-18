@@ -1,177 +1,94 @@
 @extends('layouts.admin')
 
-@section('content')
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1 text-gray-800 fw-bold">
-                <i class="bi bi-map text-primary"></i> مواقع الخريطة
-            </h1>
-            <p class="text-muted mb-0">إدارة المواقع والأماكن على الخريطة التفاعلية</p>
-        </div>
-        <a href="{{ route('admin.map-locations.create') }}" class="btn btn-primary shadow-sm">
-            <i class="bi bi-plus-circle"></i> إضافة موقع جديد
-        </a>
-    </div>
-
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    <!-- Filters -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <form method="GET" action="{{ route('admin.map-locations.index') }}" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold">بحث</label>
-                    <input type="text" name="search" class="form-control" placeholder="ابحث بالاسم..." value="{{ request('search') }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold">النوع</label>
-                    <select name="type" class="form-select">
-                        <option value="">الكل</option>
-                        @foreach(\App\Models\MapLocation::getTypes() as $key => $type)
-                            <option value="{{ $key }}" {{ request('type') == $key ? 'selected' : '' }}>
-                                {{ $type['ar'] }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search"></i> بحث
-                    </button>
-                    <a href="{{ route('admin.map-locations.index') }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle"></i> إعادة تعيين
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-1">إجمالي المواقع</h6>
-                            <h3 class="mb-0 fw-bold">{{ $locations->total() }}</h3>
-                        </div>
-                        <div class="rounded-circle bg-primary bg-opacity-10 p-3">
-                            <i class="bi bi-geo-alt-fill text-primary fs-4"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-1">المواقع النشطة</h6>
-                            <h3 class="mb-0 fw-bold text-success">{{ $locations->where('is_active', true)->count() }}</h3>
-                        </div>
-                        <div class="rounded-circle bg-success bg-opacity-10 p-3">
-                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Locations Grid -->
-    <div class="row">
-        @forelse($locations as $location)
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card shadow-sm h-100 border-0 location-card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div class="flex-grow-1">
-                                <span class="badge bg-{{ $location->type == 'emergency' ? 'danger' : ($location->type == 'food' ? 'warning' : 'primary') }} mb-2">
-                                    <i class="bi bi-{{ $location->icon }}"></i>
-                                    {{ $location->type }}
-                                </span>
-                                <h5 class="card-title mb-1 fw-bold">{{ $location->name }}</h5>
-                                <p class="text-muted small mb-0">{{ Str::limit($location->description, 50) }}</p>
-                            </div>
-                            <div>
-                                @if($location->is_active)
-                                    <span class="badge bg-success">نشط</span>
-                                @else
-                                    <span class="badge bg-secondary">غير نشط</span>
-                                @endif
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center text-muted small mb-1">
-                                <i class="bi bi-geo-fill me-2"></i>
-                                <span>{{ $location->latitude }}, {{ $location->longitude }}</span>
-                            </div>
-                            <div class="d-flex align-items-center text-muted small">
-                                <i class="bi bi-calendar3 me-2"></i>
-                                <span>{{ $location->created_at->diffForHumans() }}</span>
-                            </div>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <a href="{{ route('admin.map-locations.show', $location) }}" class="btn btn-sm btn-outline-primary flex-fill">
-                                <i class="bi bi-eye"></i> عرض
-                            </a>
-                            <a href="{{ route('admin.map-locations.edit', $location) }}" class="btn btn-sm btn-outline-warning flex-fill">
-                                <i class="bi bi-pencil"></i> تعديل
-                            </a>
-                            <form action="{{ route('admin.map-locations.destroy', $location) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا الموقع؟')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-body text-center py-5">
-                        <i class="bi bi-inbox display-1 text-muted mb-3"></i>
-                        <h5 class="text-muted">لا توجد مواقع</h5>
-                        <p class="text-muted">قم بإضافة موقع جديد للبدء</p>
-                        <a href="{{ route('admin.map-locations.create') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> إضافة موقع جديد
-                        </a>
-                    </div>
-                </div>
-            </div>
-        @endforelse
-    </div>
-
-    <!-- Pagination -->
-    @if($locations->hasPages())
-        <div class="d-flex justify-content-center mt-4">
-            {{ $locations->links() }}
-        </div>
-    @endif
-</div>
-
-<style>
-.location-card {
-    transition: all 0.3s ease;
-}
-.location-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-}
-</style>
+@section('title', 'مواقع الخريطة')
+@section('page-title', 'مواقع الخريطة')
+@section('page-subtitle', 'إدارة المواقع والأماكن على الخريطة التفاعلية')
+@php
+    $pageIcon = 'geo-alt';
+    $breadcrumbs = ['المحتوى' => null, 'مواقع الخريطة' => null];
+    $locTypes = \App\Models\MapLocation::getTypes();
+    $biIcons = ['pin-map-fill', 'geo-alt-fill', 'star-fill', 'flag-fill', 'cup-hot-fill', 'shop', 'building', 'hospital', 'life-preserver', 'p-square-fill'];
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.map-locations.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> {{ __('إضافة موقع جديد') }}
+    </a>
 @endsection
+
+@push('styles')
+<style>
+    .pin-ico { width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 17px;
+        background: color-mix(in srgb, var(--pin, var(--muted)) 16%, var(--surface)); color: color-mix(in srgb, var(--pin, var(--muted)) 78%, var(--text)); }
+</style>
+@endpush
+
+@section('content')
+    @include('admin.partials.alerts')
+
+    <x-admin.data-table title="جميع المواقع" icon="geo-alt" :count="$locations->total()" search="search" search-placeholder="ابحث بالاسم أو الوصف…" :paginator="$locations" id="locationsTable">
+        <x-slot:filters>
+            <select name="type" class="form-select" aria-label="{{ __('النوع') }}">
+                <option value="">{{ __('كل الأنواع') }}</option>
+                @foreach($locTypes as $key => $type)
+                    <option value="{{ $key }}" @selected(request('type') == $key)>{{ $type[app()->getLocale() === 'en' ? 'en' : 'ar'] }}</option>
+                @endforeach
+            </select>
+        </x-slot:filters>
+        <x-slot:head>
+            <th>{{ __('الموقع') }}</th>
+            <th>{{ __('النوع') }}</th>
+            <th>{{ __('الإحداثيات') }}</th>
+            <th>{{ __('الحالة') }}</th>
+            <th>{{ __('آخر تحديث') }}</th>
+            <th class="text-end">{{ __('الإجراءات') }}</th>
+        </x-slot:head>
+
+        @forelse($locations as $location)
+            @php
+                $pinHex = $location->color ? sprintf('#%06X', ((int) $location->color) & 0xFFFFFF) : null;
+                $pinIcon = in_array($location->icon, $biIcons, true) ? $location->icon : 'geo-alt-fill';
+            @endphp
+            <tr>
+                <td>
+                    <div class="cell-media">
+                        <span class="pin-ico" @if($pinHex) style="--pin: {{ $pinHex }}" @endif><i class="bi bi-{{ $pinIcon }}"></i></span>
+                        <div style="min-width: 0">
+                            <div class="cell-title">{{ $location->name_ar ?: $location->name }}</div>
+                            <div class="cell-sub">{{ \Illuminate\Support\Str::limit($location->description_ar ?: $location->description, 60) }}</div>
+                        </div>
+                    </div>
+                </td>
+                <td><x-admin.status-pill :variant="$location->type === 'emergency' || $location->type === 'first_aid' ? 'error' : 'neutral'" :label="$locTypes[$location->type][app()->getLocale() === 'en' ? 'en' : 'ar'] ?? $location->type" /></td>
+                <td class="num text-muted ltr text-start nowrap">{{ (float) $location->latitude }}, {{ (float) $location->longitude }}</td>
+                <td><x-admin.status-pill domain="active" :status="$location->is_active" /></td>
+                <td class="num text-muted">{{ $location->updated_at?->format('Y-m-d') }}</td>
+                <td class="text-end">
+                    <div class="row-actions">
+                        <a href="{{ route('admin.map-locations.show', $location) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.map-locations.edit', $location) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
+                        <form action="{{ route('admin.map-locations.destroy', $location) }}" method="POST" data-confirm="{{ __('سيتم حذف الموقع «:name» من الخريطة نهائيًا.', ['name' => $location->name_ar ?: $location->name]) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <x-admin.empty-row :colspan="6" icon="geo-alt" title="لا توجد مواقع" text="قم بإضافة موقع جديد ليظهر على الخريطة التفاعلية.">
+                <a href="{{ route('admin.map-locations.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة موقع جديد') }}</a>
+            </x-admin.empty-row>
+        @endforelse
+    </x-admin.data-table>
+@endsection
+
+@push('scripts')
+<script>
+    // The list filters by "type" whenever the parameter is present, so do not send it empty.
+    document.querySelector('#locationsTable .dt-toolbar')?.addEventListener('submit', function (e) {
+        e.currentTarget.querySelectorAll('select[name="type"], input[name="search"]').forEach(function (el) {
+            if (el.value === '') el.disabled = true;
+        });
+    });
+</script>
+@endpush
