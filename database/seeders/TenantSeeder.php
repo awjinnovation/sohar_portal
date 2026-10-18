@@ -20,8 +20,8 @@ class TenantSeeder extends Seeder
         $settings = [
             'tenant' => [
                 'tagline' => [
-                    'en' => 'Discover events, culture and experiences across North Batinah',
-                    'ar' => 'اكتشف الفعاليات والثقافة والتجارب في شمال الباطنة',
+                    'en' => 'Sohar Festival, races and heritage across the wilayats of North Al Batinah',
+                    'ar' => 'مهرجان صحار والسباقات والتراث في ولايات شمال الباطنة',
                 ],
                 'default_locale' => 'ar',
                 'locales' => [
@@ -32,8 +32,9 @@ class TenantSeeder extends Seeder
                 'currency_decimals' => 3,
                 'timezone' => 'Asia/Muscat',
                 'support' => [
-                    'email' => 'info@soharfestival.om',
-                    'phone' => '80012345',
+                    // Placeholders: set the organizer's real contacts in the admin.
+                    'email' => 'info@example.om',
+                    'phone' => '',
                     'whatsapp' => '',
                     'website' => 'https://services.bng.gov.om:8989',
                 ],
@@ -65,8 +66,8 @@ class TenantSeeder extends Seeder
                             'ar' => 'مرحباً بكم في فعاليات شمال الباطنة',
                         ],
                         'body' => [
-                            'en' => 'Discover amazing events, cultural performances, and unforgettable experiences across North Batinah.',
-                            'ar' => 'اكتشف الفعاليات المذهلة والعروض الثقافية والتجارب التي لا تُنسى في شمال الباطنة.',
+                            'en' => 'Sohar Festival, camel and horse racing, the rally and heritage events across Sohar, Shinas, Liwa, Saham, Al Khaburah and Al Suwaiq.',
+                            'ar' => 'مهرجان صحار وسباقات الهجن والخيل والرالي والفعاليات التراثية في صحار وشناص ولوى وصحم والخابورة والسويق.',
                         ],
                     ],
                     [
@@ -141,14 +142,16 @@ class TenantSeeder extends Seeder
                 'more',
             ],
             'map' => [
+                // Sohar: between the festival grounds (Sohar Entertainment
+                // Centre) and Sohar Fort / Corniche. Sources: docs/north_batinah_seed_sources.md
                 'center' => [
-                    'lat' => 24.3474,
-                    'lng' => 56.7535,
+                    'lat' => 24.3480,
+                    'lng' => 56.7160,
                 ],
-                'zoom' => 14,
+                'zoom' => 13,
                 'venue' => [
-                    'en' => 'Sohar Public Park',
-                    'ar' => 'حديقة صحار العامة',
+                    'en' => 'Sohar Entertainment Centre',
+                    'ar' => 'مركز صحار الترفيهي',
                 ],
             ],
             'wallet' => [

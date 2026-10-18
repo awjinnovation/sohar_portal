@@ -26,12 +26,17 @@ class NorthBatinahVendorsSeeder extends Seeder
 
     public function run(): void
     {
-        $restaurants = Restaurant::orderBy('id')->take(3)->get();
+        // Generic Sohar Festival stalls (not real businesses). The food stall is
+        // linked to its listing in the food court (NorthBatinahEventsSeeder).
         $vendors = collect([
-            ['en' => 'Sohar Karak House', 'ar' => 'بيت الكرك صحار', 'category' => 'food'],
-            ['en' => 'Festival Souvenirs', 'ar' => 'هدايا المهرجان', 'category' => 'merchandise'],
-            ['en' => 'Kids Rides', 'ar' => 'ألعاب الأطفال', 'category' => 'services'],
-        ])->map(fn ($v, $i) => self::vendor(['en' => $v['en'], 'ar' => $v['ar']], $v['category'], $restaurants[$i]->id ?? null));
+            ['en' => 'Sohar Karak House', 'ar' => 'بيت الكرك صحار', 'category' => 'food', 'restaurant' => 'Sohar Karak House'],
+            ['en' => 'Omani Village Crafts', 'ar' => 'حرفيات القرية العمانية', 'category' => 'merchandise', 'restaurant' => null],
+            ['en' => 'Festival Karting', 'ar' => 'كارتينج المهرجان', 'category' => 'services', 'restaurant' => null],
+        ])->map(fn ($v) => self::vendor(
+            ['en' => $v['en'], 'ar' => $v['ar']],
+            $v['category'],
+            $v['restaurant'] ? Restaurant::where('name', $v['restaurant'])->value('id') : null,
+        ));
 
         $cashier = User::where('email', 'vendor@northbatinah.events')->first();
         if ($cashier) {
