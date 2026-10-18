@@ -3,12 +3,17 @@
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\Web\PaymentController;
 use Illuminate\Support\Facades\Route;
 
+// Product homepage (Mawsim landing page, ?lang=ar|en) and its demo form
+Route::get('/', [LandingController::class, 'index'])->name('home');
+Route::post('/demo-request', [LandingController::class, 'store'])
+    ->middleware('throttle:demo-requests')->name('landing.demo-request');
+
 // Public Pages (tenant via ?tenant=<slug>, default tenant otherwise)
-Route::get('/', fn () => redirect('/admin/dashboard'));
 Route::get('/privacy-policy', [PublicPageController::class, 'privacyPolicy'])->name('public.privacy-policy');
 Route::get('/terms-and-conditions', [PublicPageController::class, 'termsAndConditions'])->name('public.terms-and-conditions');
 
@@ -113,5 +118,12 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         // Platform: tenants (super-admin only)
         Route::resource('tenants', Admin\TenantController::class, ['as' => 'admin'])
             ->except(['show', 'destroy'])->middleware('can:manage tenants');
+
+        // Platform: demo requests from the landing page (super-admin only)
+        Route::middleware('can:manage demo requests')->group(function () {
+            Route::get('demo-requests', [Admin\DemoRequestController::class, 'index'])->name('admin.demo-requests.index');
+            Route::get('demo-requests/{demoRequest}', [Admin\DemoRequestController::class, 'show'])->name('admin.demo-requests.show');
+            Route::post('demo-requests/{demoRequest}/status', [Admin\DemoRequestController::class, 'status'])->name('admin.demo-requests.status');
+        });
     });
 });

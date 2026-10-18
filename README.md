@@ -72,6 +72,35 @@ Demo visitor: phone `91234567` — stored with the country code as `96891234567`
 4. Poll `GET /api/v1/wallet/topups/{id}` or `GET /api/v1/payments/status/{transaction_id}`.
 The fake driver refuses to run when `APP_ENV=production`.
 
+## Public landing page (Mawsim) and demo requests
+
+`GET /` is the product homepage (`LandingController@index`, `resources/views/landing/index.blade.php`, assets in `public/landing/` with `?v=filemtime` cache busting; no build step). It is bilingual: the server picks the first-paint language from `?lang=ar|en`, then the `mawsim_lang` cookie (also written by the page's EN/AR toggle), then `Accept-Language`, and sets `<html lang dir>` accordingly; the JS dictionary in `landing.js` renders the copy. Staff reach the admin through the footer's "Staff sign in" link (`/admin/login`).
+
+**Book a demo** posts to `POST /demo-request` (`landing.demo-request`): JSON via `fetch` when JS is on (inline, localized errors), or a normal form POST that redirects to `/#demo` with a server-rendered confirmation. Fields use stable keys (`event_type`: festival/expo/concerts/mall/governorate/sports/other, `expected_visitors`: lt5k/5k-25k/25k-100k/gt100k); `contact` must be an email or a phone with 7–15 digits. Spam protection: hidden `website` honeypot (silently "succeeds"), a signed render timestamp (`App\Support\Landing\FormTimestamp`, rejected under 3 s or after 2 days) and the `demo-requests` rate limiter (5/hour and 20/day per IP).
+
+Each request is stored first in the platform-level `demo_requests` table (`App\Models\DemoRequest`, not tenant-scoped; IP stored only as `sha256(ip|APP_KEY)`), then mailed synchronously inside `try/catch` (a mail failure is logged and never fails the submission; `mailed_at` is set on success):
+- `App\Mail\DemoRequestReceived` → `DEMO_REQUEST_TO` (+ `DEMO_REQUEST_CC`), Reply-To = the requester when they gave an email (`resources/views/emails/demo-request{,-text}.blade.php`).
+- `App\Mail\DemoRequestConfirmation` → the requester (only when the contact is an email and `DEMO_REQUEST_CONFIRMATION=true`), in their language (Arabic RTL), Reply-To = `DEMO_REQUEST_TO`.
+
+Super-admins manage leads at **Admin → Platform → Demo requests** (`/admin/demo-requests`: search, status filter, detail, status new/contacted/closed; sidebar badge = new requests). Tenant admins get 403 (`manage demo requests` is a platform ability).
+
+### Mail delivery
+With `MAIL_MAILER=log` (the local default) **nothing is delivered**: the full message is written to `storage/logs/laravel.log`. To deliver to systems@awj.om, configure SMTP (or another Laravel mailer) in `.env`, e.g.:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_SCHEME=smtps          # or null + MAIL_PORT=587 for STARTTLS
+MAIL_HOST=smtp.your-provider.example
+MAIL_PORT=465
+MAIL_USERNAME=no-reply@awj.om
+MAIL_PASSWORD=…            # app password / API key
+MAIL_FROM_ADDRESS="no-reply@awj.om"
+MAIL_FROM_NAME="Mawsim"
+DEMO_REQUEST_TO=systems@awj.om
+```
+
+The from-domain (awj.om) needs SPF/DKIM (and ideally DMARC) records for the sending provider, otherwise the mails may land in spam. Then `php artisan config:clear` and submit the form (or `php artisan tinker` → `Mail::to('systems@awj.om')->send(new App\Mail\DemoRequestReceived(App\Models\DemoRequest::latest()->first()))`).
+
 ## Adding a tenant
 1. **Admin panel** (super-admin) → *Tenants* → *New*: slug, names, status; branding (logo upload, colours, fonts), modules, wallet/points/refund rules, billing address, OTP text and (optionally) Bank Muscat credentials. Optionally create the tenant's first admin user.
    Or in code: `App\Models\Tenant::create(['slug' => 'acme', 'name' => ['en' => 'Acme', 'ar' => 'أكمي'], 'status' => 'active', 'settings' => [...]])` (only store values that differ from `config('tenancy.defaults')`).
@@ -93,6 +122,9 @@ The fake driver refuses to run when `APP_ENV=production`.
 | `OTP_TEST_CODE` | empty | Fixed OTP outside production. |
 | `OTP_TTL_MINUTES`, `OTP_MAX_ATTEMPTS` | `5`, `5` | OTP expiry and wrong-code attempts before the code is burned. |
 | `ISMARTSMS_URL`, `ISMARTSMS_USER_ID`, `ISMARTSMS_PASSWORD` | – | SMS gateway for OTP delivery. |
+| `DEMO_REQUEST_TO` | `systems@awj.om` | Recipient of landing-page demo requests. |
+| `DEMO_REQUEST_CC` | empty | Optional comma-separated CC list. |
+| `DEMO_REQUEST_CONFIRMATION` | `true` | Send the requester a thank-you email when they gave an email address. |
 
 Scheduler (`php artisan schedule:work` / cron `schedule:run`): `points:expire` daily 02:00, `wallet:expire-promo` daily 02:15 (promo credit older than `wallet.promo_expiry_days`, FIFO lots in `wallet_promo_lots`; no-op while the setting is null), `payments:expire-pending` hourly (cancels abandoned gateway checkouts and returns reserved points).
 
@@ -105,7 +137,7 @@ php artisan test                         # whole suite (in-memory sqlite, PAYMEN
 php artisan test tests/Feature/Platform  # tenancy, wallet, points, merchant, payments, OTP
 ```
 
-`tests/Feature/Platform` covers tenant isolation, the tenant config/ETag, server-side pricing, fake-gateway top-ups credited once, Bank Muscat callback verification, wallet checkout + `INSUFFICIENT_BALANCE`, idempotent debits, deposits, refund requests (refundable cash only), points earn/redeem/expire/reversal, merchant charges with expired/reused/forged pay tokens, OTP throttling and owner-scoped payment endpoints. `tests/Feature/Admin*` cover the admin panel.
+`tests/Feature/Platform` covers tenant isolation, the tenant config/ETag, server-side pricing, fake-gateway top-ups credited once, Bank Muscat callback verification, wallet checkout + `INSUFFICIENT_BALANCE`, idempotent debits, deposits, refund requests (refundable cash only), points earn/redeem/expire/reversal, merchant charges with expired/reused/forged pay tokens, OTP throttling and owner-scoped payment endpoints. `tests/Feature/Admin*` cover the admin panel. `tests/Feature/Landing` covers the homepage (language/dir) and the demo form (storage, mails, validation, honeypot, timing, rate limit, non-JS flow).
 
 ## Security notes
 - The client never sends prices; amounts are computed server-side and gateway responses are verified (decryption with the tenant key + order id + currency + exact amount).

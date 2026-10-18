@@ -14,6 +14,12 @@
             $pendingRefunds = \App\Models\RefundRequest::where('status', 'pending')->count();
         }
     } catch (\Throwable $e) { $pendingRefunds = 0; }
+    $newDemoRequests = 0;
+    try {
+        if ($isSuper && \Illuminate\Support\Facades\Route::has('admin.demo-requests.index')) {
+            $newDemoRequests = \App\Models\DemoRequest::where('status', 'new')->count();
+        }
+    } catch (\Throwable $e) { $newDemoRequests = 0; }
 
     // [route, active pattern, icon, label, permission (null = any panel user), badge]
     $menuSections = [
@@ -50,6 +56,7 @@
         ]],
         ['title' => 'المنصة', 'items' => [
             ['admin.tenants.index', 'admin.tenants.*', 'buildings', 'المنظمات', 'manage tenants'],
+            ['admin.demo-requests.index', 'admin.demo-requests.*', 'envelope-paper', 'طلبات العرض التوضيحي', 'manage demo requests', $newDemoRequests],
         ]],
     ];
 @endphp

@@ -45,6 +45,12 @@ class AdminLabels
         'rejected' => ['مرفوض', 'danger'],
     ];
 
+    public const DEMO_STATUSES = [
+        'new' => ['جديد', 'brand'],
+        'contacted' => ['تم التواصل', 'info'],
+        'closed' => ['مغلق', 'secondary'],
+    ];
+
     public const REFUND_METHODS = [
         'original_payment' => 'وسيلة الدفع الأصلية',
         'bank_transfer' => 'تحويل بنكي',

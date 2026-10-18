@@ -1,0 +1,55 @@
+<?php
+
+// Public landing page (Mawsim) — server-side strings: demo form options,
+// validation / submission messages and the demo-request emails.
+return [
+    'event_types' => [
+        'festival' => 'Festival',
+        'expo' => 'Exhibition or expo',
+        'concerts' => 'Concert series',
+        'mall' => 'Mall season',
+        'governorate' => 'Governorate or municipality',
+        'sports' => 'Sports event',
+        'other' => 'Other',
+    ],
+    'visitor_ranges' => [
+        'lt5k' => 'Under 5,000',
+        '5k-25k' => '5,000 – 25,000',
+        '25k-100k' => '25,000 – 100,000',
+        'gt100k' => 'More than 100,000',
+    ],
+    'fields' => [
+        'name' => 'Name',
+        'organization' => 'Organization',
+        'event_type' => 'Event type',
+        'expected_visitors' => 'Expected visitors',
+        'season' => 'Season',
+        'contact' => 'Contact',
+        'notes' => 'Notes',
+    ],
+    'summary_head' => 'Mawsim demo request',
+    'success' => "Thanks, we've received your request. We'll contact you at :contact.",
+    'errors' => [
+        'required' => 'Add your name, organization and a phone number or email so we can reach you.',
+        'name_max' => 'Your name is too long (120 characters at most).',
+        'organization_max' => 'The organization name is too long (160 characters at most).',
+        'season_max' => 'Season dates are too long (120 characters at most).',
+        'notes_max' => 'Notes are too long (2,000 characters at most).',
+        'event_type' => 'Choose a type of event from the list.',
+        'expected_visitors' => 'Choose the expected number of visitors from the list.',
+        'contact' => 'Enter a valid email, or a phone number with 7 to 15 digits.',
+        'too_fast' => 'That was quick. Please wait a few seconds and send again.',
+        'expired' => 'This form has expired. Reload the page and try again.',
+        'throttled' => 'Too many requests from your network. Please try again later or email :email.',
+    ],
+    'mail' => [
+        'confirm_subject' => 'We received your Mawsim demo request',
+        'confirm_title' => 'Thank you, :name',
+        'confirm_intro' => "We've received your demo request for :organization. The AWJ Innovation team will reach out to you shortly to arrange a walkthrough of Mawsim in your colors.",
+        'confirm_summary' => 'Your request',
+        'confirm_next' => 'What happens next',
+        'confirm_next_body' => 'Our team will contact you at :contact. If anything changes, simply reply to this email.',
+        'confirm_footer' => 'Mawsim, an events platform by AWJ Innovation, Oman.',
+        'confirm_ignore' => "You received this email because a demo was requested with this address on the Mawsim website. If this wasn't you, you can ignore it.",
+    ],
+];

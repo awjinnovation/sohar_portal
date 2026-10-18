@@ -17,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
      * Abilities reserved to platform super-admins (never granted by a
      * tenant role).
      */
-    public const PLATFORM_ABILITIES = ['manage tenants'];
+    public const PLATFORM_ABILITIES = ['manage tenants', 'manage demo requests'];
 
     public function register(): void
     {
@@ -67,6 +67,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('otp-verify', fn (Request $r) => [
             Limit::perMinutes(10, 10)->by('otp-verify:'.$phone($r)),
             Limit::perHour(30)->by('otp-verify-ip:'.$r->ip()),
+        ]);
+
+        // Landing-page demo form: 5 per hour and 20 per day per IP.
+        RateLimiter::for('demo-requests', fn (Request $r) => [
+            Limit::perHour((int) config('landing.rate_per_hour', 5))->by('demo-hour:'.$r->ip())
+                ->response(fn (Request $r, array $headers) => \App\Http\Controllers\LandingController::throttled($r, $headers)),
+            Limit::perDay((int) config('landing.rate_per_day', 20))->by('demo-day:'.$r->ip())
+                ->response(fn (Request $r, array $headers) => \App\Http\Controllers\LandingController::throttled($r, $headers)),
         ]);
 
         RateLimiter::for('money', fn (Request $r) => Limit::perMinute(30)->by('money:'.($r->user()?->id ?: $r->ip())));

@@ -27,6 +27,11 @@ return Application::configure(basePath: dirname(__DIR__))
             '/payment/cancel',
         ]);
 
+        // Landing-page language choice is written by the page's JS too.
+        $middleware->encryptCookies(except: [
+            \App\Http\Controllers\LandingController::LANG_COOKIE,
+        ]);
+
         // Every /api request is resolved to a tenant (X-Tenant header).
         $middleware->api(prepend: [
             \App\Http\Middleware\ResolveTenant::class,
@@ -94,7 +99,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Never leak internal exception messages to API clients unless debugging.
         $exceptions->render(function (Throwable $e, Request $request) use ($isApi) {
-            if (! $isApi($request) || $e instanceof HttpExceptionInterface) {
+            // HttpResponseException carries a ready response (e.g. a rate limiter's custom response).
+            if (! $isApi($request) || $e instanceof HttpExceptionInterface || $e instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
                 return null;
             }
 

@@ -1,5 +1,5 @@
 {{-- Platform status vocabulary (§4.14).
-     <x-admin.status-pill domain="payment|refund|deposit|ticket|wallet|tx|active|announcement" :status="$x->status" />
+     <x-admin.status-pill domain="payment|refund|deposit|ticket|wallet|tx|active|announcement|demo" :status="$x->status" />
      or explicit: <x-admin.status-pill variant="success" label="…" icon="check" /> --}}
 @props(['domain' => null, 'status' => null, 'variant' => null, 'label' => null, 'icon' => null, 'size' => null])
 @php
@@ -12,6 +12,7 @@
         'ticket' => ['active' => 'success', 'valid' => 'success', 'used' => 'neutral', 'expired' => 'neutral', 'cancelled' => 'error', 'refunded' => 'error'],
         'wallet' => ['active' => 'success', 'frozen' => 'error'],
         'tenant' => ['active' => 'success', 'inactive' => 'neutral'],
+        'demo' => ['new' => 'brand', 'contacted' => 'info', 'closed' => 'neutral'],
         'announcement' => ['info' => 'info', 'warning' => 'warning', 'emergency' => 'error', 'critical' => 'error', 'celebration' => 'brand', 'promo' => 'brand'],
     ];
     $labels = [
@@ -19,6 +20,7 @@
         'deposit' => $L::DEPOSIT_STATUSES, 'wallet' => $L::WALLET_STATUSES,
         'ticket' => ['active' => ['صالحة'], 'valid' => ['صالحة'], 'used' => ['مستخدمة'], 'expired' => ['منتهية'], 'cancelled' => ['ملغاة'], 'refunded' => ['مستردة']],
         'tenant' => ['active' => ['نشطة'], 'inactive' => ['غير نشطة']],
+        'demo' => $L::DEMO_STATUSES,
         'announcement' => ['info' => ['معلومات'], 'warning' => ['تحذير'], 'emergency' => ['طوارئ'], 'critical' => ['عاجل'], 'celebration' => ['احتفال'], 'promo' => ['ترويجي']],
     ];
     $icons = ['success' => 'check-circle-fill', 'warning' => 'exclamation-triangle-fill', 'error' => 'x-circle-fill', 'info' => 'info-circle-fill'];
