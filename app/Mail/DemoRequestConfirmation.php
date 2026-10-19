@@ -29,7 +29,7 @@ class DemoRequestConfirmation extends Mailable
 
         return new Envelope(
             subject: __('landing.mail.confirm_subject', [], $this->locale),
-            replyTo: $team ? [new Address($team, 'AWJ Innovation')] : [],
+            replyTo: $team ? [new Address($team, 'AWJ Systems')] : [],
             tags: ['demo-request-confirmation'],
         );
     }

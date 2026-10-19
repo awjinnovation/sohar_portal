@@ -25,4 +25,4 @@ All requests: {!! $adminListUrl !!}
 
 —
 Request #{{ $r->id }} · {{ $submittedAt }} · {{ $localeLabel }}
-Sent by the Mawsim website (AWJ Innovation) from the "Book a demo" form.
+Sent by the Mawsim website (AWJ Systems) from the "Book a demo" form.

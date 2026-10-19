@@ -18,6 +18,6 @@
 
 @section('content')
     <article class="s-card legal">
-        {!! $isAr ? ($doc->content_ar ?: $doc->content) : ($doc->content ?: $doc->content_ar) !!}
+        {!! \App\Support\HtmlSanitizer::clean($isAr ? ($doc->content_ar ?: $doc->content) : ($doc->content ?: $doc->content_ar)) !!}
     </article>
 @endsection

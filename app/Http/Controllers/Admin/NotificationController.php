@@ -38,7 +38,7 @@ class NotificationController extends Controller
         Notification::create($this->validated($request));
 
         return redirect()->route('admin.notifications.index')
-            ->with('success', 'تم إضافة الإشعار بنجاح');
+            ->with('success', 'أُضيف الإشعار');
     }
 
     public function show(Notification $notification)
@@ -60,7 +60,7 @@ class NotificationController extends Controller
         $notification->update($this->validated($request));
 
         return redirect()->route('admin.notifications.index')
-            ->with('success', 'تم تحديث الإشعار بنجاح');
+            ->with('success', 'حُدِّث الإشعار');
     }
 
     public function destroy(Notification $notification)
@@ -68,7 +68,7 @@ class NotificationController extends Controller
         $notification->delete();
 
         return redirect()->route('admin.notifications.index')
-            ->with('success', 'تم حذف الإشعار بنجاح');
+            ->with('success', 'حُذف الإشعار');
     }
 
     private function validated(Request $request): array
@@ -76,7 +76,7 @@ class NotificationController extends Controller
         $validated = $request->validate([
             'user_id' => ['nullable', 'integer', function ($attribute, $value, $fail) {
                 if (! $this->recipientsQuery()->whereKey($value)->exists()) {
-                    $fail('المستخدم المحدد غير موجود في هذه الجهة.');
+                    $fail('المستخدم المحدَّد غير موجود في هذه المنظمة.');
                 }
             }],
             'title' => 'required|string|max:255',

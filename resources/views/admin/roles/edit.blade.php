@@ -24,7 +24,7 @@
             <div class="col-xl-8">
                 <x-admin.card title="تعديل معلومات الدور" icon="shield-lock">
                     <x-admin.form-field name="name" id="name" label="اسم الدور" :value="old('name', $role->name)" dir="ltr" required
-                        help="استخدم اسماً واضحاً باللغة الإنجليزية" />
+                        help="اكتب اسمًا واضحًا بالإنجليزية" />
                 </x-admin.card>
 
                 <div class="d-flex align-items-center gap-2 mb-3">
@@ -56,7 +56,7 @@
                         </label>
                         <div class="alert alert-warning d-flex gap-2 align-items-start mb-0 small">
                             <i class="bi bi-exclamation-triangle-fill"></i>
-                            <div><strong>{{ __('تنبيه:') }}</strong> {{ __('تعديل الصلاحيات سيؤثر على جميع المستخدمين الذين يمتلكون هذا الدور في كل الجهات.') }}</div>
+                            <div><strong>{{ __('تنبيه:') }}</strong> {{ __('يسري تعديل الصلاحيات على كل من يحمل هذا الدور في جميع المنظمات.') }}</div>
                         </div>
                         <x-slot:footer>
                             <div class="d-flex gap-2">

@@ -147,7 +147,7 @@ class EventCrudTest extends TestCase
         $response = $this->post(route('admin.events.store'), $eventData);
 
         $response->assertRedirect(route('admin.events.index'));
-        $response->assertSessionHas('success', 'تم إضافة الفعالية بنجاح');
+        $response->assertSessionHas('success', 'أُضيفت الفعالية');
 
         $this->assertDatabaseHas('events', [
             'title' => 'New Test Event',
@@ -317,7 +317,7 @@ class EventCrudTest extends TestCase
         $response = $this->put(route('admin.events.update', $event), $updatedData);
 
         $response->assertRedirect(route('admin.events.index'));
-        $response->assertSessionHas('success', 'تم تحديث الفعالية بنجاح');
+        $response->assertSessionHas('success', 'حُدِّثت الفعالية');
     }
 
     #[Test]
@@ -343,7 +343,7 @@ class EventCrudTest extends TestCase
         $response = $this->delete(route('admin.events.destroy', $event));
 
         $response->assertRedirect(route('admin.events.index'));
-        $response->assertSessionHas('success', 'تم حذف الفعالية بنجاح');
+        $response->assertSessionHas('success', 'حُذفت الفعالية');
     }
 
     #[Test]

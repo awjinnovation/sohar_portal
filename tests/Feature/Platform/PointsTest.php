@@ -20,10 +20,10 @@ class PointsTest extends TestCase
         return app(PointsService::class);
     }
 
-    private function buyWithWallet($user, $event, int $qty = 1, string $key = 'buy')
+    private function buyWithWallet($user, $event, int $qty = 1, string $key = 'buy', ?string $date = null)
     {
         return $this->api('POST', '/api/v1/payments/initialize', [
-            'event_id' => $event->id, 'booking_date' => now()->addDay()->format('Y-m-d'),
+            'event_id' => $event->id, 'booking_date' => $date ?? now()->addDay()->format('Y-m-d'),
             'quantity' => $qty, 'method' => 'wallet', 'idempotency_key' => $key,
         ], $user)->assertCreated();
     }
@@ -128,7 +128,8 @@ class PointsTest extends TestCase
         $event = $this->makeEvent(null, ['price' => '1.000']);
         $user = $this->makeUser();
         $this->fund($user, 5000);
-        $res = $this->buyWithWallet($user, $event, 1, 'b1'); // +10
+        // A ticket for the current gate day (the gate rejects other dates).
+        $res = $this->buyWithWallet($user, $event, 1, 'b1', \App\Services\Gate\GateDay::today()); // +10
         $ticket = \App\Models\Ticket::where('transaction_id', $res->json('transaction_id'))->sole();
 
         $staff = $this->makeUser();

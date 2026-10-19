@@ -4,7 +4,7 @@
 @endphp
 <div class="row gx-4">
     <div class="col-xl-8">
-        <x-admin.card title="الاسم والوصف" icon="translate" subtitle="يظهر الاسم العربي أو الإنجليزي حسب لغة الزائر">
+        <x-admin.card title="الاسم والوصف" icon="translate" subtitle="يظهر الاسم العربي أو الإنجليزي بحسب لغة الزائر">
             <div class="row">
                 <x-admin.form-field col="col-md-6" name="name_ar" label="الاسم بالعربية" :value="old('name_ar', $vendor->name['ar'] ?? '')" required />
                 <x-admin.form-field col="col-md-6" name="name_en" label="الاسم بالإنجليزية" dir="ltr" :value="old('name_en', $vendor->name['en'] ?? '')" required />
@@ -15,9 +15,9 @@
 
         <x-admin.card title="الشعار" icon="image">
             <x-admin.file-upload name="logo" :current="$vendor->logo_path ? $vendor->logoUrl() : null" accept="image/png,image/jpeg,image/webp" icon="shop"
-                help="PNG أو JPG أو WEBP بحد أقصى 2 ميغابايت — يفضّل شعار مربع بخلفية شفافة" />
+                help="PNG أو JPG أو WEBP بحجم أقصاه 2MB، ويُفضَّل شعار مربع بخلفية شفافة" />
             @if($vendor->logo_path)
-                <x-admin.toggle name="remove_logo" id="remove_logo" label="إزالة الشعار" description="يُحذف الشعار الحالي عند الحفظ (ما لم يتم رفع شعار جديد)" />
+                <x-admin.toggle name="remove_logo" id="remove_logo" label="إزالة الشعار" description="يُحذف الشعار الحالي عند الحفظ ما لم يُرفع شعار جديد" />
             @endif
         </x-admin.card>
     </div>
@@ -31,9 +31,9 @@
                     @endforeach
                 </datalist>
             </x-admin.form-field>
-            <x-admin.form-field name="restaurant_id" label="ربط بمطعم (اختياري)" type="select" placeholder="— بدون —"
+            <x-admin.form-field name="restaurant_id" label="ربط بمطعم (اختياري)" type="select" placeholder="بلا ربط"
                 :value="(string) old('restaurant_id', $vendor->restaurant_id)" :options="$restaurantOptions" />
-            <x-admin.toggle name="is_active" id="is_active" label="نشط" description="يمكن للموظفين استقبال الدفع" :hidden="true" :checked="old('is_active', $vendor->is_active ?? true)" />
+            <x-admin.toggle name="is_active" id="is_active" label="نشط" description="يستقبل الموظفون الدفع" :hidden="true" :checked="old('is_active', $vendor->is_active ?? true)" />
             <x-slot:footer>
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary flex-grow-1" data-busy><i class="bi bi-check-lg"></i> {{ __('حفظ') }}</button>

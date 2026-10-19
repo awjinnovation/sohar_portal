@@ -27,7 +27,7 @@
                         <x-admin.money :minor="(int) $payment->amount_minor" size="lg" />
                     </div>
                     <div class="text-end">
-                        <div class="text-muted small fw-semibold">{{ __('رقم العملية') }}</div>
+                        <div class="text-muted small fw-semibold">{{ __('رقم المعاملة') }}</div>
                         <span class="font-monospace ltr">{{ $payment->transaction_id }}</span>
                     </div>
                 </div>
@@ -49,7 +49,7 @@
                         <dd class="d-flex flex-wrap align-items-center gap-2">
                             <span class="pill pill-neutral pill-sm">{{ __('نقدي') }} <x-admin.money :minor="(int) $topup->amount_minor" /></span>
                             @if($topup->bonus_minor)
-                                <span class="pill pill-accent pill-sm">{{ __('ترويجي (مكافأة)') }} <x-admin.money :minor="(int) $topup->bonus_minor" :signed="true" tone="muted" /></span>
+                                <span class="pill pill-accent pill-sm">{{ __('ترويجي') }} <x-admin.money :minor="(int) $topup->bonus_minor" :signed="true" tone="muted" /></span>
                             @endif
                             <x-admin.status-pill domain="payment" :status="$topup->status" size="sm" />
                         </dd>
@@ -66,21 +66,21 @@
                 @can('refund payments')
                     @if($canRefund)
                         <p class="text-muted small">
-                            {{ __('سيتم إلغاء التذاكر، وإعادة المبلغ المدفوع من المحفظة (إن وُجد)، وإرجاع التأمينات واستعادة النقاط.') }}
+                            {{ __('ستُلغى التذاكر، ويعود إلى المحفظة ما دُفع منها إن وُجد، وتُرجَع التأمينات وتُستعاد النقاط.') }}
                         </p>
                         @if($payment->method === 'gateway')
                             <div class="alert alert-warning small d-flex gap-2 align-items-start">
-                                <i class="bi bi-info-circle-fill"></i><span>{{ __('مدفوعات البطاقة تُسترد يدويًا عبر بوابة البنك.') }}</span>
+                                <i class="bi bi-info-circle-fill"></i><span>{{ __('تُسترد مدفوعات البطاقة يدويًا عبر بوابة الدفع.') }}</span>
                             </div>
                         @endif
                         <form action="{{ route('admin.payments.refund', $payment) }}" method="POST"
-                              data-confirm="{{ __('سيتم إلغاء التذاكر المرتبطة وإعادة المبلغ. لا يمكن التراجع عن هذا الإجراء.') }}" data-confirm-title="{{ __('تأكيد استرداد الدفعة') }}" data-confirm-ok="{{ __('استرداد') }}">
+                              data-confirm="{{ __('ستُلغى التذاكر المرتبطة ويُعاد المبلغ، ولا يمكن التراجع عن هذا الإجراء.') }}" data-confirm-title="{{ __('تأكيد استرداد الدفعة') }}" data-confirm-ok="{{ __('استرداد') }}">
                             @csrf
                             <x-admin.form-field name="reason" label="السبب" type="textarea" rows="2" placeholder="السبب (اختياري)" />
                             <button type="submit" class="btn btn-outline-danger w-100" data-busy><i class="bi bi-arrow-counterclockwise"></i> {{ __('استرداد الدفعة') }}</button>
                         </form>
                     @elseif($payment->payment_type === \App\Models\Payment::TYPE_TOPUP)
-                        <x-admin.empty-state icon="wallet2" title="عبر طلبات الاسترداد" text="عمليات الشحن تُسترد عبر طلبات استرداد المحفظة." class="py-3" />
+                        <x-admin.empty-state icon="wallet2" title="عبر طلبات الاسترداد" text="تُسترد عمليات الشحن عبر طلبات استرداد المحفظة." class="py-3" />
                     @else
                         <x-admin.empty-state icon="slash-circle" title="غير متاح" text="لا يمكن استرداد هذه الدفعة." class="py-3" />
                     @endif
@@ -91,7 +91,7 @@
         </div>
     </div>
 
-    <x-admin.card title="التذاكر" icon="ticket-perforated" :subtitle="$payment->tickets->count() ? __(':count تذكرة', ['count' => $payment->tickets->count()]) : null" :flush="true">
+    <x-admin.card title="التذاكر" icon="ticket-perforated" :subtitle="$payment->tickets->count() ? __('التذاكر: :count', ['count' => $payment->tickets->count()]) : null" :flush="true">
         @if($payment->tickets->isEmpty())
             <x-admin.empty-state icon="ticket-perforated" title="لا توجد تذاكر" text="هذه الدفعة غير مرتبطة بتذاكر." />
         @else
@@ -114,13 +114,13 @@
         @endif
     </x-admin.card>
 
-    <x-admin.card title="عمليات المحفظة المرتبطة" icon="wallet2" :flush="true">
+    <x-admin.card title="معاملات المحفظة المرتبطة" icon="wallet2" :flush="true">
         @if($walletTransactions->isEmpty())
-            <x-admin.empty-state icon="wallet2" title="لا توجد عمليات محفظة" text="دُفعت هذه العملية دون حركة على المحفظة." />
+            <x-admin.empty-state icon="wallet2" title="لا توجد معاملات على المحفظة" text="دُفعت هذه العملية دون حركة على المحفظة." />
         @else
         <div class="x-table-wrap">
             <table class="table align-middle">
-                <thead><tr><th>#</th><th>{{ __('العملية') }}</th><th>{{ __('المبلغ') }}</th><th>{{ __('الحالة') }}</th><th>{{ __('التاريخ') }}</th><th class="text-end"></th></tr></thead>
+                <thead><tr><th>#</th><th>{{ __('المعاملة') }}</th><th>{{ __('المبلغ') }}</th><th>{{ __('الحالة') }}</th><th>{{ __('التاريخ') }}</th><th class="text-end"></th></tr></thead>
                 <tbody>
                     @foreach($walletTransactions as $tx)
                         <tr>

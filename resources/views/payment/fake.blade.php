@@ -8,7 +8,7 @@
 @section('band-sub', $t('بوابة دفع تجريبية', 'Test payment gateway'))
 
 @section('content')
-    <div class="note warn"><i class="bi bi-cone-striped"></i><div><b>{{ $t('وضع الاختبار', 'Test mode') }}</b> — {{ $t('لن يتم خصم أي مبلغ حقيقي. اختر النتيجة لمحاكاتها.', 'No real money is charged. Choose the outcome to simulate.') }}</div></div>
+    <div class="note warn"><i class="bi bi-cone-striped"></i><div><b>{{ $t('وضع الاختبار', 'Test mode') }}.</b> {{ $t('لن يُخصم أي مبلغ حقيقي. اختر النتيجة التي تريد محاكاتها.', 'No real money is charged. Choose the outcome to simulate.') }}</div></div>
 
     <section class="s-card">
         <div class="result">
@@ -17,7 +17,7 @@
             <x-admin.money :minor="(int) $payment->amount_minor" :currency="$payment->currency" size="hero" />
         </div>
         <dl class="rows">
-            <div><dt>{{ $t('رقم العملية', 'Transaction ID') }}</dt><dd class="mono ltr">{{ $payment->transaction_id }}</dd></div>
+            <div><dt>{{ $t('رقم المعاملة', 'Transaction ID') }}</dt><dd class="mono ltr">{{ $payment->transaction_id }}</dd></div>
         </dl>
     </section>
 

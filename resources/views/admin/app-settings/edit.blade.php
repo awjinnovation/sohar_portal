@@ -2,14 +2,14 @@
 
 @section('title', 'تعديل الإعداد')
 @section('page-title', 'تعديل الإعداد')
-@section('page-subtitle', 'تحديث إعدادات تطبيق Flutter')
+@section('page-subtitle', 'تحديث إعداد تطبيق الهاتف')
 @php
     $pageIcon = 'sliders';
     $breadcrumbs = ['المنظمة' => null, 'إعدادات التطبيق' => route('admin.app-settings.index'), 'تعديل' => null];
 @endphp
 @section('page-actions')
     <a href="{{ route('admin.app-settings.show', $appSetting) }}" class="btn"><i class="bi bi-eye"></i> {{ __('عرض') }}</a>
-    <a href="{{ route('admin.app-settings.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع للقائمة') }}</a>
+    <a href="{{ route('admin.app-settings.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع إلى القائمة') }}</a>
 @endsection
 
 @section('content')

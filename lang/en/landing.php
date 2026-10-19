@@ -45,11 +45,11 @@ return [
     'mail' => [
         'confirm_subject' => 'We received your Mawsim demo request',
         'confirm_title' => 'Thank you, :name',
-        'confirm_intro' => "We've received your demo request for :organization. The AWJ Innovation team will reach out to you shortly to arrange a walkthrough of Mawsim in your colors.",
+        'confirm_intro' => "We've received your demo request for :organization. The AWJ Systems team will reach out to you shortly to arrange a walkthrough of Mawsim in your colors.",
         'confirm_summary' => 'Your request',
         'confirm_next' => 'What happens next',
         'confirm_next_body' => 'Our team will contact you at :contact. If anything changes, simply reply to this email.',
-        'confirm_footer' => 'Mawsim, an events platform by AWJ Innovation, Oman.',
+        'confirm_footer' => 'Mawsim, an events platform by AWJ Systems, Oman.',
         'confirm_ignore' => "You received this email because a demo was requested with this address on the Mawsim website. If this wasn't you, you can ignore it.",
     ],
 ];

@@ -15,8 +15,8 @@
 </ul>
 <div class="tab-content border border-top-0 p-3" id="myTabContent">
     <div class="tab-pane fade show active" id="ar" role="tabpanel">
-        <x-admin.form-field name="tag_ar" id="tag_ar" label="اسم الوسم (العربية)" maxlength="50" required
-            :value="old('tag_ar', $eventTag->tag_ar ?? '')" help="50 حرفًا كحد أقصى" />
+        <x-admin.form-field name="tag_ar" id="tag_ar" label="اسم الوسم بالعربية" maxlength="50" required
+            :value="old('tag_ar', $eventTag->tag_ar ?? '')" help="50 حرفًا على الأكثر" />
     </div>
     <div class="tab-pane fade" id="en" role="tabpanel" dir="ltr">
         <x-admin.form-field name="tag" id="tag" label="Tag Name (English)" maxlength="50" dir="ltr" required

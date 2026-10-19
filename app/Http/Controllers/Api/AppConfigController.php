@@ -106,7 +106,7 @@ class AppConfigController extends Controller
                 'app_logo_url' => Tenant::assetUrl($t->setting('branding.logo_url')),
                 'app_icon_url' => Tenant::assetUrl($t->setting('branding.icon_url')),
                 'splash_image_url' => Tenant::assetUrl($t->setting('branding.splash_url')),
-                'loading_text' => $t->setting('legacy.loading_text', 'جاري التحميل...'),
+                'loading_text' => $t->setting('legacy.loading_text', 'جارٍ التحميل'),
                 'loading_text_en' => $t->setting('legacy.loading_text_en', 'Loading...'),
                 'splash_duration_ms' => $t->setting('legacy.splash_duration_ms', 2000),
             ],

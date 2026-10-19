@@ -15,7 +15,7 @@
 @endphp
 <div class="row g-4">
     <div class="col-xl-8">
-        <x-admin.card title="المحتوى" icon="translate" subtitle="يظهر الاسم والوصف حسب لغة المستخدم">
+        <x-admin.card title="المحتوى" icon="translate" subtitle="يظهر الاسم والوصف بحسب لغة الزائر">
             <ul class="nav nav-tabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="ar-tab" data-bs-toggle="tab" data-bs-target="#ar" type="button" role="tab">{{ __('العربية') }}</button>
@@ -26,8 +26,8 @@
             </ul>
             <div class="tab-content border border-top-0 p-3">
                 <div class="tab-pane fade show active" id="ar" role="tabpanel">
-                    <x-admin.form-field name="name_ar" label="الاسم (عربي)" placeholder="مثال: ساحة الفعاليات" :value="old('name_ar', $loc?->name_ar ?? '')" required />
-                    <x-admin.form-field name="description_ar" label="الوصف (عربي)" type="textarea" rows="4" placeholder="اكتب وصفاً تفصيلياً للموقع..." :value="old('description_ar', $loc?->description_ar ?? '')" required />
+                    <x-admin.form-field name="name_ar" label="الاسم بالعربية" placeholder="مثل ساحة الفعاليات" :value="old('name_ar', $loc?->name_ar ?? '')" required />
+                    <x-admin.form-field name="description_ar" label="الوصف بالعربية" type="textarea" rows="4" placeholder="اكتب وصفًا تفصيليًا للموقع" :value="old('description_ar', $loc?->description_ar ?? '')" required />
                 </div>
                 <div class="tab-pane fade" id="en" role="tabpanel" dir="ltr">
                     <x-admin.form-field name="name" label="Name (English)" placeholder="Example: Events Plaza" :value="old('name', $loc?->name ?? '')" required />
@@ -38,9 +38,9 @@
 
         <x-admin.card title="الإحداثيات الجغرافية" icon="geo-alt" subtitle="يمكنك نسخ الإحداثيات من خرائط Google بالنقر بزر الماوس الأيمن على الموقع">
             <div class="row">
-                <x-admin.form-field col="col-md-6" name="latitude" label="خط العرض (Latitude)" type="number" step="0.00000001" dir="ltr"
+                <x-admin.form-field col="col-md-6" name="latitude" label="خط العرض" type="number" step="0.00000001" dir="ltr"
                     placeholder="24.3456789" help="مثال: 24.3456789" :value="old('latitude', $loc?->latitude !== null ? (float) $loc->latitude : '')" required />
-                <x-admin.form-field col="col-md-6" name="longitude" label="خط الطول (Longitude)" type="number" step="0.00000001" dir="ltr"
+                <x-admin.form-field col="col-md-6" name="longitude" label="خط الطول" type="number" step="0.00000001" dir="ltr"
                     placeholder="56.1234567" help="مثال: 56.1234567" :value="old('longitude', $loc?->longitude !== null ? (float) $loc->longitude : '')" required />
             </div>
         </x-admin.card>

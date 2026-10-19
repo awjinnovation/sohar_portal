@@ -54,13 +54,13 @@
 
                 <div class="wc-row">
                     <span class="wc-chip"><i class="bi bi-cash-stack"></i> {{ __('نقدي') }} <x-admin.money :minor="$wallet->cash_minor" /></span>
-                    <span class="wc-chip"><i class="bi bi-gift"></i> {{ __('ترويجي (مكافأة)') }} <x-admin.money :minor="$wallet->promo_minor" /></span>
-                    <span class="wc-chip"><i class="bi bi-safe2"></i> {{ __('محجوز (تأمينات)') }} <x-admin.money :minor="$wallet->held_minor" /></span>
+                    <span class="wc-chip"><i class="bi bi-gift"></i> {{ __('ترويجي') }} <x-admin.money :minor="$wallet->promo_minor" /></span>
+                    <span class="wc-chip"><i class="bi bi-safe2"></i> {{ __('محجوز للتأمينات') }} <x-admin.money :minor="$wallet->held_minor" /></span>
                     <span class="wc-chip"><i class="bi bi-check2-circle"></i> {{ __('المتاح') }} <x-admin.money :minor="$wallet->availableMinor()" /></span>
                 </div>
             </div>
 
-            <x-admin.card title="تفصيل الرصيد" icon="pie-chart" :subtitle="__('جميع المبالغ بعملة :currency — الرصيد النقدي والترويجي والمحجوز منفصلة دائمًا', ['currency' => $cur])">
+            <x-admin.card title="تفصيل الرصيد" icon="pie-chart" :subtitle="__('جميع المبالغ بعملة :currency، والرصيد النقدي والترويجي والمحجوز منفصلة دائمًا', ['currency' => $cur])">
                 <div class="bucket-grid">
                     <div class="bucket">
                         <div class="b-label"><span class="sw" style="background: var(--success)"></span> {{ __('نقدي') }}</div>
@@ -68,14 +68,14 @@
                         <div class="cell-sub">{{ __('من الشحن والمبالغ المستردة') }}</div>
                     </div>
                     <div class="bucket">
-                        <div class="b-label"><span class="sw" style="background: var(--accent)"></span> {{ __('ترويجي (مكافأة)') }}</div>
+                        <div class="b-label"><span class="sw" style="background: var(--accent)"></span> {{ __('ترويجي') }}</div>
                         <x-admin.money :minor="$wallet->promo_minor" />
                         <div class="cell-sub">{{ __('غير قابل للاسترداد') }}</div>
                     </div>
                     <div class="bucket">
-                        <div class="b-label"><span class="sw" style="background: var(--info)"></span> {{ __('محجوز (تأمينات)') }}</div>
+                        <div class="b-label"><span class="sw" style="background: var(--info)"></span> {{ __('محجوز للتأمينات') }}</div>
                         <x-admin.money :minor="$wallet->held_minor" />
-                        <div class="cell-sub">{{ $heldCount ? __(':count تأمين محجوز', ['count' => $heldCount]) : __('لا توجد تأمينات محجوزة') }}</div>
+                        <div class="cell-sub">{{ $heldCount ? __('التأمينات المحجوزة: :count', ['count' => $heldCount]) : __('لا توجد تأمينات محجوزة') }}</div>
                     </div>
                     <div class="bucket">
                         <div class="b-label"><span class="sw" style="background: var(--warning-fill)"></span> {{ __('قابل للاسترداد') }}</div>
@@ -90,19 +90,19 @@
             {{-- Manual adjustment --}}
             <x-admin.card title="تعديل يدوي" icon="plus-slash-minus" subtitle="إضافة أو خصم مبلغ من رصيد محدد">
                 <form action="{{ route('admin.wallets.adjust', $wallet) }}" method="POST" id="adjustForm"
-                      data-confirm="{{ __('سيتم تنفيذ التعديل على رصيد المحفظة وتسجيله في سجل التدقيق. هل تريد المتابعة؟') }}"
+                      data-confirm="{{ __('سيُعدَّل رصيد المحفظة ويُسجَّل التعديل في سجل التدقيق. هل تريد المتابعة؟') }}"
                       data-confirm-title="{{ __('تأكيد تعديل الرصيد') }}" data-confirm-ok="{{ __('تنفيذ التعديل') }}" data-confirm-tone="primary">
                     @csrf
                     <div class="row g-2">
                         <x-admin.form-field col="col-6" name="direction" label="النوع" type="select" :value="old('direction')"
                             :options="['credit' => 'إضافة (+)', 'debit' => 'خصم (−)']" />
                         <x-admin.form-field col="col-6" name="bucket" label="الرصيد" type="select" :value="old('bucket', 'promo')"
-                            :options="['promo' => 'ترويجي (مكافأة)', 'cash' => 'نقدي']" />
+                            :options="['promo' => 'ترويجي', 'cash' => 'نقدي']" />
                     </div>
                     <x-admin.form-field name="amount" :label="__('المبلغ (:currency)', ['currency' => $cur])" :value="old('amount')" placeholder="1.500" dir="ltr" inputmode="decimal" required class="num" />
                     <x-admin.form-field name="reason" label="السبب" :value="old('reason')" required />
                     <button type="submit" class="btn btn-primary w-100" data-busy><i class="bi bi-check-lg"></i> {{ __('تنفيذ') }}</button>
-                    <p class="form-text mt-2 mb-0">{{ __('الرصيد الترويجي غير قابل للاسترداد. الخصم من الرصيد الترويجي يبدأ بالترويجي ثم النقدي. يتم تسجيل كل تعديل في سجل التدقيق.') }}</p>
+                    <p class="form-text mt-2 mb-0">{{ __('الرصيد الترويجي لا يُسترد. يبدأ الخصم بالرصيد الترويجي ثم النقدي، ويُسجَّل كل تعديل في سجل التدقيق.') }}</p>
                 </form>
             </x-admin.card>
 
@@ -111,11 +111,11 @@
                 <x-slot:actions><x-admin.status-pill domain="wallet" :status="$wallet->status" /></x-slot:actions>
                 @if($frozen)
                     <form action="{{ route('admin.wallets.status', $wallet) }}" method="POST"
-                          data-confirm="{{ __('سيتم إلغاء تجميد المحفظة ليتمكن المستخدم من الدفع والشحن مجددًا.') }}"
+                          data-confirm="{{ __('سيُلغى تجميد المحفظة ليعود المستخدم إلى الدفع والشحن.') }}"
                           data-confirm-title="{{ __('إلغاء تجميد المحفظة') }}" data-confirm-ok="{{ __('إلغاء التجميد') }}" data-confirm-tone="primary">
                         @csrf
                         <input type="hidden" name="status" value="active">
-                        <p class="text-muted small mb-2">{{ __('المحفظة مجمّدة حاليًا؛ لا يمكن للمستخدم الدفع أو الشحن.') }}</p>
+                        <p class="text-muted small mb-2">{{ __('المحفظة مجمّدة حاليًا، فلا يستطيع المستخدم الدفع أو الشحن.') }}</p>
                         <div class="field">
                             <input type="text" name="reason" class="form-control" placeholder="{{ __('سبب إلغاء التجميد (اختياري)') }}" aria-label="{{ __('سبب إلغاء التجميد') }}">
                         </div>
@@ -123,11 +123,11 @@
                     </form>
                 @else
                     <form action="{{ route('admin.wallets.status', $wallet) }}" method="POST"
-                          data-confirm="{{ __('سيتم تجميد المحفظة ومنع المستخدم من الدفع والشحن حتى إلغاء التجميد.') }}"
+                          data-confirm="{{ __('ستُجمَّد المحفظة ويُمنع المستخدم من الدفع والشحن حتى يُلغى التجميد.') }}"
                           data-confirm-title="{{ __('تجميد المحفظة') }}" data-confirm-ok="{{ __('تجميد') }}">
                         @csrf
                         <input type="hidden" name="status" value="frozen">
-                        <p class="text-muted small mb-2">{{ __('التجميد يوقف الدفع والشحن مؤقتًا دون المساس بالرصيد.') }}</p>
+                        <p class="text-muted small mb-2">{{ __('يوقف التجميد الدفع والشحن مؤقتًا دون المساس بالرصيد.') }}</p>
                         <div class="field">
                             <input type="text" name="reason" class="form-control" placeholder="{{ __('سبب التجميد (اختياري)') }}" aria-label="{{ __('سبب التجميد') }}">
                         </div>
@@ -139,10 +139,10 @@
     </div>
 
     {{-- Ledger --}}
-    <x-admin.data-table title="سجل العمليات" icon="journal-text" :count="$transactions->total()" :paginator="$transactions">
+    <x-admin.data-table title="سجل المعاملات" icon="journal-text" :count="$transactions->total()" :paginator="$transactions">
         <x-slot:head>
             <th style="width: 56px">#</th>
-            <th>{{ __('العملية') }}</th>
+            <th>{{ __('المعاملة') }}</th>
             <th>{{ __('الرصيد') }}</th>
             <th>{{ __('المبلغ') }}</th>
             <th>{{ __('الرصيد بعد') }}</th>
@@ -192,7 +192,7 @@
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end p-3 ledger-refund">
                                     <form action="{{ route('admin.wallets.refund-charge', $tx) }}" method="POST"
-                                          data-confirm="{{ __('سيتم إرجاع مبلغ هذه العملية إلى محفظة المستخدم.') }}" data-confirm-title="{{ __('استرداد عملية الدفع') }}"
+                                          data-confirm="{{ __('سيُرجَع مبلغ هذه المعاملة إلى محفظة المستخدم.') }}" data-confirm-title="{{ __('استرداد عملية الدفع') }}"
                                           data-confirm-ok="{{ __('استرداد') }}" data-confirm-tone="primary">
                                         @csrf
                                         <div class="fw-bold mb-1">{{ __('استرداد عملية الدفع') }}</div>
@@ -207,12 +207,12 @@
                 </td>
             </tr>
         @empty
-            <x-admin.empty-row :colspan="8" icon="journal-text" title="لا توجد عمليات" text="ستظهر هنا عمليات الشحن والدفع والتأمينات." />
+            <x-admin.empty-row :colspan="8" icon="journal-text" title="لا توجد معاملات" text="ستظهر هنا عمليات الشحن والدفع والتأمينات." />
         @endforelse
     </x-admin.data-table>
 
     {{-- Deposits --}}
-        <x-admin.card title="التأمينات" icon="safe2" :subtitle="$heldCount ? __(':count محجوز حاليًا', ['count' => $heldCount]) : null" :flush="true">
+        <x-admin.card title="التأمينات" icon="safe2" :subtitle="$heldCount ? __('المحجوز حاليًا: :count', ['count' => $heldCount]) : null" :flush="true">
             @if($deposits->isEmpty())
                 <x-admin.empty-state icon="safe2" title="لا توجد تأمينات" text="لم يُحجز أي تأمين من هذه المحفظة." />
             @else
@@ -234,7 +234,7 @@
                                     @can('manage deposits')
                                         @if($deposit->status === 'held')
                                             <form action="{{ route('admin.deposits.release', $deposit) }}" method="POST" class="d-inline"
-                                                  data-confirm="{{ __('سيتم إرجاع مبلغ التأمين إلى رصيد المستخدم.') }}" data-confirm-ok="{{ __('إرجاع') }}" data-confirm-tone="primary">
+                                                  data-confirm="{{ __('سيُرجَع مبلغ التأمين إلى رصيد المستخدم.') }}" data-confirm-ok="{{ __('إرجاع') }}" data-confirm-tone="primary">
                                                 @csrf
                                                 <button type="submit" class="btn btn-tonal btn-sm" data-busy><i class="bi bi-arrow-return-left dir-icon"></i> {{ __('إرجاع') }}</button>
                                             </form>

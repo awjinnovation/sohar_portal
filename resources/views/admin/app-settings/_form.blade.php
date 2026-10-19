@@ -1,10 +1,10 @@
 {{-- Shared create/edit body. Expects $appSetting (new or existing) and $submitLabel; the caller wraps it in the <form>. --}}
 @php
     $settingTypes = [
-        'string' => 'نص (String)',
-        'integer' => 'رقم صحيح (Integer)',
-        'boolean' => 'منطقي (Boolean)',
-        'decimal' => 'عشري (Decimal)',
+        'string' => 'نص',
+        'integer' => 'عدد صحيح',
+        'boolean' => 'قيمة منطقية',
+        'decimal' => 'عدد عشري',
         'json' => 'JSON',
     ];
     $currentType = old('setting_type', $appSetting->setting_type ?? 'string');
@@ -26,7 +26,7 @@
                     <label class="toggle-row" for="boolean_checkbox">
                         <span class="tr-text">
                             <span class="tr-label d-block">{{ __('تفعيل') }}</span>
-                            <span class="tr-desc d-block">{{ __('يُحفظ كـ') }} <code>1</code> {{ __('عند التفعيل و') }} <code>0</code> {{ __('عند الإيقاف') }}</span>
+                            <span class="tr-desc d-block">{{ __('يُحفظ بالقيمة') }} <code>1</code> {{ __('عند التفعيل، وبالقيمة') }} <code>0</code> {{ __('عند الإيقاف') }}</span>
                         </span>
                         <span class="switch">
                             <input type="checkbox" role="switch" id="boolean_checkbox" @checked($currentValue == '1')>
@@ -44,8 +44,8 @@
 
             <x-admin.form-field name="description" id="description" type="textarea" rows="2" label="الوصف" :value="old('description', $appSetting->description)" />
 
-            <x-admin.toggle name="is_public" id="is_public" :hidden="true" label="متاح للعموم (سيظهر في API)"
-                description="إذا كان مفعلاً، سيكون هذا الإعداد متاحاً عبر API للتطبيق" :checked="old('is_public', $appSetting->is_public)" />
+            <x-admin.toggle name="is_public" id="is_public" :hidden="true" label="متاح للعموم عبر API"
+                description="عند تفعيله يقرأ التطبيق هذا الإعداد عبر API" :checked="old('is_public', $appSetting->is_public)" />
         </x-admin.card>
     </div>
 
@@ -67,7 +67,7 @@
             </x-slot:footer>
         </x-admin.card>
 
-        <x-admin.card title="أمثلة حسب النوع" icon="lightbulb">
+        <x-admin.card title="أمثلة بحسب النوع" icon="lightbulb">
             <dl class="dl">
                 <dt><code>String</code></dt><dd>"{{ ($brand ?? null)?->localizedName('ar') ?? config('app.name') }}"</dd>
                 <dt><code>Integer</code></dt><dd class="num">2000</dd>
@@ -90,11 +90,11 @@
     if (!type || !valueField) return;
 
     const hints = {
-        boolean: [@json(__('استخدم المفتاح للتبديل بين نعم/لا')), 4],
-        json: [@json(__('أدخل JSON صحيح، مثال: {"key": "value"}')), 6],
-        integer: [@json(__('أدخل رقم صحيح، مثال: 2000')), 2],
-        decimal: [@json(__('أدخل رقم عشري، مثال: 24.3589')), 2],
-        string: [@json(__('أدخل نص عادي')), 4],
+        boolean: [@json(__('استعمل المفتاح للتبديل بين نعم ولا')), 4],
+        json: [@json(__('أدخل JSON صحيحًا، مثل {"key": "value"}')), 6],
+        integer: [@json(__('أدخل عددًا صحيحًا، مثل 2000')), 2],
+        decimal: [@json(__('أدخل عددًا عشريًا، مثل 24.3589')), 2],
+        string: [@json(__('أدخل نصًا عاديًا')), 4],
     };
 
     function update() {

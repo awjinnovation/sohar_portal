@@ -2,7 +2,7 @@
 
 @section('title', 'إدارة المستخدمين')
 @section('page-title', 'المستخدمون')
-@section('page-subtitle', 'فريق لوحة الإدارة وأدوارهم في هذه المنظمة')
+@section('page-subtitle', 'فريق لوحة التحكم وأدوارهم في هذه المنظمة')
 @php
     $pageIcon = 'people';
     $breadcrumbs = ['المنظمة' => null, 'المستخدمون' => null];
@@ -20,11 +20,11 @@
     @include('admin.partials.alerts')
 
     <x-admin.data-table :title="($scope ?? 'tenant') === 'all' ? 'جميع مستخدمي المنصة' : 'قائمة المستخدمين'" icon="people"
-        :count="$users->total()" search="search" search-placeholder="بحث بالاسم أو البريد أو الهاتف" :paginator="$users">
+        :count="$users->total()" search="search" search-placeholder="ابحث بالاسم أو البريد أو الهاتف" :paginator="$users">
         @if($isSuperActor)
             <x-slot:filters>
                 <select name="scope" class="form-select" aria-label="{{ __('نطاق المستخدمين') }}">
-                    <option value="tenant" @selected(($scope ?? 'tenant') === 'tenant')>{{ __('مستخدمو الجهة الحالية') }}</option>
+                    <option value="tenant" @selected(($scope ?? 'tenant') === 'tenant')>{{ __('مستخدمو المنظمة الحالية') }}</option>
                     <option value="all" @selected(($scope ?? '') === 'all')>{{ __('جميع مستخدمي المنصة') }}</option>
                 </select>
             </x-slot:filters>
@@ -33,7 +33,7 @@
         <x-slot:head>
             <th style="width: 56px">#</th>
             <th>{{ __('المستخدم') }}</th>
-            <th>{{ __('البريد الإلكتروني / الهاتف') }}</th>
+            <th>{{ __('البريد الإلكتروني أو الهاتف') }}</th>
             <th>{{ __('الأدوار') }}</th>
             <th>{{ __('تاريخ التسجيل') }}</th>
             <th class="text-end">{{ __('الإجراءات') }}</th>
@@ -71,7 +71,7 @@
                         @forelse($user->roles as $role)
                             <span class="pill pill-brand pill-sm">{{ $role->name }}</span>
                         @empty
-                            <span class="text-muted small">{{ __('بدون دور') }}</span>
+                            <span class="text-muted small">{{ __('بلا دور') }}</span>
                         @endforelse
                     </div>
                 </td>
@@ -83,10 +83,10 @@
                             <a href="{{ route('admin.users.edit', $user) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
                             @if($user->id !== auth()->id())
                                 <form action="{{ route('admin.users.destroy', $user) }}" method="POST"
-                                      data-confirm="{{ $isSuperActor ? __('سيتم حذف المستخدم «:name» نهائيًا من المنصة.', ['name' => $user->name]) : __('سيتم إزالة صلاحيات المستخدم «:name» من هذه الجهة.', ['name' => $user->name]) }}">
+                                      data-confirm="{{ $isSuperActor ? __('سيُحذف المستخدم «:name» نهائيًا من المنصة.', ['name' => $user->name]) : __('ستُزال صلاحيات المستخدم «:name» في هذه المنظمة.', ['name' => $user->name]) }}">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="icon-btn danger" title="{{ $isSuperActor ? __('حذف') : __('إزالة من الجهة') }}">
+                                    <button type="submit" class="icon-btn danger" title="{{ $isSuperActor ? __('حذف') : __('إزالة من المنظمة') }}">
                                         <i class="bi bi-{{ $isSuperActor ? 'trash' : 'person-dash' }}"></i>
                                     </button>
                                 </form>
@@ -97,7 +97,7 @@
             </tr>
         @empty
             <x-admin.empty-row :colspan="6" icon="people" title="لا يوجد مستخدمون"
-                :text="request('search') ? 'لا توجد نتائج مطابقة للبحث.' : 'أضف أعضاء الفريق ليتمكنوا من الدخول إلى لوحة الإدارة.'">
+                :text="request('search') ? 'لا توجد نتائج مطابقة للبحث.' : 'أضف أعضاء الفريق ليتمكنوا من الدخول إلى لوحة التحكم.'">
                 @can('manage users')
                     <a href="{{ route('admin.users.create') }}" class="btn btn-tonal"><i class="bi bi-person-plus"></i> {{ __('إضافة مستخدم') }}</a>
                 @endcan

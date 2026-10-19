@@ -100,7 +100,7 @@ class Ticket extends Model
             return [
                 'is_valid' => false,
                 'reason' => 'TICKET_EXPIRED',
-                'message' => 'التذكرة منتهية الصلاحية / Ticket expired'
+                'message' => 'انتهت صلاحية التذكرة / Ticket expired'
             ];
         }
 
@@ -108,7 +108,7 @@ class Ticket extends Model
             return [
                 'is_valid' => false,
                 'reason' => 'TICKET_ALREADY_USED',
-                'message' => 'التذكرة مستخدمة بالفعل / Ticket already used',
+                'message' => 'التذكرة مستخدمة من قبل / Ticket already used',
                 'data' => [
                     'validated_at' => $this->used_at?->toIso8601String(),
                     'validated_by' => $this->validated_by
@@ -120,7 +120,7 @@ class Ticket extends Model
             return [
                 'is_valid' => false,
                 'reason' => 'TICKET_EXPIRED',
-                'message' => 'التذكرة منتهية الصلاحية / Ticket expired',
+                'message' => 'انتهت صلاحية التذكرة / Ticket expired',
                 'data' => [
                     'expiry_date' => $this->booking_date->toIso8601String()
                 ]
@@ -131,7 +131,7 @@ class Ticket extends Model
             return [
                 'is_valid' => false,
                 'reason' => 'EVENT_ENDED',
-                'message' => 'الفعالية انتهت / Event has ended'
+                'message' => 'انتهت الفعالية / Event has ended'
             ];
         }
 

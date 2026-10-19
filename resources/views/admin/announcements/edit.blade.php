@@ -26,7 +26,7 @@
         @method('PUT')
         <div class="row g-4">
             <div class="col-xl-8">
-                <x-admin.card title="المحتوى" icon="translate" subtitle="يظهر النص العربي أو الإنجليزي حسب لغة المستخدم">
+                <x-admin.card title="المحتوى" icon="translate" subtitle="يظهر النص العربي أو الإنجليزي بحسب لغة الزائر">
                     <ul class="nav nav-tabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="ar-tab" data-bs-toggle="tab" data-bs-target="#ar" type="button" role="tab">{{ __('العربية') }}</button>
@@ -37,8 +37,8 @@
                     </ul>
                     <div class="tab-content border border-top-0 p-3">
                         <div class="tab-pane fade show active" id="ar" role="tabpanel">
-                            <x-admin.form-field name="title_ar" label="العنوان (العربية)" :value="old('title_ar', $announcement->title_ar)" required />
-                            <x-admin.form-field name="content_ar" label="المحتوى (العربية)" type="textarea" rows="5" :value="old('content_ar', $announcement->content_ar)" required />
+                            <x-admin.form-field name="title_ar" label="العنوان بالعربية" :value="old('title_ar', $announcement->title_ar)" required />
+                            <x-admin.form-field name="content_ar" label="المحتوى بالعربية" type="textarea" rows="5" :value="old('content_ar', $announcement->content_ar)" required />
                         </div>
                         <div class="tab-pane fade" id="en" role="tabpanel" dir="ltr">
                             <x-admin.form-field name="title" label="Title (English)" :value="old('title', $announcement->title)" required />
@@ -49,19 +49,20 @@
             </div>
 
             <div class="col-xl-4">
+                @include('admin.ai._announcement-copilot')
                 <x-admin.card title="الإعدادات" icon="sliders">
                     <x-admin.form-field name="type" label="النوع" type="select" required placeholder="اختر النوع" :value="old('type', $announcement->type)"
                         :options="$typeOptions" />
                     <div class="row">
                         <x-admin.form-field col="col-6" name="priority" label="الأولوية" type="number" min="0" :value="old('priority', $announcement->priority)" />
                         <x-admin.form-field col="col-6" name="target_audience" label="الجمهور المستهدف" type="select" :value="old('target_audience', $announcement->target_audience)"
-                            :options="['all' => 'الجميع', 'visitors' => 'الزوار', 'vendors' => 'البائعون', 'staff' => 'الموظفون']" />
+                            :options="['all' => 'الجميع', 'visitors' => 'الزوار', 'vendors' => 'التجار', 'staff' => 'الموظفون']" />
                     </div>
                     <x-admin.form-field name="start_datetime" label="تاريخ ووقت البداية" type="datetime-local" required
                         :value="old('start_datetime', $announcement->start_datetime?->format('Y-m-d\TH:i'))" />
                     <x-admin.form-field name="end_datetime" label="تاريخ ووقت النهاية" type="datetime-local"
                         :value="old('end_datetime', $announcement->end_datetime?->format('Y-m-d\TH:i'))" />
-                    <x-admin.toggle name="is_pinned" id="is_pinned" label="تثبيت الإعلان" description="يظهر أولاً في القائمة" :hidden="true" :checked="old('is_pinned', $announcement->is_pinned)" />
+                    <x-admin.toggle name="is_pinned" id="is_pinned" label="تثبيت الإعلان" description="يظهر أولًا في القائمة" :hidden="true" :checked="old('is_pinned', $announcement->is_pinned)" />
                     <x-admin.toggle name="is_active" id="is_active" label="نشط" description="مرئي في التطبيق" :hidden="true" :checked="old('is_active', $announcement->is_active)" />
                     <x-slot:footer>
                         <div class="d-flex gap-2">

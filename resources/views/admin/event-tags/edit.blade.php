@@ -20,7 +20,7 @@
         @method('PUT')
         <div class="row g-4">
             <div class="col-xl-8">
-                <x-admin.card title="بيانات الوسم" icon="tag" subtitle="يظهر الاسم العربي أو الإنجليزي حسب لغة المستخدم">
+                <x-admin.card title="بيانات الوسم" icon="tag" subtitle="يظهر الاسم العربي أو الإنجليزي بحسب لغة الزائر">
                     @include('admin.event-tags._form')
                     <x-slot:footer>
                         <div class="d-flex gap-2 justify-content-end">
@@ -33,7 +33,7 @@
             <div class="col-xl-4">
                 <x-admin.card title="السجل" icon="clock-history">
                     <dl class="dl">
-                        <dt>{{ __('المعرف') }}</dt>
+                        <dt>{{ __('المعرّف') }}</dt>
                         <dd class="num">{{ $eventTag->id }}</dd>
                         <dt>{{ __('تاريخ الإنشاء') }}</dt>
                         <dd><span class="num" dir="ltr">{{ $eventTag->created_at?->format('Y-m-d H:i') ?? '—' }}</span></dd>

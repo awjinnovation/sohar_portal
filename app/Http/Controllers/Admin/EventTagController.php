@@ -39,7 +39,7 @@ class EventTagController extends Controller
         EventTag::create($this->validated($request));
 
         return redirect()->route('admin.event-tags.index')
-            ->with('success', 'تم إضافة الوسم بنجاح');
+            ->with('success', 'أُضيف الوسم');
     }
 
     public function show(EventTag $eventTag)
@@ -61,7 +61,7 @@ class EventTagController extends Controller
         $eventTag->update($this->validated($request, $eventTag));
 
         return redirect()->route('admin.event-tags.index')
-            ->with('success', 'تم تحديث الوسم بنجاح');
+            ->with('success', 'حُدِّث الوسم');
     }
 
     public function destroy(EventTag $eventTag)
@@ -69,7 +69,7 @@ class EventTagController extends Controller
         $eventTag->delete();
 
         return redirect()->route('admin.event-tags.index')
-            ->with('success', 'تم حذف الوسم بنجاح');
+            ->with('success', 'حُذف الوسم');
     }
 
     private function events()

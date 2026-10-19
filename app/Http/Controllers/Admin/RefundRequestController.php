@@ -44,17 +44,17 @@ class RefundRequestController extends Controller
 
     public function approve(Request $request, RefundRequest $refundRequest)
     {
-        return $this->transition($request, $refundRequest, 'approve', 'تمت الموافقة على طلب الاسترداد');
+        return $this->transition($request, $refundRequest, 'approve', 'قُبل طلب الاسترداد');
     }
 
     public function reject(Request $request, RefundRequest $refundRequest)
     {
-        return $this->transition($request, $refundRequest, 'reject', 'تم رفض الطلب وإعادة المبلغ إلى المحفظة');
+        return $this->transition($request, $refundRequest, 'reject', 'رُفض الطلب وأُعيد المبلغ إلى المحفظة');
     }
 
     public function markPaid(Request $request, RefundRequest $refundRequest)
     {
-        return $this->transition($request, $refundRequest, 'markPaid', 'تم تسجيل الطلب كمدفوع');
+        return $this->transition($request, $refundRequest, 'markPaid', 'سُجِّل الطلب مدفوعًا');
     }
 
     private function transition(Request $request, RefundRequest $refundRequest, string $action, string $message)

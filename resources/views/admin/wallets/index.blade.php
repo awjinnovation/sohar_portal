@@ -12,15 +12,15 @@
     @include('admin.partials.alerts')
 
     <div class="stat-grid">
-        <x-admin.stat-tile label="إجمالي الأرصدة" :money="$totals['balance']" icon="wallet2" tone="brand" hint="نقدي + ترويجي في جميع المحافظ" />
-        <x-admin.stat-tile label="المبالغ المحجوزة (تأمينات)" :money="$totals['held']" icon="safe2" tone="info" hint="غير متاحة للإنفاق حتى الإرجاع" />
+        <x-admin.stat-tile label="إجمالي الأرصدة" :money="$totals['balance']" icon="wallet2" tone="brand" hint="النقدي والترويجي في جميع المحافظ" />
+        <x-admin.stat-tile label="المبالغ المحجوزة للتأمينات" :money="$totals['held']" icon="safe2" tone="info" hint="غير متاحة للإنفاق حتى الإرجاع" />
         <x-admin.stat-tile label="عدد المحافظ" :value="$totals['count']" icon="people" tone="neutral" />
         <x-admin.stat-tile label="المحافظ المجمّدة" :value="$totals['frozen']" icon="lock" :tone="$totals['frozen'] > 0 ? 'error' : 'neutral'"
             :href="route('admin.wallets.index', ['status' => 'frozen'])" hint="عرض المحافظ المجمّدة" />
     </div>
 
     @if($usersWithoutWallet->isNotEmpty())
-        <x-admin.card title="مستخدمون بدون محفظة في هذه المنظمة" icon="person-plus" subtitle="لا تُنشأ المحفظة إلا عند طلب ذلك صراحةً أو عند أول عملية للمستخدم" :flush="true">
+        <x-admin.card title="مستخدمون بلا محفظة في هذه المنظمة" icon="person-plus" subtitle="لا تُنشأ المحفظة إلا عند طلب ذلك صراحةً أو عند أول عملية للمستخدم" :flush="true">
             <ul class="tx-list">
                 @foreach($usersWithoutWallet as $u)
                     <li class="tx-item">

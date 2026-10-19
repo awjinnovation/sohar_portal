@@ -43,7 +43,7 @@ class PrivacyPolicyController extends Controller
         PrivacyPolicy::create($validated);
 
         return redirect()->route('admin.privacy-policies.index')
-            ->with('success', 'تم إضافة سياسة الخصوصية بنجاح');
+            ->with('success', 'أُضيفت سياسة الخصوصية');
     }
 
     /**
@@ -80,7 +80,7 @@ class PrivacyPolicyController extends Controller
         $privacyPolicy->update($validated);
 
         return redirect()->route('admin.privacy-policies.index')
-            ->with('success', 'تم تحديث سياسة الخصوصية بنجاح');
+            ->with('success', 'حُدِّثت سياسة الخصوصية');
     }
 
     /**
@@ -91,6 +91,6 @@ class PrivacyPolicyController extends Controller
         $privacyPolicy->delete();
 
         return redirect()->route('admin.privacy-policies.index')
-            ->with('success', 'تم حذف سياسة الخصوصية بنجاح');
+            ->with('success', 'حُذفت سياسة الخصوصية');
     }
 }

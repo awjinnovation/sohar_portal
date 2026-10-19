@@ -36,9 +36,12 @@ class TenantController extends Controller
     public const HEADER_STYLES = ['gradient', 'solid', 'image'];
 
     public const HOME_BLOCKS = ['wallet_card', 'quick_actions', 'announcements', 'featured_events', 'happening_today',
-        'points_progress', 'vendors', 'map_teaser', 'categories'];
+        'points_progress', 'vendors', 'map_teaser', 'categories', 'ai_assistant', 'places_featured', 'places_map_teaser'];
 
-    public const QUICK_ACTIONS = ['topup', 'pay', 'points', 'tickets', 'map', 'refund', 'deposits', 'calendar', 'vendors'];
+    /** Home block `collection:<key>` (a content collection, docs/places_content_contract.md §1). */
+    public const COLLECTION_BLOCK = '/^collection:[a-z0-9][a-z0-9_-]{0,63}$/';
+
+    public const QUICK_ACTIONS = ['topup', 'pay', 'points', 'tickets', 'map', 'refund', 'deposits', 'calendar', 'vendors', 'ai', 'places'];
 
     private const HEX = 'regex:/^#[0-9A-Fa-f]{6}$/';
 
@@ -115,7 +118,7 @@ class TenantController extends Controller
             return $tenant;
         });
 
-        return redirect()->route('admin.tenants.index')->with('success', 'تم إنشاء المنظمة بنجاح');
+        return redirect()->route('admin.tenants.index')->with('success', 'أُنشئت المنظمة');
     }
 
     public function edit(Tenant $tenant)
@@ -146,7 +149,7 @@ class TenantController extends Controller
 
         AuditLog::record('tenant.updated', $tenant, ['keys' => array_keys($values)]);
 
-        return redirect()->route('admin.tenants.edit', $tenant)->with('success', 'تم حفظ إعدادات المنظمة بنجاح');
+        return redirect()->route('admin.tenants.edit', $tenant)->with('success', 'حُفظت إعدادات المنظمة');
     }
 
     /** Switch the admin panel to another tenant the user may access. */
@@ -164,7 +167,7 @@ class TenantController extends Controller
         $tenant = Tenant::find($tenantId);
 
         return redirect()->route('admin.dashboard')
-            ->with('success', 'تم التبديل إلى '.($tenant?->localizedName('ar') ?? ''));
+            ->with('success', 'انتقلت إلى '.($tenant?->localizedName('ar') ?? ''));
     }
 
     // ------------------------------------------------------------------
@@ -188,7 +191,7 @@ class TenantController extends Controller
 
         AuditLog::record('tenant.branding_updated', $tenant, ['keys' => array_keys($values)]);
 
-        return redirect()->route('admin.branding.edit')->with('success', 'تم حفظ الهوية والإعدادات بنجاح');
+        return redirect()->route('admin.branding.edit')->with('success', 'حُفظت الهوية والإعدادات');
     }
 
     // ------------------------------------------------------------------
@@ -394,6 +397,16 @@ class TenantController extends Controller
             $f["messages.otp_sms.$l"] = ['string', 'nullable|string|max:500'];
         }
 
+        // AI Experience (docs/ai_and_gate_contract.md §A2; admin/ai/_tenant-settings).
+        foreach (['en', 'ar'] as $l) {
+            $f["ai.assistant_name.$l"] = ['string', 'nullable|string|max:60'];
+            $f["ai.welcome.$l"] = ['string', 'nullable|string|max:300'];
+            $f["ai.venue_info.$l"] = ['string', 'nullable|string|max:3000'];
+        }
+        $f['ai.suggestions'] = ['json', 'nullable|json|max:3000'];
+        $f['ai.monthly_token_budget'] = ['int', 'required|integer|min:0|max:1000000000'];
+        $f['ai.copilot_enabled'] = ['bool', 'boolean'];
+
         return $f;
     }
 
@@ -457,8 +470,8 @@ class TenantController extends Controller
             'int_nullable' => ($value === null || $value === '') ? null : (int) $value,
             'color' => strtoupper((string) $value),
             'color_optional' => $value ? strtoupper((string) $value) : null,
-            'csv' => array_values(array_filter(array_map('trim', explode(',', (string) $value)), 'strlen')),
-            'csv_int' => array_map('intval', array_values(array_filter(array_map('trim', explode(',', (string) $value)), 'strlen'))),
+            'csv' => array_values(array_filter(array_map('trim', preg_split('/[,\x{060C}]/u', (string) $value)), 'strlen')),
+            'csv_int' => array_map('intval', array_values(array_filter(array_map('trim', preg_split('/[,\x{060C}]/u', (string) $value)), 'strlen'))),
             'list' => array_values(array_filter((array) $value, fn ($v) => $v !== null && $v !== '')),
             'json' => ($value === null || trim((string) $value) === '') ? [] : json_decode((string) $value, true),
             default => $value,
@@ -473,19 +486,19 @@ class TenantController extends Controller
         if (isset($values['tenant.locales'])) {
             foreach ($values['tenant.locales'] as $locale) {
                 if (! preg_match('/^[a-z]{2}$/', $locale)) {
-                    $errors['s.tenant.locales'] = 'اللغات يجب أن تكون رموزًا من حرفين مفصولة بفواصل (مثال: ar,en).';
+                    $errors['s.tenant.locales'] = 'رموز اللغات حرفان لكل لغة، يُفصل بينها بفاصلة، مثل ar، en.';
                 }
             }
             $default = $values['tenant.default_locale'] ?? null;
             if ($default && ! in_array($default, $values['tenant.locales'], true)) {
-                $errors['s.tenant.default_locale'] = 'اللغة الافتراضية يجب أن تكون ضمن اللغات المتاحة.';
+                $errors['s.tenant.default_locale'] = 'اختر اللغة الافتراضية من اللغات المتاحة.';
             }
         }
 
         if (isset($values['navigation'])) {
             foreach ($values['navigation'] as $item) {
                 if (! preg_match('/^[a-z_]+$/', $item)) {
-                    $errors['s.navigation'] = 'عناصر التنقل يجب أن تكون كلمات إنجليزية صغيرة مفصولة بفواصل.';
+                    $errors['s.navigation'] = 'اكتب عناصر التنقل كلماتٍ إنجليزية بأحرف صغيرة، يُفصل بينها بفاصلة.';
                 }
             }
         }
@@ -500,7 +513,7 @@ class TenantController extends Controller
                 }
             }
             if (! $valid) {
-                $errors['s.wallet.topup_bonus'] = 'مكافأة الشحن يجب أن تكون قائمة JSON بالشكل [{"min_minor": 10000, "bonus_percent": 5}].';
+                $errors['s.wallet.topup_bonus'] = 'اكتب مكافأة الشحن قائمة JSON بهذا الشكل [{"min_minor": 10000, "bonus_percent": 5}].';
             }
         }
 
@@ -516,18 +529,31 @@ class TenantController extends Controller
                 }
             }
             if (! $valid) {
-                $errors['s.points.tiers'] = 'المستويات يجب أن تكون قائمة JSON، لكل مستوى code و min_points (و name/multiplier/color اختياريًا).';
+                $errors['s.points.tiers'] = 'اكتب المستويات قائمة JSON، ولكل مستوى الحقلان code وmin_points، والحقول name وmultiplier وcolor اختيارية.';
             }
         }
 
         foreach (['min_topup_minor', 'max_topup_minor'] as $k) {
             if (isset($values["wallet.$k"]) && $values["wallet.$k"] < 0) {
-                $errors["s.wallet.$k"] = 'القيمة يجب ألا تكون سالبة.';
+                $errors["s.wallet.$k"] = 'لا تُقبل القيمة السالبة.';
             }
         }
         if (isset($values['wallet.min_topup_minor'], $values['wallet.max_topup_minor'])
             && $values['wallet.max_topup_minor'] < $values['wallet.min_topup_minor']) {
-            $errors['s.wallet.max_topup_minor'] = 'الحد الأعلى للشحن يجب أن يكون أكبر من أو يساوي الحد الأدنى.';
+            $errors['s.wallet.max_topup_minor'] = 'يجب ألا يقل الحد الأعلى للشحن عن الحد الأدنى.';
+        }
+
+        if (array_key_exists('ai.suggestions', $values)) {
+            $list = $values['ai.suggestions'];
+            $valid = is_array($list) && array_is_list($list) && count($list) <= 6;
+            foreach ($valid ? $list : [] as $row) {
+                if (! is_array($row) || array_diff(array_keys($row), ['en', 'ar']) || ! array_filter($row, fn ($v) => is_string($v) && $v !== '' && mb_strlen($v) <= 80)) {
+                    $valid = false;
+                }
+            }
+            if (! $valid) {
+                $errors['s.ai.suggestions'] = __('ai.admin.suggestions_help');
+            }
         }
 
         return $errors;
@@ -546,7 +572,7 @@ class TenantController extends Controller
 
         $data = json_decode($json, true);
         if (! is_array($data) || ($data !== [] && array_is_list($data))) {
-            $errors['advanced'] = 'الإعدادات المتقدمة يجب أن تكون كائن JSON صالحًا.';
+            $errors['advanced'] = 'اكتب الإعدادات المتقدمة كائن JSON صالحًا.';
 
             return [];
         }
@@ -566,7 +592,7 @@ class TenantController extends Controller
         if (array_key_exists('theme', $data)) {
             $theme = $data['theme'];
             if (! is_array($theme) || ($theme !== [] && array_is_list($theme))) {
-                $fail('theme يجب أن يكون كائنًا.');
+                $fail('يجب أن يكون المفتاح theme كائنًا.');
             } else {
                 $bad = array_diff(array_keys($theme), self::ADVANCED_THEME_KEYS);
                 if ($bad) {
@@ -594,8 +620,10 @@ class TenantController extends Controller
                 continue;
             }
             $list = $data[$key];
-            if (! is_array($list) || ! array_is_list($list) || array_diff($list, $allowed)) {
-                $fail("$key يجب أن تكون قائمة من: ".implode(', ', $allowed));
+            $unknown = is_array($list) ? array_filter(array_diff($list, $allowed),
+                fn ($v) => ! ($key === 'home_blocks' && is_string($v) && preg_match(self::COLLECTION_BLOCK, $v))) : [];
+            if (! is_array($list) || ! array_is_list($list) || $unknown) {
+                $fail("يجب أن يكون $key قائمة من هذه القيم: ".implode(', ', $allowed));
             } else {
                 $out[$key] = array_values(array_unique($list));
             }
@@ -606,7 +634,7 @@ class TenantController extends Controller
             $threshold = is_array($merchant) ? ($merchant['confirm_threshold_minor'] ?? null) : null;
             if (! is_array($merchant) || array_diff(array_keys($merchant), ['confirm_threshold_minor'])
                 || (array_key_exists('confirm_threshold_minor', $merchant) && (! is_int($threshold) || $threshold < 0))) {
-                $fail('merchant يقبل فقط confirm_threshold_minor (عدد صحيح موجب).');
+                $fail('لا يقبل المفتاح merchant إلا confirm_threshold_minor، وقيمته عدد صحيح موجب.');
             } elseif (array_key_exists('confirm_threshold_minor', $merchant)) {
                 $out['merchant.confirm_threshold_minor'] = $threshold;
             }

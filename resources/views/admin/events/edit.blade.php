@@ -23,7 +23,7 @@
         @method('PUT')
         <div class="row g-4">
             <div class="col-xl-8">
-                <x-admin.card title="معلومات الفعالية" icon="translate" subtitle="يظهر النص العربي أو الإنجليزي حسب لغة المستخدم">
+                <x-admin.card title="معلومات الفعالية" icon="translate" subtitle="يظهر النص العربي أو الإنجليزي بحسب لغة الزائر">
                     <ul class="nav nav-tabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="arabic-tab" data-bs-toggle="tab" data-bs-target="#arabic-content" type="button" role="tab">{{ __('العربية') }}</button>
@@ -38,7 +38,7 @@
                             <x-admin.form-field name="description_ar" label="الوصف" type="textarea" rows="5" :value="old('description_ar', $model?->description_ar)" required />
                             <div class="row">
                                 <x-admin.form-field col="col-md-6" name="location_ar" label="الموقع" :value="old('location_ar', $model?->location_ar)" />
-                                <x-admin.form-field col="col-md-6" name="organizer_name_ar" label="اسم المنظم" :value="old('organizer_name_ar', $model?->organizer_name_ar)" />
+                                <x-admin.form-field col="col-md-6" name="organizer_name_ar" label="اسم المنظِّم" :value="old('organizer_name_ar', $model?->organizer_name_ar)" />
                             </div>
                         </div>
                         <div class="tab-pane fade" id="english-content" role="tabpanel" dir="ltr">
@@ -52,14 +52,14 @@
                     </div>
                 </x-admin.card>
 
-                <x-admin.card title="الصور" icon="images" subtitle="الصورة الرئيسية تظهر في البطاقات، والمعرض في صفحة الفعالية">
+                <x-admin.card title="الصور" icon="images" subtitle="تظهر الصورة الرئيسية في البطاقات، ويظهر المعرض في صفحة الفعالية">
                     <div class="field">
                         <label class="form-label" for="main-image-input">{{ __('الصورة الرئيسية') }}</label>
                         <div id="main-image-zone" class="upload {{ $mainImage ? 'd-none' : '' }}" role="button" tabindex="0">
                             <div class="preview"><i class="bi bi-image"></i></div>
                             <div>
                                 <div class="u-title">{{ __('اضغط لتحميل الصورة الرئيسية') }}</div>
-                                <div class="u-help">{{ __('PNG, JPG, JPEG حتى 10MB') }}</div>
+                                <div class="u-help">{{ __('PNG أو JPG أو JPEG بحجم أقصاه 10MB') }}</div>
                             </div>
                             <input type="file" id="main-image-input" accept="image/*" class="d-none">
                         </div>
@@ -81,11 +81,11 @@
                             <div class="preview"><i class="bi bi-cloud-arrow-up"></i></div>
                             <div>
                                 <div class="u-title">{{ __('اسحب الصور هنا أو اضغط للتحميل') }}</div>
-                                <div class="u-help">{{ __('يمكن اختيار عدة صور · PNG, JPG, JPEG حتى 10MB') }}</div>
+                                <div class="u-help">{{ __('يمكن اختيار عدة صور · PNG أو JPG أو JPEG بحجم أقصاه 10MB') }}</div>
                             </div>
                             <input type="file" id="file-input" multiple accept="image/*" class="d-none">
                         </div>
-                        <div id="upload-progress" class="progress mt-3 d-none" role="progressbar" aria-label="{{ __('تقدم التحميل') }}">
+                        <div id="upload-progress" class="progress mt-3 d-none" role="progressbar" aria-label="{{ __('تقدّم التحميل') }}">
                             <div class="progress-bar bg-primary" style="width: 0%">0%</div>
                         </div>
                         <div id="image-gallery-preview" class="row g-3 mt-0"></div>
@@ -96,6 +96,7 @@
             </div>
 
             <div class="col-xl-4">
+                @include('admin.ai._event-copilot')
                 <x-admin.card title="الموعد والمكان" icon="calendar3">
                     <x-admin.form-field name="category_id" label="الفئة" type="select" required placeholder="اختر الفئة"
                         :value="old('category_id', $model?->category_id)" :options="$categories->pluck('name_ar', 'id')->all()" />
@@ -106,7 +107,7 @@
                     <x-admin.form-field name="map_location_id" label="موقع الخريطة" type="select" placeholder="اختر الموقع على الخريطة"
                         :value="old('map_location_id', $model?->map_location_id)"
                         :options="$mapLocations->mapWithKeys(fn ($loc) => [$loc->id => $loc->name_ar.' ('.$loc->latitude.', '.$loc->longitude.')'])->all()"
-                        help="يُستخدم لعرض الفعالية على خريطة التطبيق (خط العرض والطول)" />
+                        help="يحدّد خطّي العرض والطول لعرض الفعالية على خريطة التطبيق" />
                 </x-admin.card>
 
                 <x-admin.card title="التذاكر والسعر" icon="ticket-perforated">
@@ -122,7 +123,7 @@
                         <x-admin.form-field col="col-6" name="total_tickets" label="إجمالي التذاكر" type="number" min="0" dir="ltr"
                             :value="old('total_tickets', $model?->total_tickets)" />
                     </div>
-                    <div class="form-text mt-n2">{{ __('السعر 0 يعني فعالية مجانية.') }}</div>
+                    <div class="form-text mt-n2">{{ __('السعر 0 يجعل الفعالية مجانية.') }}</div>
                 </x-admin.card>
 
                 <x-admin.card title="النشر" icon="broadcast">
@@ -168,8 +169,8 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (e) { images = []; }
 
     function validFile(file) {
-        if (!file.type.startsWith('image/')) { alert(@json(__(':name ليس ملف صورة صحيح')).replace(':name', file.name)); return false; }
-        if (file.size > maxBytes) { alert(@json(__(':name حجم الملف أكبر من 10MB')).replace(':name', file.name)); return false; }
+        if (!file.type.startsWith('image/')) { alert(@json(__('الملف :name ليس صورة صالحة')).replace(':name', file.name)); return false; }
+        if (file.size > maxBytes) { alert(@json(__('حجم الملف :name أكبر من 10MB')).replace(':name', file.name)); return false; }
         return true;
     }
 
@@ -204,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
     mainInput.addEventListener('change', function (e) { if (e.target.files[0]) handleMain(e.target.files[0]); mainInput.value = ''; });
     async function handleMain(file) {
         if (!validFile(file)) return;
-        try { showMain(await uploadFile(file)); } catch (err) { alert(@json(__('فشل تحميل الصورة'))); }
+        try { showMain(await uploadFile(file)); } catch (err) { alert(@json(__('تعذّر تحميل الصورة'))); }
     }
     removeMain.addEventListener('click', function () { showMain(''); });
 
@@ -220,7 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
         for (var i = 0; i < files.length; i++) {
             var file = files[i];
             if (validFile(file)) {
-                try { images.push(await uploadFile(file)); } catch (err) { alert(@json(__('فشل تحميل :name')).replace(':name', file.name)); }
+                try { images.push(await uploadFile(file)); } catch (err) { alert(@json(__('تعذّر تحميل :name')).replace(':name', file.name)); }
             }
             done++;
             var pct = Math.round((done / total) * 100);

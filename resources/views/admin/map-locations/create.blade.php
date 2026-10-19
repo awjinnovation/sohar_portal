@@ -2,7 +2,7 @@
 
 @section('title', 'إضافة موقع جديد')
 @section('page-title', 'إضافة موقع جديد على الخريطة')
-@section('page-subtitle', 'أضف موقعاً جديداً للظهور على الخريطة التفاعلية')
+@section('page-subtitle', 'أضف موقعًا جديدًا ليظهر على الخريطة التفاعلية')
 @php
     $pageIcon = 'geo-alt';
     $breadcrumbs = ['المحتوى' => null, 'مواقع الخريطة' => route('admin.map-locations.index'), 'إضافة موقع' => null];

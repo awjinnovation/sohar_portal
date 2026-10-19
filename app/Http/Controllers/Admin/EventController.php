@@ -76,7 +76,7 @@ class EventController extends Controller
         Event::create($validated);
 
         return redirect()->route('admin.events.index')
-            ->with('success', 'تم إضافة الفعالية بنجاح');
+            ->with('success', 'أُضيفت الفعالية');
     }
 
     public function show(Event $event)
@@ -108,7 +108,7 @@ class EventController extends Controller
         $event->update($validated);
 
         return redirect()->route('admin.events.index')
-            ->with('success', 'تم تحديث الفعالية بنجاح');
+            ->with('success', 'حُدِّثت الفعالية');
     }
 
     public function destroy(Event $event)
@@ -121,7 +121,7 @@ class EventController extends Controller
         $event->delete();
 
         return redirect()->route('admin.events.index')
-            ->with('success', 'تم حذف الفعالية بنجاح');
+            ->with('success', 'حُذفت الفعالية');
     }
 
     private function rules(): array

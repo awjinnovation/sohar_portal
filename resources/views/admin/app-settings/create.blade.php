@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'إضافة إعداد')
-@section('page-title', 'إضافة إعدادات التطبيق جديد')
+@section('page-title', 'إضافة إعداد جديد للتطبيق')
 @section('page-subtitle', 'إعداد جديد يقرأه تطبيق الهاتف')
 @php
     $pageIcon = 'sliders';

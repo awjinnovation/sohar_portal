@@ -2,7 +2,7 @@
      @include('admin.partials.legal-form', ['item' => $model|null, 'submitLabel' => '…', 'cancelUrl' => route(…)]) --}}
 <div class="row g-4">
     <div class="col-xl-8">
-        <x-admin.card title="نص المستند" icon="translate" subtitle="يظهر للمستخدم بلغته في صفحة التطبيق العامة">
+        <x-admin.card title="نص المستند" icon="translate" subtitle="يظهر للزائر بلغته في صفحة التطبيق العامة">
             <ul class="nav nav-tabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="ar-tab" data-bs-toggle="tab" data-bs-target="#ar" type="button" role="tab">{{ __('العربية') }}</button>
@@ -13,9 +13,9 @@
             </ul>
             <div class="tab-content border border-top-0 p-3">
                 <div class="tab-pane fade show active" id="ar" role="tabpanel">
-                    <x-admin.form-field name="title_ar" id="title_ar" label="العنوان (العربية)" :value="old('title_ar', $item->title_ar ?? '')" required />
+                    <x-admin.form-field name="title_ar" id="title_ar" label="العنوان بالعربية" :value="old('title_ar', $item->title_ar ?? '')" required />
                     <div class="field mb-0">
-                        <label for="content_ar" class="form-label">{{ __('المحتوى (العربية)') }}<span class="req">*</span></label>
+                        <label for="content_ar" class="form-label">{{ __('المحتوى بالعربية') }}<span class="req">*</span></label>
                         <textarea name="content_ar" id="content_ar" rows="12" class="form-control @error('content_ar') is-invalid @enderror">{{ old('content_ar', $item->content_ar ?? '') }}</textarea>
                         @error('content_ar')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>

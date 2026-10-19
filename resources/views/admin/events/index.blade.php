@@ -90,7 +90,7 @@
                             @if($soldOut)
                                 <x-admin.status-pill variant="neutral" label="نفدت التذاكر" size="sm" />
                             @elseif($fewLeft)
-                                <x-admin.status-pill variant="warning" label="متبقٍ القليل" size="sm" />
+                                <x-admin.status-pill variant="warning" label="بقي القليل" size="sm" />
                             @endif
                         @endif
                     </td>
@@ -116,7 +116,7 @@
                         <div class="row-actions">
                             <a href="{{ route('admin.events.show', $event) }}" class="icon-btn" title="{{ __('عرض') }}" aria-label="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                             <a href="{{ route('admin.events.edit', $event) }}" class="icon-btn brand" title="{{ __('تعديل') }}" aria-label="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                            <form action="{{ route('admin.events.destroy', $event) }}" method="POST" data-confirm="{{ __('سيتم حذف الفعالية «:name» نهائيًا.', ['name' => $event->title_ar]) }}">
+                            <form action="{{ route('admin.events.destroy', $event) }}" method="POST" data-confirm="{{ __('ستُحذف الفعالية «:name» نهائيًا.', ['name' => $event->title_ar]) }}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}" aria-label="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var pct = total > 0 ? Math.round((available / total) * 100) : 0;
                 var pill = '';
                 if (total > 0 && available <= 0) pill = ' <span class="pill pill-neutral pill-sm"><span class="dot"></span>' + @json(__('نفدت التذاكر')) + '</span>';
-                else if (total > 0 && pct <= 20) pill = ' <span class="pill pill-warning pill-sm"><i class="bi bi-exclamation-triangle-fill"></i>' + @json(__('متبقٍ القليل')) + '</span>';
+                else if (total > 0 && pct <= 20) pill = ' <span class="pill pill-warning pill-sm"><i class="bi bi-exclamation-triangle-fill"></i>' + @json(__('بقي القليل')) + '</span>';
                 tickets = '<span class="num">' + available.toLocaleString('en') + ' / ' + total.toLocaleString('en') + '</span> <span class="text-muted num">(' + pct + '%)</span>' + pill;
             }
             var priceParts = String(p.price || '').split(' ');

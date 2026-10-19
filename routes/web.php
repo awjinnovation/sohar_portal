@@ -16,6 +16,7 @@ Route::post('/demo-request', [LandingController::class, 'store'])
 // Public Pages (tenant via ?tenant=<slug>, default tenant otherwise)
 Route::get('/privacy-policy', [PublicPageController::class, 'privacyPolicy'])->name('public.privacy-policy');
 Route::get('/terms-and-conditions', [PublicPageController::class, 'termsAndConditions'])->name('public.terms-and-conditions');
+Route::get('/discover/places/{slug}', [PublicPageController::class, 'place'])->name('public.place');
 
 // Payment Pages (opened by the app's web view)
 Route::get('/payment/redirect/{transaction_id}', [PaymentController::class, 'redirectToGateway'])->middleware('signed')->name('payment.redirect');
@@ -47,6 +48,20 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         Route::post('/media/upload', [Admin\MediaController::class, 'upload'])->name('admin.media.upload');
         Route::delete('/media/delete', [Admin\MediaController::class, 'delete'])->name('admin.media.delete');
 
+        // AI copilot (docs/ai_and_gate_contract.md §A5–A6) — JSON for page JS;
+        // permissions are checked per endpoint. Registered before any
+        // `gates/{gate}` resource route so /admin/gates/insights is not shadowed.
+        Route::prefix('ai')->name('admin.ai.')->middleware('throttle:60,1')->group(function () {
+            Route::post('copilot/event-description', [Admin\AiCopilotController::class, 'eventDescription'])->name('copilot.event-description');
+            Route::post('copilot/translate', [Admin\AiCopilotController::class, 'translate'])->name('copilot.translate');
+            Route::post('copilot/shorten', [Admin\AiCopilotController::class, 'shorten'])->name('copilot.shorten');
+            Route::post('copilot/announcement', [Admin\AiCopilotController::class, 'announcement'])->name('copilot.announcement');
+            Route::post('copilot/content-description', [Admin\AiCopilotController::class, 'contentDescription'])->name('copilot.content-description');
+            Route::get('briefing', [Admin\AiCopilotController::class, 'briefing'])->name('briefing');
+            Route::post('briefing/regenerate', [Admin\AiCopilotController::class, 'briefing'])->name('briefing.regenerate');
+        });
+        Route::get('gates/insights', Admin\AiOpsInsightsController::class)->middleware('throttle:60,1')->name('admin.gates.insights');
+
         // Events
         Route::middleware('can:manage events')->group(function () {
             Route::resource('categories', Admin\CategoryController::class, ['as' => 'admin']);
@@ -54,6 +69,18 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
             Route::resource('event-tags', Admin\EventTagController::class, ['as' => 'admin']);
         });
         Route::resource('tickets', Admin\TicketController::class, ['as' => 'admin'])->only(['index', 'show', 'update'])->middleware('can:manage tickets');
+
+        // Gates: scanner devices + pairing, live gate dashboard, scan log (contract §B3)
+        Route::middleware('can:manage gates')->prefix('gates')->name('admin.gates.')->group(function () {
+            Route::get('dashboard', [Admin\GateDashboardController::class, 'index'])->name('dashboard');
+            Route::get('dashboard/data', [Admin\GateDashboardController::class, 'data'])->name('dashboard.data');
+            Route::get('devices', [Admin\GateDeviceController::class, 'index'])->name('devices.index');
+            Route::post('devices/pair', [Admin\GateDeviceController::class, 'pair'])->name('devices.pair');
+            Route::put('devices/{device}', [Admin\GateDeviceController::class, 'update'])->name('devices.update');
+            Route::post('devices/{device}/revoke', [Admin\GateDeviceController::class, 'revoke'])->name('devices.revoke');
+            Route::get('scans', [Admin\GateScanController::class, 'index'])->name('scans.index');
+        });
+        Route::resource('gates', Admin\GateController::class, ['as' => 'admin'])->except(['show'])->middleware('can:manage gates');
 
         // Payments
         Route::middleware('can:view payments')->group(function () {
@@ -97,6 +124,29 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         // Listings & map
         Route::resource('restaurants', Admin\RestaurantController::class, ['as' => 'admin'])->middleware('can:manage restaurants');
         Route::resource('map-locations', Admin\MapLocationController::class, ['as' => 'admin'])->middleware('can:manage locations');
+
+        // Places to visit + custom map (docs/places_content_contract.md §4)
+        Route::middleware('can:manage places')->group(function () {
+            Route::get('places/map', [Admin\PlaceController::class, 'map'])->name('admin.places.map');
+            Route::post('places/reorder', [Admin\PlaceController::class, 'reorder'])->name('admin.places.reorder');
+            Route::post('places/{place}/featured', [Admin\PlaceController::class, 'featured'])->name('admin.places.featured');
+            Route::resource('places', Admin\PlaceController::class, ['as' => 'admin'])->except(['show']);
+            Route::post('place-categories/reorder', [Admin\PlaceCategoryController::class, 'reorder'])->name('admin.place-categories.reorder');
+            Route::resource('place-categories', Admin\PlaceCategoryController::class, ['as' => 'admin'])->except(['show']);
+        });
+
+        // Content collections + items, pages (contract §4)
+        Route::middleware('can:manage content')->prefix('content')->group(function () {
+            Route::post('collections/reorder', [Admin\ContentCollectionController::class, 'reorder'])->name('admin.content-collections.reorder');
+            Route::resource('collections', Admin\ContentCollectionController::class)->except(['show'])
+                ->names('admin.content-collections')->parameters(['collections' => 'collection']);
+            Route::post('collections/{collection}/items/reorder', [Admin\ContentItemController::class, 'reorder'])->name('admin.content-items.reorder');
+            Route::resource('collections.items', Admin\ContentItemController::class)->except(['show'])
+                ->names('admin.content-items')->parameters(['collections' => 'collection', 'items' => 'item']);
+            Route::post('pages/reorder', [Admin\ContentPageController::class, 'reorder'])->name('admin.content-pages.reorder');
+            Route::resource('pages', Admin\ContentPageController::class)->except(['show'])
+                ->names('admin.content-pages')->parameters(['pages' => 'page']);
+        });
 
         // Communications
         Route::resource('announcements', Admin\AnnouncementController::class, ['as' => 'admin'])->middleware('can:manage announcements');

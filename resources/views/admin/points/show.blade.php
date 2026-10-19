@@ -29,7 +29,7 @@
         </x-admin.stat-tile>
         <x-admin.stat-tile label="إجمالي المكتسب" :value="$account->lifetime_earned" icon="graph-up-arrow" tone="brand" />
         <x-admin.stat-tile label="المستوى" :value="$tierName($tier['tier'])" icon="award" tone="neutral"
-            :hint="$tier['next_tier'] ? __(':points نقطة للمستوى :tier', ['points' => number_format($tier['points_to_next_tier']), 'tier' => $tierName($tier['next_tier'])]) : __('أعلى مستوى')" />
+            :hint="$tier['next_tier'] ? __('تبقّى :points من النقاط لبلوغ المستوى :tier', ['points' => number_format($tier['points_to_next_tier']), 'tier' => $tierName($tier['next_tier'])]) : __('أعلى مستوى')" />
         <x-admin.stat-tile label="تنتهي خلال 60 يومًا" :value="collect($expiring)->sum('points')" icon="hourglass-split" :tone="collect($expiring)->sum('points') > 0 ? 'warning' : 'neutral'" />
     </div>
 
@@ -53,7 +53,7 @@
                         </td>
                         <td class="num fw-semibold {{ $pt->points > 0 ? 'text-success' : '' }}"><span class="ltr">{{ $pt->points > 0 ? '+' : ($pt->points < 0 ? "\u{2212}" : '') }}{{ number_format(abs($pt->points)) }}</span></td>
                         <td class="num">{{ number_format($pt->balance_after) }}</td>
-                        <td class="num text-muted"><span class="ltr">{{ $pt->expires_at ? $pt->expires_at->copy()->setTimezone($tz)->format('Y-m-d') : '—' }}</span>@if($pt->expires_at && $pt->remaining > 0)<div class="cell-sub">{{ __('متبقٍ :points', ['points' => number_format($pt->remaining)]) }}</div>@endif</td>
+                        <td class="num text-muted"><span class="ltr">{{ $pt->expires_at ? $pt->expires_at->copy()->setTimezone($tz)->format('Y-m-d') : '—' }}</span>@if($pt->expires_at && $pt->remaining > 0)<div class="cell-sub">{{ __('المتبقي :points', ['points' => number_format($pt->remaining)]) }}</div>@endif</td>
                         <td class="num text-muted"><span class="ltr">{{ $pt->created_at?->copy()->setTimezone($tz)->format('Y-m-d H:i') }}</span></td>
                     </tr>
                 @empty
@@ -66,7 +66,7 @@
             @can('manage wallets')
                 <x-admin.card title="تعديل يدوي" icon="plus-slash-minus" subtitle="إضافة أو خصم نقاط مع ذكر السبب">
                     <form action="{{ route('admin.points.adjust', $account) }}" method="POST"
-                          data-confirm="{{ __('سيتم تعديل رصيد النقاط وتسجيله في سجل التدقيق. هل تريد المتابعة؟') }}"
+                          data-confirm="{{ __('سيُعدَّل رصيد النقاط ويُسجَّل التعديل في سجل التدقيق. هل تريد المتابعة؟') }}"
                           data-confirm-title="{{ __('تأكيد تعديل النقاط') }}" data-confirm-ok="{{ __('تنفيذ التعديل') }}" data-confirm-tone="primary">
                         @csrf
                         <x-admin.form-field name="direction" label="النوع" type="select" :value="old('direction')"
@@ -74,7 +74,7 @@
                         <x-admin.form-field name="points" label="عدد النقاط" type="number" min="1" step="1" :value="old('points')" dir="ltr" required class="num" />
                         <x-admin.form-field name="reason" label="السبب" :value="old('reason')" required />
                         <button type="submit" class="btn btn-primary w-100" data-busy><i class="bi bi-check-lg"></i> {{ __('تنفيذ') }}</button>
-                        <p class="form-text mt-2 mb-0">{{ __('الإضافة لا تغيّر المستوى (يُحسب من النقاط المكتسبة). الخصم يبدأ بالنقاط الأقرب انتهاءً. يتم تسجيل كل تعديل في سجل التدقيق.') }}</p>
+                        <p class="form-text mt-2 mb-0">{{ __('لا تغيّر الإضافة المستوى لأنه يُحسب من النقاط المكتسبة. يبدأ الخصم بالنقاط الأقرب انتهاءً، ويُسجَّل كل تعديل في سجل التدقيق.') }}</p>
                     </form>
                 </x-admin.card>
             @endcan

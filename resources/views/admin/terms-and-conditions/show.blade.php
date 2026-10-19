@@ -68,7 +68,7 @@
                 <dl class="dl">
                     <dt>{{ __('الحالة') }}</dt>
                     <dd><x-admin.status-pill domain="active" :status="$termsAndCondition->is_active" /></dd>
-                    <dt>{{ __('العنوان (English)') }}</dt>
+                    <dt>{{ __('العنوان بالإنجليزية') }}</dt>
                     <dd class="ltr text-start">{{ $termsAndCondition->title }}</dd>
                     <dt>{{ __('تاريخ الإنشاء') }}</dt>
                     <dd class="num">{{ $termsAndCondition->created_at?->format('Y-m-d H:i') ?? '—' }}</dd>
@@ -78,7 +78,7 @@
                 <x-slot:footer>
                     <div class="d-flex gap-2 justify-content-between align-items-center">
                         <a href="{{ route('admin.terms-and-conditions.edit', $termsAndCondition) }}" class="btn btn-tonal"><i class="bi bi-pencil"></i> {{ __('تعديل') }}</a>
-                        <form action="{{ route('admin.terms-and-conditions.destroy', $termsAndCondition) }}" method="POST" class="m-0" data-confirm="{{ __('سيتم حذف هذه الشروط نهائيًا.') }}">
+                        <form action="{{ route('admin.terms-and-conditions.destroy', $termsAndCondition) }}" method="POST" class="m-0" data-confirm="{{ __('ستُحذف هذه الشروط نهائيًا.') }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> {{ __('حذف') }}</button>

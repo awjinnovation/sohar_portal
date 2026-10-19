@@ -20,8 +20,8 @@
     <div class="stat-grid">
         <x-admin.stat-tile label="مبيعات اليوم" :money="$stats['today']" icon="calendar-check" tone="brand" />
         <x-admin.stat-tile label="إجمالي المبيعات" :money="$stats['total']" icon="graph-up-arrow" tone="success" />
-        <x-admin.stat-tile label="عدد العمليات" :value="$stats['count']" icon="receipt" tone="neutral" />
-        <x-admin.stat-tile label="المستردات" :money="$stats['refunds']" icon="arrow-counterclockwise" tone="neutral" />
+        <x-admin.stat-tile label="عدد المعاملات" :value="$stats['count']" icon="receipt" tone="neutral" />
+        <x-admin.stat-tile label="المبالغ المستردة" :money="$stats['refunds']" icon="arrow-counterclockwise" tone="neutral" />
     </div>
 
     <div class="row g-4 mb-4">
@@ -50,7 +50,7 @@
         </div>
 
         <div class="col-xl-7">
-            <x-admin.card title="الموظفون" icon="people" :subtitle="$vendor->staff->count() ? __(':count موظف يمكنهم استقبال الدفع', ['count' => $vendor->staff->count()]) : 'أضف موظفين لاستقبال الدفع في نقطة البيع'" :flush="true" class="h-100 mb-0">
+            <x-admin.card title="الموظفون" icon="people" :subtitle="$vendor->staff->count() ? __('موظفون يستقبلون الدفع: :count', ['count' => $vendor->staff->count()]) : 'أضف موظفين لاستقبال الدفع في نقطة البيع'" :flush="true" class="h-100 mb-0">
                 <form action="{{ route('admin.vendors.staff.attach', $vendor) }}" method="POST" class="row g-2 align-items-end p-3 border-bottom">
                     @csrf
                     <x-admin.form-field col="col-md-6" name="identifier" label="البريد الإلكتروني أو رقم الهاتف" :value="old('identifier')"
@@ -71,7 +71,7 @@
                             </div>
                             <x-admin.status-pill :variant="$member->pivot->role === 'manager' ? 'brand' : 'neutral'" :label="AdminLabels::label(AdminLabels::VENDOR_STAFF_ROLES, $member->pivot->role)" size="sm" />
                             <form action="{{ route('admin.vendors.staff.detach', [$vendor, $member]) }}" method="POST" class="m-0"
-                                  data-confirm="{{ __('إزالة :name من موظفي التاجر؟ لن يتمكن من استقبال الدفع لهذا التاجر.', ['name' => $member->name]) }}" data-confirm-ok="{{ __('إزالة') }}">
+                                  data-confirm="{{ __('إزالة :name من موظفي التاجر؟ لن يستطيع بعدها استقبال الدفع لهذا التاجر.', ['name' => $member->name]) }}" data-confirm-ok="{{ __('إزالة') }}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="icon-btn danger" title="{{ __('إزالة الموظف') }}"><i class="bi bi-person-dash"></i></button>
@@ -85,12 +85,12 @@
         </div>
     </div>
 
-    <x-admin.data-table title="آخر العمليات" icon="journal-text" :count="$transactions->total()" :paginator="$transactions">
+    <x-admin.data-table title="آخر المعاملات" icon="journal-text" :count="$transactions->total()" :paginator="$transactions">
         <x-slot:head>
             <th style="width: 56px">#</th>
-            <th>{{ __('العملية') }}</th>
-            <th>{{ __('العميل') }}</th>
-            <th>{{ __('المبلغ (محفظة العميل)') }}</th>
+            <th>{{ __('المعاملة') }}</th>
+            <th>{{ __('الزائر') }}</th>
+            <th>{{ __('المبلغ من محفظة الزائر') }}</th>
             <th>{{ __('الحالة') }}</th>
             <th>{{ __('التاريخ') }}</th>
             <th class="text-end"></th>
@@ -114,7 +114,7 @@
                 </td>
             </tr>
         @empty
-            <x-admin.empty-row :colspan="7" icon="journal-text" title="لا توجد عمليات" text="ستظهر هنا مبيعات التاجر من محافظ الزوار." />
+            <x-admin.empty-row :colspan="7" icon="journal-text" title="لا توجد معاملات" text="ستظهر هنا مبيعات التاجر من محافظ الزوار." />
         @endforelse
     </x-admin.data-table>
 @endsection

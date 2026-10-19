@@ -83,7 +83,7 @@ class UserController extends Controller
         });
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'تم إنشاء المستخدم بنجاح');
+            ->with('success', 'أُنشئ المستخدم');
     }
 
     public function show(Request $request, User $user)
@@ -127,7 +127,7 @@ class UserController extends Controller
         $validated = $request->validate($rules);
 
         if ($user->is($actor) && ! $actor->isSuperAdmin() && ! in_array('admin', $validated['roles'], true) && $actor->hasRole('admin')) {
-            return back()->withInput()->with('error', 'لا يمكنك إزالة دور المدير من حسابك الخاص');
+            return back()->withInput()->with('error', 'لا يمكنك إزالة دور المدير من حسابك');
         }
 
         DB::transaction(function () use ($validated, $user, $actor, $request, $canEditIdentity) {
@@ -150,7 +150,7 @@ class UserController extends Controller
         });
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'تم تحديث المستخدم بنجاح');
+            ->with('success', 'حُدِّث المستخدم');
     }
 
     /**
@@ -164,20 +164,20 @@ class UserController extends Controller
 
         if ($user->id == auth()->id()) {
             return redirect()->route('admin.users.index')
-                ->with('error', 'لا يمكنك حذف حسابك الخاص');
+                ->with('error', 'لا يمكنك حذف حسابك');
         }
 
         if ($request->user()->isSuperAdmin()) {
             $user->delete();
 
             return redirect()->route('admin.users.index')
-                ->with('success', 'تم حذف المستخدم بنجاح');
+                ->with('success', 'حُذف المستخدم');
         }
 
         $user->syncRoles([]);
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'تم إزالة صلاحيات المستخدم من هذه الجهة');
+            ->with('success', 'أُزيلت صلاحيات المستخدم في هذه المنظمة');
     }
 
     /** Users holding at least one role in the current tenant. */

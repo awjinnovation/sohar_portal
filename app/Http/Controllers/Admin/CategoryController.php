@@ -36,7 +36,7 @@ class CategoryController extends Controller
         Category::create($validated);
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'تم إضافة الفئة بنجاح');
+            ->with('success', 'أُضيفت الفئة');
     }
 
     public function show(Category $category)
@@ -70,7 +70,7 @@ class CategoryController extends Controller
         $category->update($validated);
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'تم تحديث الفئة بنجاح');
+            ->with('success', 'حُدِّثت الفئة');
     }
 
     public function destroy(Category $category)
@@ -83,6 +83,6 @@ class CategoryController extends Controller
         $category->delete();
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'تم حذف الفئة بنجاح');
+            ->with('success', 'حُذفت الفئة');
     }
 }

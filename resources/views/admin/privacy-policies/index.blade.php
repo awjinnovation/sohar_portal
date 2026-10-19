@@ -40,7 +40,7 @@
                     <div class="row-actions">
                         <a href="{{ route('admin.privacy-policies.show', $policy) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.privacy-policies.edit', $policy) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                        <form action="{{ route('admin.privacy-policies.destroy', $policy) }}" method="POST" data-confirm="{{ __('سيتم حذف هذه السياسة نهائيًا.') }}">
+                        <form action="{{ route('admin.privacy-policies.destroy', $policy) }}" method="POST" data-confirm="{{ __('ستُحذف هذه السياسة نهائيًا.') }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
@@ -49,7 +49,7 @@
                 </td>
             </tr>
         @empty
-            <x-admin.empty-row :colspan="6" icon="shield-check" title="لا توجد سياسات خصوصية" text="أضف سياسة الخصوصية لتظهر للمستخدمين في التطبيق.">
+            <x-admin.empty-row :colspan="6" icon="shield-check" title="لا توجد سياسات خصوصية" text="أضف سياسة الخصوصية لتظهر للزوار في التطبيق.">
                 <a href="{{ route('admin.privacy-policies.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة سياسة') }}</a>
             </x-admin.empty-row>
         @endforelse

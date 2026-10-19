@@ -78,7 +78,7 @@ class DemoRequestTest extends TestCase
 
         $confirmation = (new DemoRequestConfirmation($demo))->render();
         $this->assertStringContainsString('dir="rtl"', $confirmation);
-        $this->assertStringContainsString('شكراً لك', $confirmation);
+        $this->assertStringContainsString('شكرًا لك', $confirmation);
     }
 
     public function test_confirmation_only_when_an_email_is_given(): void
@@ -108,7 +108,7 @@ class DemoRequestTest extends TestCase
 
         $this->postJson(route('landing.demo-request'), $this->payload(['locale' => 'ar', 'contact' => '12345', 'event_type' => 'rave']))
             ->assertStatus(422)
-            ->assertJsonPath('errors.contact.0', 'أدخل بريداً إلكترونياً صحيحاً أو رقم هاتف من 7 إلى 15 رقماً.')
+            ->assertJsonPath('errors.contact.0', 'أدخل بريدًا إلكترونيًا صحيحًا أو رقم هاتف من 7 إلى 15 رقمًا.')
             ->assertJsonPath('errors.event_type.0', 'اختر نوع الفعالية من القائمة.');
 
         $this->postJson(route('landing.demo-request'), $this->payload(['notes' => str_repeat('x', 2001)]))
@@ -162,7 +162,7 @@ class DemoRequestTest extends TestCase
         $this->postJson(route('landing.demo-request'), $this->payload(['locale' => 'ar']))
             ->assertStatus(429)
             ->assertJsonPath('code', 'TOO_MANY_REQUESTS')
-            ->assertJsonPath('message', 'طلبات كثيرة من شبكتك. حاول لاحقاً أو راسلنا على systems@awj.om.');
+            ->assertJsonPath('message', 'وصلتنا طلبات كثيرة من شبكتك. حاول لاحقًا أو راسلنا على systems@awj.om.');
 
         $this->assertSame(5, DemoRequest::count());
     }
@@ -173,12 +173,12 @@ class DemoRequestTest extends TestCase
 
         $response->assertRedirect('/#demo')->assertSessionHas('demo_success');
         $this->assertSame(1, DemoRequest::count());
-        $this->assertStringContainsString('شكراً، استلمنا طلبك', session('demo_success')['message']);
+        $this->assertStringContainsString('شكرًا، استلمنا طلبك', session('demo_success')['message']);
 
         $this->get('/?lang=ar')
             ->assertOk()
-            ->assertSee('شكراً، استلمنا طلبك. سنتواصل معك على <bdi dir="ltr">Salim@Example.om</bdi>.', false)
-            ->assertSee('طلب عرض موسم');
+            ->assertSee('شكرًا، استلمنا طلبك. سنتواصل معك على <bdi dir="ltr">Salim@Example.om</bdi>.', false)
+            ->assertSee('طلب عرض توضيحي لموسم');
     }
 
     public function test_non_js_validation_redirects_back_with_errors_and_input(): void

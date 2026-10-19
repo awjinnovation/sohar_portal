@@ -63,7 +63,7 @@ class TenantSeeder extends Seeder
                         'image_url' => '/tenants/north-batinah/onboarding_1.jpg',
                         'title' => [
                             'en' => 'Welcome to North Batinah Events',
-                            'ar' => 'مرحباً بكم في فعاليات شمال الباطنة',
+                            'ar' => 'مرحبًا بكم في فعاليات شمال الباطنة',
                         ],
                         'body' => [
                             'en' => 'Sohar Festival, camel and horse racing, the rally and heritage events across Sohar, Shinas, Liwa, Saham, Al Khaburah and Al Suwaiq.',
@@ -78,18 +78,18 @@ class TenantSeeder extends Seeder
                         ],
                         'body' => [
                             'en' => 'Browse through exciting events, add them to your favorites, and never miss what matters to you.',
-                            'ar' => 'تصفح الفعاليات المثيرة، أضفها إلى المفضلة، ولن تفوتك أي فعالية تهمك.',
+                            'ar' => 'تصفح الفعاليات وأضف ما يعجبك منها إلى المفضلة حتى لا تفوتك فعالية تهمك.',
                         ],
                     ],
                     [
                         'image_url' => '/tenants/north-batinah/onboarding_3.jpg',
                         'title' => [
                             'en' => 'QR Code Access',
-                            'ar' => 'الوصول برمز QR',
+                            'ar' => 'الدخول برمز QR',
                         ],
                         'body' => [
                             'en' => 'Use QR codes for quick event check-ins, special offers, and exclusive content access.',
-                            'ar' => 'استخدم رموز QR للدخول السريع للفعاليات والعروض الخاصة والمحتوى الحصري.',
+                            'ar' => 'استخدم رموز QR لدخول الفعاليات بسرعة وللحصول على العروض الخاصة والمحتوى الحصري.',
                         ],
                     ],
                 ],
@@ -240,7 +240,7 @@ class TenantSeeder extends Seeder
             ],
             'legacy' => [
                 'splash_duration_ms' => 2000,
-                'loading_text' => 'جاري التحميل...',
+                'loading_text' => 'جارٍ التحميل',
                 'loading_text_en' => 'Loading...',
                 'currency_symbol' => 'ر.ع.',
                 'pagination_limit' => 20,
@@ -251,9 +251,34 @@ class TenantSeeder extends Seeder
             'header_gradient' => ['#2F8E80', '#2C7DA5'],
             'font_family_numeric' => 'Inter',
         ];
-        $settings['home_blocks'] = ['wallet_card', 'quick_actions', 'announcements', 'featured_events', 'happening_today', 'map_teaser', 'categories'];
-        $settings['quick_actions'] = ['topup', 'pay', 'tickets', 'map', 'points'];
+        // Places + content are reached from Home (places_featured,
+        // places_map_teaser, collection:<key>) and More; the tabs and quick
+        // actions stay as approved (points is not on Home elsewhere).
+        $settings['home_blocks'] = ['wallet_card', 'quick_actions', 'ai_assistant', 'announcements', 'featured_events', 'happening_today', 'places_featured', 'places_map_teaser', 'collection:services', 'map_teaser', 'categories'];
+        $settings['quick_actions'] = ['topup', 'pay', 'tickets', 'ai', 'points'];
         $settings['merchant'] = ['confirm_threshold_minor' => 20000];
+        // AI Experience (docs/ai_and_gate_contract.md §A2) — Arabic-first.
+        $settings['modules'] += ['ai_assistant' => true, 'ai_plan' => true];
+        // Places to visit + content (docs/places_content_contract.md §1).
+        $settings['modules'] += ['places' => true, 'content' => true];
+        $settings['ai'] = [
+            'assistant_name' => ['en' => 'Ask Sohar', 'ar' => 'اسأل صحار'],
+            'welcome' => [
+                'en' => 'Welcome to North Batinah events! Ask me about the Sohar Festival, races, heritage events, tickets or parking.',
+                'ar' => 'حيّاك الله في فعاليات شمال الباطنة. اسألني عن مهرجان صحار والسباقات والفعاليات التراثية والتذاكر ومواقف السيارات.',
+            ],
+            'suggestions' => [
+                ['en' => "What's on this weekend?", 'ar' => 'ما فعاليات عطلة نهاية الأسبوع؟'],
+                ['en' => 'When does the Sohar Festival start?', 'ar' => 'متى يبدأ مهرجان صحار؟'],
+                ['en' => 'Plan a family evening at the festival', 'ar' => 'خطّط أمسية عائلية في المهرجان'],
+                ['en' => 'Where can I park?', 'ar' => 'أين أجد مواقف السيارات؟'],
+            ],
+            'monthly_token_budget' => 2000000,
+            'venue_info' => [
+                'en' => 'The Sohar Festival is held at the Sohar Entertainment Centre (festival grounds) and runs daily in the evening during the festival season. Families are welcome. Most events are free; some activities (e.g. karting) are paid.',
+                'ar' => 'يُقام مهرجان صحار في أرض المهرجان بمركز صحار الترفيهي، ويفتح أبوابه مساء كل يوم طوال موسم المهرجان، والعائلات مرحب بها. أغلب الفعاليات مجانية، وبعض الأنشطة كالكارتينج برسوم.',
+            ],
+        ];
         $settings['tenant']['legal'] = [
             'terms_url' => url('/terms-and-conditions').'?tenant=north-batinah&lang={lang}',
             'privacy_url' => url('/privacy-policy').'?tenant=north-batinah&lang={lang}',
@@ -317,7 +342,7 @@ class TenantSeeder extends Seeder
                         'image_url' => '/tenants/demo/onboarding_1.jpg',
                         'title' => [
                             'en' => 'Welcome to Demo Events',
-                            'ar' => 'مرحباً بك في فعاليات تجريبية',
+                            'ar' => 'مرحبًا بك في فعاليات تجريبية',
                         ],
                         'body' => [
                             'en' => 'Find concerts, markets and shows happening near you.',
@@ -343,7 +368,7 @@ class TenantSeeder extends Seeder
                         ],
                         'body' => [
                             'en' => 'Top up once, pay everywhere at the venue and earn points.',
-                            'ar' => 'اشحن مرة واحدة وادفع في كل مكان واكسب النقاط.',
+                            'ar' => 'اشحن محفظتك مرة واحدة وادفع بها في أرجاء الموقع، واكسب النقاط.',
                         ],
                     ],
                 ],
@@ -386,7 +411,7 @@ class TenantSeeder extends Seeder
                 'points' => true,
                 'refunds' => true,
                 'ticket_transfer' => false,
-                'staff_scanner' => false,
+                'staff_scanner' => true,
             ],
             'navigation' => [
                 'home',
@@ -496,9 +521,32 @@ class TenantSeeder extends Seeder
             'header_gradient' => ['#4F46E5', '#7C3AED'],
             'font_family_numeric' => 'Inter',
         ];
-        $settings['home_blocks'] = ['wallet_card', 'quick_actions', 'points_progress', 'featured_events', 'happening_today', 'vendors', 'announcements'];
-        $settings['quick_actions'] = ['topup', 'pay', 'points', 'tickets', 'vendors'];
+        // Points stay reachable from the points_progress block, so the
+        // `places` quick action takes their slot.
+        $settings['home_blocks'] = ['wallet_card', 'quick_actions', 'ai_assistant', 'points_progress', 'featured_events', 'happening_today', 'places_featured', 'places_map_teaser', 'collection:brands', 'vendors', 'announcements'];
+        $settings['quick_actions'] = ['topup', 'pay', 'places', 'tickets', 'ai'];
         $settings['merchant'] = ['confirm_threshold_minor' => 10000];
+        // AI Experience (§A2) — English-first demo.
+        $settings['modules'] += ['ai_assistant' => true, 'ai_plan' => true];
+        // Places + content on (docs/places_content_contract.md §1).
+        $settings['modules'] += ['places' => true, 'content' => true];
+        $settings['ai'] = [
+            'assistant_name' => ['en' => 'Ask Demo', 'ar' => 'المساعد التجريبي'],
+            'welcome' => [
+                'en' => 'Hi! Ask me about tonight\'s shows, tickets, your wallet or Stars.',
+                'ar' => 'أهلًا وسهلًا، اسألني عن عروض الليلة والتذاكر ومحفظتك ونجومك.',
+            ],
+            'suggestions' => [
+                ['en' => "What's on tonight?", 'ar' => 'ما فعاليات الليلة؟'],
+                ['en' => 'Plan an evening for my family', 'ar' => 'خطّط أمسية لعائلتي'],
+                ['en' => 'How do refunds work?', 'ar' => 'كيف أسترد رصيدي؟'],
+            ],
+            'monthly_token_budget' => 1000000,
+            'venue_info' => [
+                'en' => 'Demo Arena, Muscat. Doors open at 10:00; the expo closes at 23:00.',
+                'ar' => 'ساحة العروض في مسقط. تُفتح الأبواب الساعة 10:00، ويُغلق المعرض الساعة 23:00.',
+            ],
+        ];
         $settings['tenant']['legal'] = [
             'terms_url' => url('/terms-and-conditions').'?tenant=demo&lang={lang}',
             'privacy_url' => url('/privacy-policy').'?tenant=demo&lang={lang}',

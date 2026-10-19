@@ -72,7 +72,7 @@
                     <div class="row-actions">
                         <a href="{{ route('admin.restaurants.show', $restaurant) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.restaurants.edit', $restaurant) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                        <form action="{{ route('admin.restaurants.destroy', $restaurant) }}" method="POST" data-confirm="{{ __('سيتم حذف المطعم «:name» نهائيًا.', ['name' => $restaurant->name_ar]) }}">
+                        <form action="{{ route('admin.restaurants.destroy', $restaurant) }}" method="POST" data-confirm="{{ __('سيُحذف المطعم «:name» نهائيًا.', ['name' => $restaurant->name_ar]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>

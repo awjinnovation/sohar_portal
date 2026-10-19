@@ -2,7 +2,7 @@
 
 @section('title', 'المدفوعات')
 @section('page-title', 'المدفوعات')
-@section('page-subtitle', 'مدفوعات التذاكر وشحن المحافظ عبر البوابة أو المحفظة')
+@section('page-subtitle', 'مدفوعات التذاكر وشحن المحافظ عبر بوابة الدفع أو المحفظة')
 @use('App\Support\AdminLabels')
 @php
     $pageIcon = 'credit-card-2-front';
@@ -20,7 +20,7 @@
     </div>
 
     <x-admin.data-table title="سجل المدفوعات" icon="credit-card-2-front" :count="$payments->total()" search="q"
-        search-placeholder="رقم العملية أو هاتف المستخدم" :paginator="$payments">
+        search-placeholder="رقم المعاملة أو هاتف المستخدم" :paginator="$payments">
         <x-slot:filters>
             <select name="status" class="form-select" aria-label="{{ __('الحالة') }}">
                 <option value="">{{ __('كل الحالات') }}</option>
@@ -43,7 +43,7 @@
         </x-slot:filters>
         <x-slot:head>
             <th style="width: 56px">#</th>
-            <th>{{ __('رقم العملية') }}</th>
+            <th>{{ __('رقم المعاملة') }}</th>
             <th>{{ __('المستخدم') }}</th>
             <th>{{ __('النوع') }}</th>
             <th>{{ __('الطريقة') }}</th>

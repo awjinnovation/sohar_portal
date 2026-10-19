@@ -25,7 +25,7 @@
 @section('content')
     @include('admin.partials.alerts')
 
-    <x-admin.data-table title="جميع المواقع" icon="geo-alt" :count="$locations->total()" search="search" search-placeholder="ابحث بالاسم أو الوصف…" :paginator="$locations" id="locationsTable">
+    <x-admin.data-table title="جميع المواقع" icon="geo-alt" :count="$locations->total()" search="search" search-placeholder="ابحث بالاسم أو الوصف" :paginator="$locations" id="locationsTable">
         <x-slot:filters>
             <select name="type" class="form-select" aria-label="{{ __('النوع') }}">
                 <option value="">{{ __('كل الأنواع') }}</option>
@@ -66,7 +66,7 @@
                     <div class="row-actions">
                         <a href="{{ route('admin.map-locations.show', $location) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.map-locations.edit', $location) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                        <form action="{{ route('admin.map-locations.destroy', $location) }}" method="POST" data-confirm="{{ __('سيتم حذف الموقع «:name» من الخريطة نهائيًا.', ['name' => $location->name_ar ?: $location->name]) }}">
+                        <form action="{{ route('admin.map-locations.destroy', $location) }}" method="POST" data-confirm="{{ __('سيُحذف الموقع «:name» من الخريطة نهائيًا.', ['name' => $location->name_ar ?: $location->name]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
@@ -75,7 +75,7 @@
                 </td>
             </tr>
         @empty
-            <x-admin.empty-row :colspan="6" icon="geo-alt" title="لا توجد مواقع" text="قم بإضافة موقع جديد ليظهر على الخريطة التفاعلية.">
+            <x-admin.empty-row :colspan="6" icon="geo-alt" title="لا توجد مواقع" text="أضف موقعًا جديدًا ليظهر على الخريطة التفاعلية.">
                 <a href="{{ route('admin.map-locations.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة موقع جديد') }}</a>
             </x-admin.empty-row>
         @endforelse

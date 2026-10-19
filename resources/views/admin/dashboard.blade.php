@@ -19,7 +19,7 @@
     $can = fn ($ability) => $user?->can($ability);
     $link = fn ($route) => \Illuminate\Support\Facades\Route::has($route) ? route($route) : null;
 @endphp
-@section('page-subtitle', __(':greeting، :name — ملخص نشاط :tenant اليوم', ['greeting' => $greeting, 'name' => $user->name ?? '', 'tenant' => $brand?->localizedName(app()->getLocale()) ?? config('app.name')]))
+@section('page-subtitle', __(':greeting، :name. هذا ملخص نشاط :tenant اليوم.', ['greeting' => $greeting, 'name' => $user->name ?? '', 'tenant' => $brand?->localizedName(app()->getLocale()) ?? config('app.name')]))
 @section('page-actions')
     @if($can('manage events') && $link('admin.events.create'))
         <a href="{{ route('admin.events.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> {{ __('فعالية جديدة') }}</a>
@@ -44,13 +44,15 @@
         <x-admin.stat-tile label="التذاكر المباعة اليوم" :value="$m['tickets_today']" icon="ticket-perforated" tone="accent" :href="$can('manage tickets') ? $link('admin.tickets.index') : null"
             :hint="__('الإجمالي :total · مستخدمة :used', ['total' => number_format($m['tickets_total']), 'used' => number_format($m['tickets_used'])])" />
         <x-admin.stat-tile label="شحن المحافظ اليوم" :money="$m['topups_today']" icon="wallet2" tone="success" :href="$can('manage wallets') ? $link('admin.wallets.index') : null"
-            :hint="__(':count عملية شحن', ['count' => number_format($m['topups_count_today'])])" />
+            :hint="__('عمليات الشحن: :count', ['count' => number_format($m['topups_count_today'])])" />
         <x-admin.stat-tile label="طلبات استرداد معلّقة" :value="$m['refunds_pending']" icon="arrow-counterclockwise" :tone="$m['refunds_pending'] ? 'warning' : 'neutral'" :href="$can('manage refunds') ? $link('admin.refund-requests.index') : null">
             <x-admin.money :minor="$m['refunds_pending_minor']" tone="muted" /> {{ __('بانتظار المراجعة') }}
         </x-admin.stat-tile>
         <x-admin.stat-tile label="التجار النشطون" :value="$m['vendors_active']" icon="shop-window" tone="info" :href="$can('manage vendors') ? $link('admin.vendors.index') : null"
-            :hint="__('من أصل :count تاجر', ['count' => number_format($m['vendors_total'])])" />
+            :hint="__('من أصل :count', ['count' => number_format($m['vendors_total'])])" />
     </div>
+
+    @include('admin.ai._briefing-card')
 
     <div class="row g-4">
         {{-- Trends --}}
@@ -65,7 +67,7 @@
                 </x-slot:actions>
                 <div class="chart-box"><canvas id="trendChart" aria-label="{{ __('رسم بياني للنشاط اليومي') }}" role="img"></canvas></div>
                 <details class="mt-3 small">
-                    <summary class="text-muted">{{ __('عرض البيانات كجدول') }}</summary>
+                    <summary class="text-muted">{{ __('عرض البيانات في جدول') }}</summary>
                     <div class="table-responsive mt-2">
                         <table class="table table-sm">
                             <thead><tr><th>{{ __('اليوم') }}</th><th>{{ __('مبيعات التذاكر') }}</th><th>{{ __('شحن المحافظ') }}</th><th>{{ __('التذاكر') }}</th></tr></thead>
@@ -224,7 +226,7 @@
     var decimals = {{ \App\View\Fmt::decimals() }};
     var current = 'ticket_revenue';
     var labels = { ticket_revenue: @json(__('مبيعات التذاكر')), topups: @json(__('شحن المحافظ')), tickets: @json(__('عدد التذاكر')) };
-    var ticketsTpl = @json(__(':count تذكرة'));
+    var ticketsTpl = @json(__('التذاكر: :count'));
     var isMoney = function (k) { return k !== 'tickets'; };
     var css = function (v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); };
     var fmt = function (minor) {

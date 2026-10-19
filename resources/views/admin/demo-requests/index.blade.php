@@ -40,7 +40,7 @@
             @if($status !== 'all')<input type="hidden" name="status" value="{{ $status }}">@endif
         </x-slot:filters>
         <x-slot:actions>
-            <nav class="seg-scroll" aria-label="{{ __('تصفية حسب الحالة') }}"><div class="segmented">
+            <nav class="seg-scroll" aria-label="{{ __('التصفية بحسب الحالة') }}"><div class="segmented">
                 @foreach($tabs as $key => $label)
                     <a href="{{ route('admin.demo-requests.index', array_filter(['status' => $key, 'q' => $q ?: null])) }}" class="{{ $status === $key ? 'active' : '' }}" @if($status === $key) aria-current="page" @endif>
                         {{ __($label) }}@if($cnt($key))<span class="cnt">{{ $cnt($key) }}</span>@endif
@@ -87,7 +87,7 @@
                             <form action="{{ route('admin.demo-requests.status', $dr) }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="status" value="contacted">
-                                <button type="submit" class="icon-btn brand" title="{{ __('تسجيل كتم التواصل') }}"><i class="bi bi-chat-dots"></i></button>
+                                <button type="submit" class="icon-btn brand" title="{{ __('تسجيل التواصل') }}"><i class="bi bi-chat-dots"></i></button>
                             </form>
                         @endif
                         <a href="{{ route('admin.demo-requests.show', $dr) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>

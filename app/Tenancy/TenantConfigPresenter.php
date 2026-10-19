@@ -23,6 +23,10 @@ class TenantConfigPresenter
 
         $modules = array_map('boolval', $s['modules']);
         $navigation = array_values(array_filter($s['navigation'], function ($item) use ($modules) {
+            // `discover` (places + content, docs/places_content_contract.md §1) needs either module.
+            if ($item === 'discover') {
+                return ($modules['places'] ?? false) || ($modules['content'] ?? false);
+            }
             $module = ['wallet' => 'wallet', 'tickets' => 'tickets', 'events' => 'events', 'map' => 'map', 'calendar' => 'calendar', 'vendors' => 'vendors'][$item] ?? null;
 
             return $module === null || ($modules[$module] ?? false);
@@ -57,6 +61,12 @@ class TenantConfigPresenter
                 ['country_code' => '968', 'phone_length' => 8, 'phone_hint' => '9123 4567'],
                 (array) ($s['auth'] ?? []),
             ),
+            // AI Experience (docs/ai_and_gate_contract.md §A2) — public keys only.
+            'ai' => [
+                'assistant_name' => $s['ai']['assistant_name'] ?? ['en' => '', 'ar' => ''],
+                'welcome' => $s['ai']['welcome'] ?? ['en' => '', 'ar' => ''],
+                'suggestions' => array_values((array) ($s['ai']['suggestions'] ?? [])),
+            ],
         ];
     }
 }

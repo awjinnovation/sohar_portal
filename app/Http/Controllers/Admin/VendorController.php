@@ -58,7 +58,7 @@ class VendorController extends Controller
 
         AuditLog::record('vendor.created', $vendor);
 
-        return redirect()->route('admin.vendors.show', $vendor)->with('success', 'تم إضافة التاجر بنجاح');
+        return redirect()->route('admin.vendors.show', $vendor)->with('success', 'أُضيف التاجر');
     }
 
     public function show(Vendor $vendor)
@@ -109,14 +109,14 @@ class VendorController extends Controller
 
         AuditLog::record('vendor.updated', $vendor);
 
-        return redirect()->route('admin.vendors.show', $vendor)->with('success', 'تم تحديث التاجر بنجاح');
+        return redirect()->route('admin.vendors.show', $vendor)->with('success', 'حُدِّث التاجر');
     }
 
     public function destroy(Vendor $vendor)
     {
         if ($vendor->transactions()->exists()) {
             return redirect()->route('admin.vendors.index')
-                ->with('error', 'لا يمكن حذف تاجر لديه عمليات مالية، يمكنك إيقافه بدلاً من ذلك');
+                ->with('error', 'لا يمكن حذف تاجر له معاملات مالية، ويمكنك إيقافه.');
         }
 
         $vendor->staff()->detach();
@@ -124,7 +124,7 @@ class VendorController extends Controller
         AuditLog::record('vendor.deleted', $vendor, ['name' => $vendor->name]);
         $vendor->delete();
 
-        return redirect()->route('admin.vendors.index')->with('success', 'تم حذف التاجر بنجاح');
+        return redirect()->route('admin.vendors.index')->with('success', 'حُذف التاجر');
     }
 
     public function attachStaff(Request $request, Vendor $vendor)
@@ -136,7 +136,7 @@ class VendorController extends Controller
 
         $user = $this->findUser($data['identifier']);
         if (! $user) {
-            return back()->withInput()->with('error', 'لم يتم العثور على مستخدم بهذا البريد أو رقم الهاتف');
+            return back()->withInput()->with('error', 'لا يوجد مستخدم بهذا البريد أو رقم الهاتف');
         }
 
         $vendor->staff()->syncWithoutDetaching([$user->id => ['role' => $data['role']]]);
@@ -144,7 +144,7 @@ class VendorController extends Controller
 
         AuditLog::record('vendor.staff_attached', $vendor, ['user_id' => $user->id, 'role' => $data['role']]);
 
-        return redirect()->route('admin.vendors.show', $vendor)->with('success', 'تم إضافة '.$user->name.' إلى موظفي التاجر');
+        return redirect()->route('admin.vendors.show', $vendor)->with('success', 'أُضيف '.$user->name.' إلى موظفي التاجر');
     }
 
     public function detachStaff(Vendor $vendor, User $user)
@@ -158,7 +158,7 @@ class VendorController extends Controller
 
         AuditLog::record('vendor.staff_detached', $vendor, ['user_id' => $user->id]);
 
-        return redirect()->route('admin.vendors.show', $vendor)->with('success', 'تم إزالة الموظف من التاجر');
+        return redirect()->route('admin.vendors.show', $vendor)->with('success', 'أُزيل الموظف من فريق التاجر');
     }
 
     private function findUser(string $identifier): ?User

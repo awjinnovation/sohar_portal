@@ -123,8 +123,8 @@ class AdminPolishTest extends AdminPlatformTestCase
         $this->actingAs($admin)->get(route('admin.map-locations.index', ['type' => '', 'search' => '']))->assertOk()->assertSee('موقف الاختبار');
 
         $this->actingAs($admin)->delete(route('admin.map-locations.destroy', MapLocation::first()))
-            ->assertSessionHas('success', 'تم حذف الموقع بنجاح');
-        $this->assertSame('Location deleted successfully', __('تم حذف الموقع بنجاح', [], 'en'));
+            ->assertSessionHas('success', 'حُذف الموقع');
+        $this->assertSame('Location deleted successfully', __('حُذف الموقع', [], 'en'));
     }
 
     public function test_logo_needs_chip_is_an_optional_tenant_setting(): void

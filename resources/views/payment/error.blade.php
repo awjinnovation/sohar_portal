@@ -9,8 +9,8 @@
         'not_completed' => ['لم تكتمل عملية الدفع بعد. ستظهر النتيجة في التطبيق خلال لحظات.', 'The payment is not completed yet. The app will show the result in a moment.'],
         'no_response' => ['لم يصل رد من بوابة الدفع.', 'No response was received from the payment gateway.'],
         'verification_failed' => ['تعذر التحقق من رد بوابة الدفع.', 'The payment gateway response could not be verified.'],
-        'payment_failed' => ['فشلت عملية الدفع. يرجى المحاولة مرة أخرى.', 'The payment failed. Please try again.'],
-        'server_error' => ['حدث خطأ أثناء معالجة الدفع.', 'An error occurred while processing your payment.'],
+        'payment_failed' => ['لم تنجح عملية الدفع. حاول مرة أخرى.', 'The payment failed. Please try again.'],
+        'server_error' => ['حدث خطأ في معالجة الدفع.', 'An error occurred while processing your payment.'],
     ];
     $code = $code ?? 'server_error';
     [$msgAr, $msgEn] = $messages[$code] ?? $messages['server_error'];
@@ -34,5 +34,5 @@
     @if(isset($error) && config('app.debug'))
         <div class="note warn ltr" style="text-align:left"><i class="bi bi-bug"></i><div><b>Debug:</b> {{ $error }}</div></div>
     @endif
-    <div class="note info"><i class="bi bi-info-circle"></i><div>{{ $t('لم يتم خصم أي مبلغ إذا لم تكتمل العملية. عُد إلى التطبيق للمحاولة مجددًا.', 'You are not charged for a payment that did not complete. Return to the app to try again.') }}</div></div>
+    <div class="note info"><i class="bi bi-info-circle"></i><div>{{ $t('لا يُخصم أي مبلغ ما لم تكتمل العملية. عُد إلى التطبيق لتحاول مجددًا.', 'You are not charged for a payment that did not complete. Return to the app to try again.') }}</div></div>
 @endsection

@@ -2,7 +2,7 @@
 
 @section('title', 'إضافة دور جديد')
 @section('page-title', 'إضافة دور جديد')
-@section('page-subtitle', 'تعريفات الأدوار مشتركة بين جميع الجهات')
+@section('page-subtitle', 'تعريفات الأدوار مشتركة بين جميع المنظمات')
 @php
     $pageIcon = 'shield-plus';
     $breadcrumbs = ['المنظمة' => null, 'الأدوار والصلاحيات' => route('admin.roles.index'), 'إضافة دور' => null];
@@ -21,7 +21,7 @@
             <div class="col-xl-8">
                 <x-admin.card title="معلومات الدور الجديد" icon="shield-lock">
                     <x-admin.form-field name="name" id="name" label="اسم الدور" :value="old('name')" dir="ltr" required
-                        help="استخدم اسماً واضحاً باللغة الإنجليزية (مثل: content-editor, event-coordinator)" />
+                        help="اكتب اسمًا واضحًا بالإنجليزية، مثل content-editor أو event-coordinator" />
                 </x-admin.card>
 
                 <div class="d-flex align-items-center gap-2 mb-3">

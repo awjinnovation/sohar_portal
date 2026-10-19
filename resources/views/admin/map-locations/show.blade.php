@@ -62,7 +62,7 @@
 
             <x-admin.card title="التفاصيل" icon="info-circle">
                 <dl class="dl">
-                    <dt>{{ __('المعرف') }}</dt>
+                    <dt>{{ __('المعرّف') }}</dt>
                     <dd class="num">#{{ $mapLocation->id }}</dd>
                     <dt>{{ __('النوع') }}</dt>
                     <dd>
@@ -103,7 +103,7 @@
                 <x-slot:footer>
                     <div class="d-flex gap-2 justify-content-between align-items-center">
                         <a href="{{ route('admin.map-locations.edit', $mapLocation) }}" class="btn btn-tonal"><i class="bi bi-pencil"></i> {{ __('تعديل') }}</a>
-                        <form action="{{ route('admin.map-locations.destroy', $mapLocation) }}" method="POST" class="m-0" data-confirm="{{ __('سيتم حذف الموقع «:name» من الخريطة نهائيًا.', ['name' => $mapLocation->name_ar ?: $mapLocation->name]) }}">
+                        <form action="{{ route('admin.map-locations.destroy', $mapLocation) }}" method="POST" class="m-0" data-confirm="{{ __('سيُحذف الموقع «:name» من الخريطة نهائيًا.', ['name' => $mapLocation->name_ar ?: $mapLocation->name]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> {{ __('حذف') }}</button>

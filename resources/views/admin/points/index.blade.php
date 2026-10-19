@@ -20,7 +20,7 @@
     @include('admin.partials.alerts')
 
     @unless($moduleEnabled)
-        <div class="alert alert-warning d-flex gap-2 align-items-center"><i class="bi bi-exclamation-triangle-fill"></i>{{ __('وحدة النقاط معطلة لهذه المنظمة — لا تُكتسب نقاط جديدة.') }}</div>
+        <div class="alert alert-warning d-flex gap-2 align-items-center"><i class="bi bi-exclamation-triangle-fill"></i>{{ __('وحدة النقاط معطّلة في هذه المنظمة، فلا تُكتسب نقاط جديدة.') }}</div>
     @endunless
 
     <div class="stat-grid">
@@ -94,7 +94,7 @@
                     'الكسب لكل وحدة عملة' => rtrim(rtrim(number_format((float) ($rules['earn_per_currency_unit'] ?? 0), 2, '.', ''), '0'), '.').' / 1 '.($brand?->currency() ?? ''),
                     'قيمة النقطة عند الاستبدال' => ($brand ? $brand->formatMoney((int) ($rules['redeem_value_minor_per_point'] ?? 0)).' '.$brand->currency() : (int) ($rules['redeem_value_minor_per_point'] ?? 0)),
                     'أقل عدد للاستبدال' => number_format((int) ($rules['min_redeem_points'] ?? 0)),
-                    'الصلاحية' => (int) ($rules['expiry_days'] ?? 0) > 0 ? __(':days يومًا', ['days' => (int) $rules['expiry_days']]) : __('لا تنتهي'),
+                    'الصلاحية' => (int) ($rules['expiry_days'] ?? 0) > 0 ? __('بالأيام: :days', ['days' => (int) $rules['expiry_days']]) : __('لا تنتهي'),
                     'نقاط عند الدخول' => ! empty($rules['earn_on_checkin']) ? number_format((int) ($rules['checkin_points'] ?? 0)) : __('معطّل'),
                 ]" />
                 @if($tiers->isNotEmpty())
@@ -108,7 +108,7 @@
                             </li>
                         @endforeach
                     </ul>
-                    <p class="form-text mt-2 mb-0">{{ __('المستوى يُحسب من إجمالي النقاط المكتسبة.') }}</p>
+                    <p class="form-text mt-2 mb-0">{{ __('يُحسب المستوى من إجمالي النقاط المكتسبة.') }}</p>
                 @endif
             </x-admin.card>
         </div>

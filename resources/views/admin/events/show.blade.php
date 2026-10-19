@@ -44,7 +44,7 @@
             @if($soldOut)
                 <x-admin.status-pill variant="neutral" label="نفدت التذاكر" size="sm" />
             @elseif($fewLeft)
-                <x-admin.status-pill variant="warning" label="متبقٍ القليل" size="sm" />
+                <x-admin.status-pill variant="warning" label="بقي القليل" size="sm" />
             @endif
         </x-admin.stat-tile>
         <x-admin.stat-tile label="إجمالي التذاكر" :value="$unlimited ? '∞' : $total" icon="stack" tone="neutral" />
@@ -91,7 +91,7 @@
                         <dt>{{ __('موقع الخريطة') }}</dt>
                         <dd>{{ $event->mapLocation->name_ar }} <span class="cell-sub num"><span dir="ltr">({{ $event->mapLocation->latitude }}, {{ $event->mapLocation->longitude }})</span></span></dd>
                     @endif
-                    <dt>{{ __('المنظم') }}</dt>
+                    <dt>{{ __('المنظِّم') }}</dt>
                     <dd>{{ $event->organizer_name_ar ?? __('غير محدد') }}@if($event->organizer_name)<div class="cell-sub"><span dir="ltr">{{ $event->organizer_name }}</span></div>@endif</dd>
                     <dt>{{ __('التذاكر المتاحة') }}</dt>
                     <dd>@if($unlimited) {{ __('غير محدودة') }} @else<span class="num" dir="ltr">{{ number_format($available) }} / {{ number_format($total) }}</span>@endif</dd>
@@ -99,7 +99,7 @@
             </x-admin.card>
 
             @if(count($gallery))
-                <x-admin.card title="معرض الصور" icon="images" :subtitle="__(':count صور', ['count' => count($gallery)])">
+                <x-admin.card title="معرض الصور" icon="images" :subtitle="__('الصور: :count', ['count' => count($gallery)])">
                     <div class="row g-3">
                         @foreach($gallery as $img)
                             <div class="col-6 col-md-4">
@@ -129,7 +129,7 @@
                     @if($soldOut)
                         <x-admin.status-pill variant="neutral" label="نفدت التذاكر" />
                     @elseif($fewLeft)
-                        <x-admin.status-pill variant="warning" label="متبقٍ القليل" />
+                        <x-admin.status-pill variant="warning" label="بقي القليل" />
                     @endif
                 </div>
             </x-admin.card>

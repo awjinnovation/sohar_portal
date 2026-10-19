@@ -51,7 +51,7 @@
                     @endif
                     <dt>{{ __('سبب المستخدم') }}</dt><dd>{{ $refund->reason ?: '—' }}</dd>
                     <dt>{{ __('تاريخ الطلب') }}</dt><dd class="num"><span class="ltr">{{ $refund->created_at?->format('Y-m-d H:i') }}</span></dd>
-                    <dt>{{ __('القرار بواسطة') }}</dt>
+                    <dt>{{ __('صاحب القرار') }}</dt>
                     <dd>
                         {{ $refund->decider?->name ?? '—' }}
                         @if($refund->decided_at)<span class="text-muted small num ms-1"><span class="ltr">{{ $refund->decided_at->format('Y-m-d H:i') }}</span></span>@endif
@@ -69,7 +69,7 @@
                 @if($open)
                     <div class="alert alert-info small d-flex gap-2 align-items-start">
                         <i class="bi bi-info-circle-fill"></i>
-                        <span>{{ __('المبلغ محجوز من رصيد المستخدم النقدي. الرفض يعيده إلى المحفظة.') }}</span>
+                        <span>{{ __('المبلغ محجوز من الرصيد النقدي للمستخدم، ويعيده الرفض إلى المحفظة.') }}</span>
                     </div>
 
                     @if($refund->status === 'pending')
@@ -82,10 +82,10 @@
                     @endif
 
                     <form action="{{ route('admin.refund-requests.paid', $refund) }}" method="POST" class="mb-4"
-                          data-confirm="{{ __('تأكيد أنه تم تحويل المبلغ للمستخدم؟') }}" data-confirm-ok="{{ __('تسجيل كمدفوع') }}" data-confirm-tone="primary">
+                          data-confirm="{{ __('تأكيد تحويل المبلغ إلى المستخدم؟') }}" data-confirm-ok="{{ __('تسجيله مدفوعًا') }}" data-confirm-tone="primary">
                         @csrf
-                        <x-admin.form-field name="admin_note" id="paid_note" label="مرجع التحويل" type="textarea" rows="2" placeholder="مرجع التحويل / ملاحظة (اختياري)" />
-                        <button type="submit" class="btn btn-success w-100" data-busy><i class="bi bi-cash-coin"></i> {{ __('تسجيل كمدفوع') }}</button>
+                        <x-admin.form-field name="admin_note" id="paid_note" label="مرجع التحويل" type="textarea" rows="2" placeholder="مرجع التحويل أو ملاحظة (اختياري)" />
+                        <button type="submit" class="btn btn-success w-100" data-busy><i class="bi bi-cash-coin"></i> {{ __('تسجيله مدفوعًا') }}</button>
                     </form>
 
                     <form action="{{ route('admin.refund-requests.reject', $refund) }}" method="POST"

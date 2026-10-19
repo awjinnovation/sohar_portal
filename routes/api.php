@@ -116,6 +116,22 @@ Route::prefix('v1')->group(function () {
     Route::get('/terms-and-conditions', [TermsAndConditionController::class, 'index']);
     Route::get('/terms-and-conditions/{type}/{language}', [TermsAndConditionController::class, 'show']);
 
+    // Places to visit + custom map, content collections and pages
+    // (docs/places_content_contract.md §3). Published rows only.
+    Route::prefix('places')->middleware('module:places')->group(function () {
+        Route::get('/categories', [\App\Http\Controllers\Api\PlaceController::class, 'categories']);
+        Route::get('/map', [\App\Http\Controllers\Api\PlaceController::class, 'map']);
+        Route::get('/', [\App\Http\Controllers\Api\PlaceController::class, 'index']);
+        Route::get('/{place}', [\App\Http\Controllers\Api\PlaceController::class, 'show']);
+    });
+    Route::prefix('content')->middleware('module:content')->group(function () {
+        Route::get('/collections', [\App\Http\Controllers\Api\ContentController::class, 'collections']);
+        Route::get('/collections/{key}/items', [\App\Http\Controllers\Api\ContentController::class, 'collectionItems']);
+        Route::get('/items/{id}', [\App\Http\Controllers\Api\ContentController::class, 'item']);
+        Route::get('/pages', [\App\Http\Controllers\Api\ContentController::class, 'pages']);
+        Route::get('/pages/{slug}', [\App\Http\Controllers\Api\ContentController::class, 'page']);
+    });
+
     // Bank Muscat server-to-server callback (verified by decryption)
     Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
 });
@@ -195,4 +211,37 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/favorites/restaurants', [FavoriteController::class, 'restaurants']);
     Route::post('/favorites/toggle', [FavoriteController::class, 'toggle']);
     Route::delete('/favorites/{id}', [FavoriteController::class, 'destroy']);
+});
+
+// Gate scanner (docs/ai_and_gate_contract.md §B2) — authenticated as a paired
+// GateDevice (Sanctum token, ability `gate`), not as a user.
+Route::prefix('v1/gate')->group(function () {
+    Route::post('/pair', [\App\Http\Controllers\Api\GateController::class, 'pair'])->middleware('throttle:gate-pair');
+
+    Route::middleware([\App\Http\Middleware\AuthenticateGateDevice::class, 'module:staff_scanner'])->group(function () {
+        Route::post('/scan', [\App\Http\Controllers\Api\GateController::class, 'scan'])->middleware('throttle:gate-scan');
+        Route::post('/sync', [\App\Http\Controllers\Api\GateController::class, 'sync'])->middleware('throttle:gate-sync');
+        Route::post('/staff/login', [\App\Http\Controllers\Api\GateController::class, 'staffLogin'])->middleware('throttle:gate-staff-login');
+        Route::middleware('throttle:gate-api')->group(function () {
+            Route::get('/session', [\App\Http\Controllers\Api\GateController::class, 'session']);
+            Route::post('/staff/logout', [\App\Http\Controllers\Api\GateController::class, 'staffLogout']);
+            Route::get('/manifest', [\App\Http\Controllers\Api\GateController::class, 'manifest']);
+            Route::get('/stats', [\App\Http\Controllers\Api\GateController::class, 'stats']);
+            Route::post('/heartbeat', [\App\Http\Controllers\Api\GateController::class, 'heartbeat']);
+        });
+    });
+});
+
+// AI Experience (docs/ai_and_gate_contract.md §A3–A4) — auth optional:
+// Sanctum bearer token or the app's opaque X-Ai-Guest header. Module checks
+// (ai_assistant / ai_plan → AI_DISABLED), rate limits and the tenant token
+// budget are enforced in the controllers.
+Route::prefix('v1/ai')->group(function () {
+    Route::post('/chat', [\App\Http\Controllers\Api\AiChatController::class, 'chat']);
+    Route::post('/messages/{id}/feedback', [\App\Http\Controllers\Api\AiChatController::class, 'feedback'])->whereNumber('id')->middleware('throttle:60,1');
+    Route::get('/conversations', [\App\Http\Controllers\Api\AiChatController::class, 'index'])->middleware('throttle:60,1');
+    Route::get('/conversations/{id}', [\App\Http\Controllers\Api\AiChatController::class, 'show'])->middleware('throttle:60,1');
+    Route::delete('/conversations/{id}', [\App\Http\Controllers\Api\AiChatController::class, 'destroy'])->middleware('throttle:60,1');
+    Route::post('/plan', [\App\Http\Controllers\Api\AiPlanController::class, 'store']);
+    Route::get('/plans/{id}', [\App\Http\Controllers\Api\AiPlanController::class, 'show'])->middleware('throttle:60,1');
 });

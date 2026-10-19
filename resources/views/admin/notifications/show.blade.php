@@ -42,7 +42,7 @@
         <div class="col-xl-4">
             <x-admin.card title="التفاصيل" icon="info-circle">
                 <dl class="dl">
-                    <dt>{{ __('المعرف') }}</dt>
+                    <dt>{{ __('المعرّف') }}</dt>
                     <dd class="num">#{{ $notification->id }}</dd>
                     <dt>{{ __('المستلم') }}</dt>
                     <dd>
@@ -71,7 +71,7 @@
                 <x-slot:footer>
                     <div class="d-flex gap-2 justify-content-between align-items-center">
                         <a href="{{ route('admin.notifications.edit', $notification) }}" class="btn btn-tonal"><i class="bi bi-pencil"></i> {{ __('تعديل') }}</a>
-                        <form action="{{ route('admin.notifications.destroy', $notification) }}" method="POST" class="m-0" data-confirm="{{ __('سيتم حذف هذا الإشعار نهائيًا.') }}">
+                        <form action="{{ route('admin.notifications.destroy', $notification) }}" method="POST" class="m-0" data-confirm="{{ __('سيُحذف هذا الإشعار نهائيًا.') }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> {{ __('حذف') }}</button>

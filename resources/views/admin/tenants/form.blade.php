@@ -11,15 +11,15 @@
         ? ['المنصة' => null, 'المنظمات' => route('admin.tenants.index'), ($mode === 'create' ? 'منظمة جديدة' : $tenant->localizedName('ar')) => null]
         : ['المنظمة' => null, 'الهوية والإعدادات' => null];
     $colorGroups = [
-        'brand' => ['title' => 'ألوان العلامة', 'help' => 'اللون الأساسي هو الوحيد المطلوب فعليًا؛ يتحقق حارس التباين منه تلقائيًا ويغمّقه قليلًا عند الحاجة.', 'keys' => ['primary', 'on_primary', 'secondary', 'on_secondary', 'tertiary']],
+        'brand' => ['title' => 'ألوان العلامة', 'help' => 'لا يلزم إلا اللون الأساسي، ويفحصه حارس التباين تلقائيًا ويغمّقه قليلًا عند الحاجة.', 'keys' => ['primary', 'on_primary', 'secondary', 'on_secondary', 'tertiary']],
         'wallet' => ['title' => 'بطاقة المحفظة', 'help' => 'تحمل نصًا أبيض دائمًا؛ يُغمَّق كل طرف حتى يصل التباين إلى 4.5:1.', 'keys' => ['wallet_card_start', 'wallet_card_end']],
-        'neutral' => ['title' => 'الأسطح والنصوص', 'help' => 'تُقبل فقط إذا اجتازت حارس التباين، وإلا تُستخدم قيم المنصة.', 'keys' => ['background', 'surface', 'on_surface', 'muted', 'outline']],
-        'semantic' => ['title' => 'ألوان الحالات (مقفلة في التطبيق)', 'help' => 'النجاح/التحذير/الخطأ/المعلومات ثابتة على مستوى المنصة في التطبيق حتى يُقرأ المال والحالة بالطريقة نفسها لدى كل منظمة. تُستخدم هذه القيم في البريد ولوحة الإدارة فقط.', 'keys' => ['success', 'warning', 'error', 'info']],
+        'neutral' => ['title' => 'الأسطح والنصوص', 'help' => 'تُقبل إذا اجتازت حارس التباين، وإلا اعتُمدت قيم المنصة.', 'keys' => ['background', 'surface', 'on_surface', 'muted', 'outline']],
+        'semantic' => ['title' => 'ألوان الحالات (مقفلة في التطبيق)', 'help' => 'ألوان النجاح والتحذير والخطأ والمعلومات ثابتة في التطبيق على مستوى المنصة، ليُقرأ المال والحالة بالطريقة نفسها في كل منظمة. أما هذه القيم فتُستعمل في البريد ولوحة التحكم فقط.', 'keys' => ['success', 'warning', 'error', 'info']],
     ];
     $colorLabels = [
         'primary' => 'الأساسي', 'on_primary' => 'النص على الأساسي',
         'secondary' => 'الثانوي (تمييز)', 'on_secondary' => 'النص على الثانوي',
-        'tertiary' => 'الثالثي (اختياري)', 'info' => 'معلومات (اختياري)',
+        'tertiary' => 'الثالث (اختياري)', 'info' => 'معلومات (اختياري)',
         'background' => 'الخلفية', 'surface' => 'الأسطح', 'on_surface' => 'النص على الأسطح',
         'muted' => 'النص الخافت', 'outline' => 'الحدود',
         'success' => 'نجاح', 'warning' => 'تحذير', 'error' => 'خطأ',
@@ -32,12 +32,14 @@
         'events' => 'الفعاليات', 'tickets' => 'التذاكر', 'calendar' => 'التقويم', 'map' => 'الخريطة',
         'vendors' => 'التجار', 'announcements' => 'الإعلانات', 'favorites' => 'المفضلة', 'notifications' => 'الإشعارات',
         'wallet' => 'المحفظة', 'topup' => 'شحن الرصيد', 'deposits' => 'التأمينات', 'points' => 'النقاط',
-        'refunds' => 'الاسترداد', 'ticket_transfer' => 'نقل التذاكر', 'staff_scanner' => 'ماسح الموظفين',
+        'refunds' => 'الاسترداد', 'ticket_transfer' => 'نقل التذاكر', 'staff_scanner' => 'ماسح الموظفين', 'ai_assistant' => 'ai.admin.module_ai_assistant', 'ai_plan' => 'ai.admin.module_ai_plan',
+        'places' => 'الأماكن والخريطة المخصصة', 'content' => 'المجموعات والصفحات',
     ];
     $moduleIcons = [
         'events' => 'calendar-event', 'tickets' => 'ticket-perforated', 'calendar' => 'calendar3', 'map' => 'map', 'vendors' => 'shop-window',
         'announcements' => 'megaphone', 'favorites' => 'heart', 'notifications' => 'bell', 'wallet' => 'wallet2', 'topup' => 'cash-coin',
-        'deposits' => 'lock', 'points' => 'stars', 'refunds' => 'arrow-counterclockwise', 'ticket_transfer' => 'send', 'staff_scanner' => 'qr-code-scan',
+        'deposits' => 'lock', 'points' => 'stars', 'refunds' => 'arrow-counterclockwise', 'ticket_transfer' => 'send', 'staff_scanner' => 'qr-code-scan', 'ai_assistant' => 'stars', 'ai_plan' => 'map',
+        'places' => 'pin-map', 'content' => 'collection',
     ];
     $socialLabels = ['instagram' => 'إنستغرام', 'x' => 'X (تويتر)', 'tiktok' => 'تيك توك', 'youtube' => 'يوتيوب', 'facebook' => 'فيسبوك'];
     $gatewayLabels = ['merchant_id' => 'Merchant ID', 'access_code' => 'Access Code', 'working_key' => 'Working Key', 'gateway_url' => 'Gateway URL'];
@@ -48,7 +50,7 @@
         'sec-identity' => ['building', 'الهوية'], 'sec-logos' => ['image', 'الشعارات'], 'sec-colors' => ['palette', 'الألوان'],
         'sec-type' => ['fonts', 'الخطوط والشكل'], 'sec-locale' => ['globe2', 'اللغة والتواصل'], 'sec-modules' => ['toggles', 'الوحدات'],
         'sec-map' => ['geo-alt', 'الخريطة'], 'sec-wallet' => ['wallet2', 'المحفظة'], 'sec-points' => ['stars', 'النقاط'],
-        'sec-app' => ['phone', 'التطبيق'], 'sec-billing' => ['receipt', 'الفوترة والرسائل'],
+        'sec-app' => ['phone', 'التطبيق'], 'sec-ai' => ['stars', 'ai.admin.ai_settings'], 'sec-billing' => ['receipt', 'الفوترة والرسائل'],
     ];
     if ($platform) { $sections['sec-gateway'] = ['shield-lock', 'بوابة الدفع']; }
     $sections['sec-advanced'] = ['code-slash', 'متقدم'];
@@ -58,7 +60,7 @@
 
 @section('title', $pageTitle)
 @section('page-title', $pageTitle)
-@section('page-subtitle', 'كل ما يراه زوار التطبيق والموقع: الاسم، الشعار، الألوان، الخطوط والوحدات. المعاينة تتحدث مباشرة.')
+@section('page-subtitle', 'كل ما يراه زوار التطبيق والموقع من اسم وشعار وألوان وخطوط ووحدات، وتتحدّث المعاينة مباشرة.')
 @section('page-actions')
     <button type="submit" form="tenantForm" class="btn btn-primary" data-busy><i class="bi bi-check-lg"></i> {{ __('حفظ التغييرات') }}</button>
     <a href="{{ $platform ? route('admin.tenants.index') : route('admin.dashboard') }}" class="btn">{{ __('رجوع') }}</a>
@@ -101,7 +103,7 @@
 
                         @if($mode === 'create')
                             <div class="col-md-4 field">
-                                <label class="form-label" for="slug">{{ __('المعرّف (slug)') }}<span class="req">*</span></label>
+                                <label class="form-label" for="slug">{{ __('معرّف الرابط') }}<span class="req">*</span></label>
                                 <input type="text" name="slug" id="slug" dir="ltr" pattern="[a-z0-9-]+" class="form-control @error('slug') is-invalid @enderror"
                                        value="{{ old('slug') }}" placeholder="my-tenant" required>
                                 <div class="form-text">{{ __('أحرف إنجليزية صغيرة وأرقام وشرطة فقط. لا يمكن تغييره لاحقًا.') }}</div>
@@ -109,7 +111,7 @@
                             </div>
                         @else
                             <div class="col-md-4 field">
-                                <label class="form-label">{{ __('المعرّف (slug)') }}</label>
+                                <label class="form-label">{{ __('معرّف الرابط') }}</label>
                                 <input type="text" class="form-control" dir="ltr" value="{{ $tenant->slug }}" disabled>
                             </div>
                         @endif
@@ -131,19 +133,19 @@
                             </div>
                         @endif
 
-                        @include('admin.tenants._field', ['key' => 'tenant.tagline.ar', 'label' => 'الشعار النصي (عربي)', 'inputId' => 'tagline_ar'])
-                        @include('admin.tenants._field', ['key' => 'tenant.tagline.en', 'label' => 'الشعار النصي (إنجليزي)', 'ltr' => true, 'inputId' => 'tagline_en'])
-                        @include('admin.tenants._field', ['key' => 'tenant.organization.ar', 'label' => 'الجهة المنظمة (عربي)'])
-                        @include('admin.tenants._field', ['key' => 'tenant.organization.en', 'label' => 'الجهة المنظمة (إنجليزي)', 'ltr' => true])
+                        @include('admin.tenants._field', ['key' => 'tenant.tagline.ar', 'label' => 'الشعار النصي بالعربية', 'inputId' => 'tagline_ar'])
+                        @include('admin.tenants._field', ['key' => 'tenant.tagline.en', 'label' => 'الشعار النصي بالإنجليزية', 'ltr' => true, 'inputId' => 'tagline_en'])
+                        @include('admin.tenants._field', ['key' => 'tenant.organization.ar', 'label' => 'الجهة المنظِّمة بالعربية'])
+                        @include('admin.tenants._field', ['key' => 'tenant.organization.en', 'label' => 'الجهة المنظِّمة بالإنجليزية', 'ltr' => true])
                     </div>
                 </x-admin.card>
 
                 {{-- Logos --}}
-                <x-admin.card id="sec-logos" title="الشعارات والصور" icon="image" subtitle="يظهر الشعار داخل دائرة بيضاء على الشريط الملون إذا لم يتوفر شعار فاتح شفاف">
+                <x-admin.card id="sec-logos" title="الشعارات والصور" icon="image" subtitle="يظهر الشعار داخل دائرة بيضاء على الشريط الملون إن لم يتوفر شعار فاتح بخلفية شفافة">
                     <x-admin.file-upload name="logo" id="logoUpload" label="رفع شعار جديد" :current="$logoPreview" accept="image/png,image/jpeg,image/webp"
-                        help="PNG / JPG / WEBP بحد أقصى 2MB. يحل محل رابط الشعار أدناه." />
+                        help="PNG أو JPG أو WEBP بحجم أقصاه 2MB، ويحل محل رابط الشعار أدناه." />
                     <div class="row">
-                        @include('admin.tenants._field', ['key' => 'branding.logo_url', 'label' => 'رابط/مسار الشعار', 'ltr' => true, 'placeholder' => 'https://… أو tenants/slug/logo.png', 'inputId' => 'logo_url'])
+                        @include('admin.tenants._field', ['key' => 'branding.logo_url', 'label' => 'رابط الشعار أو مساره', 'ltr' => true, 'placeholder' => 'https://example.com/logo.png أو tenants/slug/logo.png', 'inputId' => 'logo_url'])
                         @include('admin.tenants._field', ['key' => 'branding.logo_on_primary_url', 'label' => 'الشعار على اللون الأساسي', 'ltr' => true, 'inputId' => 'logo_on_primary_url'])
                         @include('admin.tenants._field', ['key' => 'branding.icon_url', 'label' => 'الأيقونة', 'ltr' => true])
                         @include('admin.tenants._field', ['key' => 'branding.splash_url', 'label' => 'شاشة البداية', 'ltr' => true])
@@ -154,18 +156,18 @@
                         <div class="col-md-6 field">
                             <label class="form-label" for="f_logo_needs_chip">{{ __('خلفية بيضاء للشعار') }}</label>
                             <select name="s[branding][logo_needs_chip]" id="f_logo_needs_chip" class="form-select {{ $errors->has('s.branding.logo_needs_chip') ? 'is-invalid' : '' }}">
-                                <option value="" @selected($chipVal === '')>{{ __('تلقائي (حسب توفر شعار فاتح)') }}</option>
-                                <option value="1" @selected($chipVal === '1')>{{ __('نعم — اعرض الشعار داخل دائرة بيضاء') }}</option>
-                                <option value="0" @selected($chipVal === '0')>{{ __('لا — الشعار مناسب للشريط الملون') }}</option>
+                                <option value="" @selected($chipVal === '')>{{ __('تلقائي بحسب توفّر شعار فاتح') }}</option>
+                                <option value="1" @selected($chipVal === '1')>{{ __('نعم، اعرض الشعار داخل دائرة بيضاء') }}</option>
+                                <option value="0" @selected($chipVal === '0')>{{ __('لا، الشعار يناسب الشريط الملون') }}</option>
                             </select>
                             @error('s.branding.logo_needs_chip')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                     </div>
-                    <div class="form-text">{{ __('تقبل روابط كاملة (https://) أو مسارات: مسار يبدأ بـ "/" من مجلد public، أو مسار في قرص التخزين العام.') }}</div>
+                    <div class="form-text">{{ __('يُقبل رابط كامل يبدأ بـ https://، أو مسار يبدأ بـ "/" من مجلد public، أو مسار في قرص التخزين العام.') }}</div>
                 </x-admin.card>
 
                 {{-- Colors --}}
-                <x-admin.card id="sec-colors" title="الألوان" icon="palette" subtitle="يكفي لون أساسي واحد؛ تُشتق بقية الأدوار وتُفحص نسب التباين (WCAG AA) تلقائيًا">
+                <x-admin.card id="sec-colors" title="الألوان" icon="palette" subtitle="يكفي لون أساسي واحد، وتُشتق بقية الألوان وتُفحص نسب التباين وفق معيار WCAG AA تلقائيًا">
                     @foreach($colorGroups as $groupKey => $group)
                         @php $groupKeys = array_values(array_intersect($group['keys'], $colorKeys)); @endphp
                         @if($groupKeys)
@@ -214,7 +216,7 @@
                 </x-admin.card>
 
                 {{-- Typography & shape --}}
-                <x-admin.card id="sec-type" title="الخطوط والشكل" icon="fonts" subtitle="خطوط Google من القائمة المعتمدة (يمكن كتابة اسم خط آخر)، واستدارة الزوايا التي تُشتق منها كل الأحجام">
+                <x-admin.card id="sec-type" title="الخطوط والشكل" icon="fonts" subtitle="خطوط Google من القائمة المعتمدة، ويمكن كتابة اسم خط آخر، واستدارة الزوايا التي تُشتق منها كل المقاسات">
                     <datalist id="curatedFonts">
                         @foreach($curatedFonts as $cf)<option value="{{ $cf }}">@endforeach
                     </datalist>
@@ -254,7 +256,7 @@
                             <label class="form-label" for="theme_mode">{{ __('الوضع') }}</label>
                             @php $modeVal = old('s.theme.mode', $tenant->setting('theme.mode')); @endphp
                             <select name="s[theme][mode]" id="theme_mode" class="form-select">
-                                @foreach(['system' => 'حسب النظام (يسمح للمستخدم بالاختيار)', 'light' => 'فاتح', 'dark' => 'داكن'] as $mv => $ml)
+                                @foreach(['system' => 'بحسب النظام (يختار المستخدم)', 'light' => 'فاتح', 'dark' => 'داكن'] as $mv => $ml)
                                     <option value="{{ $mv }}" @selected($modeVal === $mv)>{{ __($ml) }}</option>
                                 @endforeach
                             </select>
@@ -283,7 +285,7 @@
                             </select>
                             @error('s.tenant.default_locale')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        @include('admin.tenants._field', ['key' => 'tenant.locales', 'label' => 'اللغات المتاحة', 'col' => 'col-md-3', 'ltr' => true, 'help' => 'مفصولة بفواصل: ar, en'])
+                        @include('admin.tenants._field', ['key' => 'tenant.locales', 'label' => 'اللغات المتاحة', 'col' => 'col-md-3', 'ltr' => true, 'help' => 'يُفصل بينها بفاصلة، مثل ar، en'])
                         @include('admin.tenants._field', ['key' => 'tenant.currency', 'label' => 'العملة', 'col' => 'col-md-2', 'ltr' => true, 'inputId' => 'currency'])
                         @include('admin.tenants._field', ['key' => 'tenant.currency_decimals', 'label' => 'المنازل العشرية', 'type' => 'number', 'col' => 'col-md-2'])
                         @include('admin.tenants._field', ['key' => 'tenant.timezone', 'label' => 'المنطقة الزمنية', 'col' => 'col-md-2', 'ltr' => true])
@@ -309,14 +311,14 @@
                 </x-admin.card>
 
                 {{-- Modules & navigation --}}
-                <x-admin.card id="sec-modules" title="الوحدات والتنقل" icon="toggles" subtitle="الوحدة المعطلة تختفي من التطبيق بالكامل (لا أزرار رمادية)">
+                <x-admin.card id="sec-modules" title="الوحدات والتنقل" icon="toggles" subtitle="تختفي الوحدة المعطّلة من التطبيق كليًّا، فلا تظهر لها أزرار رمادية">
                     <div class="row">
                         @foreach($moduleKeys as $mk)
                             @include('admin.tenants._toggle', ['key' => 'modules.'.$mk, 'label' => $moduleLabels[$mk] ?? $mk, 'code' => $mk])
                         @endforeach
                     </div>
                     <div class="row">
-                        @include('admin.tenants._field', ['key' => 'navigation', 'label' => 'عناصر شريط التنقل', 'col' => 'col-12', 'ltr' => true, 'help' => 'مفصولة بفواصل بالترتيب، مثال: home, events, wallet, tickets, more'])
+                        @include('admin.tenants._field', ['key' => 'navigation', 'label' => 'عناصر شريط التنقل', 'col' => 'col-12', 'ltr' => true, 'help' => 'بالترتيب، ويُفصل بينها بفاصلة، مثل home، events، discover، tickets، more'])
                     </div>
                 </x-admin.card>
 
@@ -326,25 +328,25 @@
                         @include('admin.tenants._field', ['key' => 'map.center.lat', 'label' => 'خط العرض', 'type' => 'number', 'step' => 'any', 'col' => 'col-md-4', 'ltr' => true])
                         @include('admin.tenants._field', ['key' => 'map.center.lng', 'label' => 'خط الطول', 'type' => 'number', 'step' => 'any', 'col' => 'col-md-4', 'ltr' => true])
                         @include('admin.tenants._field', ['key' => 'map.zoom', 'label' => 'التكبير', 'type' => 'number', 'step' => 'any', 'col' => 'col-md-4', 'ltr' => true])
-                        @include('admin.tenants._field', ['key' => 'map.venue.ar', 'label' => 'اسم الموقع (عربي)'])
-                        @include('admin.tenants._field', ['key' => 'map.venue.en', 'label' => 'اسم الموقع (إنجليزي)', 'ltr' => true])
+                        @include('admin.tenants._field', ['key' => 'map.venue.ar', 'label' => 'اسم الموقع بالعربية'])
+                        @include('admin.tenants._field', ['key' => 'map.venue.en', 'label' => 'اسم الموقع بالإنجليزية', 'ltr' => true])
                     </div>
                 </x-admin.card>
 
                 {{-- Wallet --}}
-                <x-admin.card id="sec-wallet" title="إعدادات المحفظة" icon="wallet2" :subtitle="__('جميع المبالغ بالوحدات الصغرى (مثال: 1000 = 1.000 :currency عند 3 منازل عشرية)', ['currency' => $tenant->currency()])">
+                <x-admin.card id="sec-wallet" title="إعدادات المحفظة" icon="wallet2" :subtitle="__('تُكتب جميع المبالغ بالوحدات الصغرى، فالقيمة 1000 تساوي 1.000 :currency عند ثلاث منازل عشرية', ['currency' => $tenant->currency()])">
                     <div class="row">
-                        @include('admin.tenants._field', ['key' => 'wallet.topup_presets_minor', 'label' => 'مبالغ الشحن المقترحة', 'col' => 'col-md-6', 'ltr' => true, 'help' => 'مفصولة بفواصل: 5000, 10000, 20000'])
+                        @include('admin.tenants._field', ['key' => 'wallet.topup_presets_minor', 'label' => 'مبالغ الشحن المقترحة', 'col' => 'col-md-6', 'ltr' => true, 'help' => 'يُفصل بينها بفاصلة، مثل 5000، 10000، 20000'])
                         @include('admin.tenants._field', ['key' => 'wallet.min_topup_minor', 'label' => 'أقل شحن', 'type' => 'number', 'col' => 'col-md-2'])
                         @include('admin.tenants._field', ['key' => 'wallet.max_topup_minor', 'label' => 'أعلى شحن', 'type' => 'number', 'col' => 'col-md-2'])
                         @include('admin.tenants._field', ['key' => 'wallet.max_balance_minor', 'label' => 'أعلى رصيد', 'type' => 'number', 'col' => 'col-md-2'])
-                        @include('admin.tenants._field', ['key' => 'wallet.promo_expiry_days', 'label' => 'صلاحية الرصيد الترويجي (أيام)', 'type' => 'number', 'col' => 'col-md-6', 'help' => 'فارغ = لا ينتهي. يُطبق على الرصيد الترويجي المضاف بعد الحفظ (الأقدم يُستهلك أولاً).'])
-                        @include('admin.tenants._json', ['key' => 'wallet.topup_bonus', 'label' => 'مكافأة الشحن', 'rows' => 3, 'help' => '[{"min_minor": 20000, "bonus_percent": 5}] — تُضاف كرصيد ترويجي.'])
+                        @include('admin.tenants._field', ['key' => 'wallet.promo_expiry_days', 'label' => 'صلاحية الرصيد الترويجي بالأيام', 'type' => 'number', 'col' => 'col-md-6', 'help' => 'اتركه فارغًا ليبقى الرصيد بلا انتهاء. يسري على الرصيد الترويجي المضاف بعد الحفظ، ويُستهلك الأقدم أولًا.'])
+                        @include('admin.tenants._json', ['key' => 'wallet.topup_bonus', 'label' => 'مكافأة الشحن', 'rows' => 3, 'help' => '[{"min_minor": 20000, "bonus_percent": 5}]، وتُضاف المكافأة إلى الرصيد الترويجي.'])
                     </div>
                     <h3 class="h6 fw-bold mt-2">{{ __('الاسترداد') }}</h3>
                     <div class="row">
-                        @include('admin.tenants._toggle', ['key' => 'wallet.refunds.enabled', 'label' => 'السماح بطلبات الاسترداد', 'col' => 'col-12', 'description' => 'يمكن للمستخدم طلب استرداد الرصيد النقدي فقط (لا يشمل الرصيد الترويجي)'])
-                        @include('admin.tenants._field', ['key' => 'wallet.refunds.window_days', 'label' => 'المهلة (أيام)', 'type' => 'number', 'col' => 'col-md-4'])
+                        @include('admin.tenants._toggle', ['key' => 'wallet.refunds.enabled', 'label' => 'السماح بطلبات الاسترداد', 'col' => 'col-12', 'description' => 'يطلب المستخدم استرداد الرصيد النقدي فقط، دون الرصيد الترويجي'])
+                        @include('admin.tenants._field', ['key' => 'wallet.refunds.window_days', 'label' => 'المهلة بالأيام', 'type' => 'number', 'col' => 'col-md-4'])
                         @include('admin.tenants._field', ['key' => 'wallet.refunds.fee_minor', 'label' => 'الرسوم', 'type' => 'number', 'col' => 'col-md-4'])
                         @include('admin.tenants._field', ['key' => 'wallet.refunds.min_minor', 'label' => 'أقل مبلغ', 'type' => 'number', 'col' => 'col-md-4'])
                         <div class="col-12 field">
@@ -366,12 +368,12 @@
                 {{-- Points --}}
                 <x-admin.card id="sec-points" title="إعدادات النقاط" icon="stars">
                     <div class="row">
-                        @include('admin.tenants._field', ['key' => 'points.label.ar', 'label' => 'اسم النقاط (عربي)', 'col' => 'col-md-3'])
-                        @include('admin.tenants._field', ['key' => 'points.label.en', 'label' => 'اسم النقاط (إنجليزي)', 'col' => 'col-md-3', 'ltr' => true])
+                        @include('admin.tenants._field', ['key' => 'points.label.ar', 'label' => 'اسم النقاط بالعربية', 'col' => 'col-md-3'])
+                        @include('admin.tenants._field', ['key' => 'points.label.en', 'label' => 'اسم النقاط بالإنجليزية', 'col' => 'col-md-3', 'ltr' => true])
                         @include('admin.tenants._field', ['key' => 'points.earn_per_currency_unit', 'label' => 'نقاط لكل وحدة عملة', 'type' => 'number', 'step' => 'any', 'col' => 'col-md-3'])
-                        @include('admin.tenants._field', ['key' => 'points.redeem_value_minor_per_point', 'label' => 'قيمة النقطة (وحدات صغرى)', 'type' => 'number', 'col' => 'col-md-3'])
-                        @include('admin.tenants._field', ['key' => 'points.min_redeem_points', 'label' => 'أقل نقاط للاستبدال', 'type' => 'number', 'col' => 'col-md-3'])
-                        @include('admin.tenants._field', ['key' => 'points.expiry_days', 'label' => 'انتهاء الصلاحية (أيام، 0 = بدون)', 'type' => 'number', 'col' => 'col-md-3'])
+                        @include('admin.tenants._field', ['key' => 'points.redeem_value_minor_per_point', 'label' => 'قيمة النقطة بالوحدات الصغرى', 'type' => 'number', 'col' => 'col-md-3'])
+                        @include('admin.tenants._field', ['key' => 'points.min_redeem_points', 'label' => 'أدنى عدد نقاط للاستبدال', 'type' => 'number', 'col' => 'col-md-3'])
+                        @include('admin.tenants._field', ['key' => 'points.expiry_days', 'label' => 'مدة الصلاحية بالأيام (0 بلا انتهاء)', 'type' => 'number', 'col' => 'col-md-3'])
                         @include('admin.tenants._field', ['key' => 'points.checkin_points', 'label' => 'نقاط حضور الفعالية', 'type' => 'number', 'col' => 'col-md-3'])
                         @include('admin.tenants._toggle', ['key' => 'points.earn_on_checkin', 'label' => 'منح نقاط عند أول دخول', 'col' => 'col-md-3'])
                         @include('admin.tenants._json', ['key' => 'points.tiers', 'label' => 'المستويات', 'rows' => 8, 'help' => '[{"code": "bronze", "name": {"en": "Bronze", "ar": "برونزي"}, "min_points": 0, "multiplier": 1.0, "color": "#B87333"}]'])
@@ -383,14 +385,16 @@
                     <div class="row">
                         @include('admin.tenants._field', ['key' => 'app.min_version', 'label' => 'أقل إصدار مدعوم', 'col' => 'col-md-3', 'ltr' => true])
                         @include('admin.tenants._field', ['key' => 'app.latest_version', 'label' => 'أحدث إصدار', 'col' => 'col-md-3', 'ltr' => true])
-                        @include('admin.tenants._toggle', ['key' => 'app.force_update', 'label' => 'إجبار التحديث', 'col' => 'col-md-3'])
+                        @include('admin.tenants._toggle', ['key' => 'app.force_update', 'label' => 'فرض التحديث', 'col' => 'col-md-3'])
                         @include('admin.tenants._toggle', ['key' => 'app.maintenance_mode', 'label' => 'وضع الصيانة', 'col' => 'col-md-3'])
-                        @include('admin.tenants._field', ['key' => 'app.maintenance_message.ar', 'label' => 'رسالة الصيانة (عربي)'])
-                        @include('admin.tenants._field', ['key' => 'app.maintenance_message.en', 'label' => 'رسالة الصيانة (إنجليزي)', 'ltr' => true])
+                        @include('admin.tenants._field', ['key' => 'app.maintenance_message.ar', 'label' => 'رسالة الصيانة بالعربية'])
+                        @include('admin.tenants._field', ['key' => 'app.maintenance_message.en', 'label' => 'رسالة الصيانة بالإنجليزية', 'ltr' => true])
                         @include('admin.tenants._field', ['key' => 'app.store_urls.ios', 'label' => 'رابط App Store', 'ltr' => true])
                         @include('admin.tenants._field', ['key' => 'app.store_urls.android', 'label' => 'رابط Google Play', 'ltr' => true])
                     </div>
                 </x-admin.card>
+
+                @include('admin.ai._tenant-settings')
 
                 {{-- Billing & messages --}}
                 <x-admin.card id="sec-billing" title="بيانات الفوترة والرسائل" icon="receipt">
@@ -400,13 +404,13 @@
                         @include('admin.tenants._field', ['key' => 'payments.billing.state', 'label' => 'المحافظة', 'col' => 'col-md-2'])
                         @include('admin.tenants._field', ['key' => 'payments.billing.zip', 'label' => 'الرمز البريدي', 'col' => 'col-md-2'])
                         @include('admin.tenants._field', ['key' => 'payments.billing.country', 'label' => 'الدولة', 'col' => 'col-md-2'])
-                        @include('admin.tenants._field', ['key' => 'messages.otp_sms.ar', 'label' => 'رسالة رمز التحقق (عربي)', 'col' => 'col-12', 'help' => 'المتغيرات: :app :code :minutes'])
-                        @include('admin.tenants._field', ['key' => 'messages.otp_sms.en', 'label' => 'رسالة رمز التحقق (إنجليزي)', 'col' => 'col-12', 'ltr' => true])
+                        @include('admin.tenants._field', ['key' => 'messages.otp_sms.ar', 'label' => 'رسالة رمز التحقق بالعربية', 'col' => 'col-12', 'help' => 'المتغيرات: :app :code :minutes'])
+                        @include('admin.tenants._field', ['key' => 'messages.otp_sms.en', 'label' => 'رسالة رمز التحقق بالإنجليزية', 'col' => 'col-12', 'ltr' => true])
                     </div>
                 </x-admin.card>
 
                 @if($platform)
-                    <x-admin.card id="sec-gateway" title="بيانات بوابة الدفع" icon="shield-lock" subtitle="تُحفظ مشفرة. القيم المحفوظة لا تُعرض — اترك الحقل فارغًا للإبقاء على القيمة الحالية.">
+                    <x-admin.card id="sec-gateway" title="بيانات بوابة الدفع" icon="shield-lock" subtitle="تُحفظ القيم مشفّرة ولا تُعرض. اترك الحقل فارغًا لتبقى القيمة الحالية.">
                         @foreach($gatewayFields as $provider => $gFields)
                             <h3 class="h6 fw-bold ltr text-start">{{ $provider }}</h3>
                             <div class="row">
@@ -418,7 +422,7 @@
                                         </label>
                                         <input type="{{ $gf === 'gateway_url' ? 'text' : 'password' }}" name="gateway[{{ $provider }}][{{ $gf }}]" id="gw_{{ $provider }}_{{ $gf }}" dir="ltr"
                                                autocomplete="new-password" class="form-control @error('gateway.'.$provider.'.'.$gf) is-invalid @enderror"
-                                               placeholder="{{ $gSet ? __('•••••• (اتركه فارغًا للإبقاء)') : '' }}">
+                                               placeholder="{{ $gSet ? __('•••••• (اتركه فارغًا لتبقى القيمة)') : '' }}">
                                         @error('gateway.'.$provider.'.'.$gf)<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
                                 @endforeach
@@ -427,7 +431,7 @@
                     </x-admin.card>
                 @endif
 
-                <x-admin.card id="sec-advanced" title="إعدادات متقدمة" icon="code-slash" subtitle="مفاتيح العرض الاختيارية (§5a). التدرج هنا يُعاين مباشرة.">
+                <x-admin.card id="sec-advanced" title="إعدادات متقدمة" icon="code-slash" subtitle="مفاتيح العرض الاختيارية (§5a)، ويُعاين التدرّج هنا مباشرة.">
                     <p class="form-text mt-0 mb-2 ltr text-start">
                         <code>theme.header_style</code> (gradient | solid | image) · <code>theme.header_gradient</code> · <code>theme.header_image_url</code> ·
                         <code>theme.card_pattern_url</code> · <code>theme.font_family_numeric</code> · <code>home_blocks</code> · <code>quick_actions</code> · <code>merchant.confirm_threshold_minor</code>
@@ -437,7 +441,7 @@
                 </x-admin.card>
 
                 @if($mode === 'create')
-                    <x-admin.card id="sec-admin" title="مدير المنظمة (اختياري)" icon="person-badge" subtitle="إذا كان البريد مسجلاً مسبقًا سيُمنح المستخدم دور المدير في هذه المنظمة، وإلا سيتم إنشاء مستخدم جديد.">
+                    <x-admin.card id="sec-admin" title="مدير المنظمة (اختياري)" icon="person-badge" subtitle="إن كان البريد مسجّلًا من قبل مُنح صاحبه دور المدير في هذه المنظمة، وإلا أُنشئ مستخدم جديد.">
                         <div class="row">
                             <x-admin.form-field col="col-md-4" name="admin_email" label="البريد الإلكتروني" type="email" dir="ltr" :value="old('admin_email')" />
                             <x-admin.form-field col="col-md-4" name="admin_name" label="الاسم" :value="old('admin_name')" />
@@ -499,7 +503,7 @@
                         </div>
                     </x-admin.card>
 
-                    <x-admin.card title="حارس التباين" icon="shield-check" subtitle="النتيجة التي يستخدمها التطبيق والويب فعليًا">
+                    <x-admin.card title="حارس التباين" icon="shield-check" subtitle="النتيجة التي يعتمدها التطبيق والموقع">
                         <table class="guard-table" id="guardReport"><tbody></tbody></table>
                         <p class="form-text mb-0 mt-2" id="guardNote"></p>
                     </x-admin.card>
@@ -571,7 +575,7 @@
         var rows = '';
         rows += row(@json(__('الأساسي (تعبئة)')), p.fill === seed ? [seed] : [seed, p.fill], G.contrast(p.on, p.fill), G.contrast(p.on, p.fill) >= 4.5,
             p.step === 1 ? ' <span class="pill pill-sm pill-info">' + @json(__('غُمّق :shift')).replace(':shift', p.shift) + '</span>' : (p.step === 2 ? ' <span class="pill pill-sm pill-warning">' + @json(__('نص داكن')) + '</span>' : ''));
-        rows += row(@json(__('الأساسي كنص')), [p.text], G.contrast(p.text, bg), G.contrast(p.text, bg) >= 4.5);
+        rows += row(@json(__('الأساسي للنص')), [p.text], G.contrast(p.text, bg), G.contrast(p.text, bg) >= 4.5);
         rows += row(@json(__('الثانوي')), s.fill === secSeed ? [secSeed] : [secSeed, s.fill], G.contrast(s.on, s.fill), G.contrast(s.on, s.fill) >= 4.5,
             s.step === 2 ? ' <span class="pill pill-sm pill-warning">' + @json(__('نص داكن')) + '</span>' : '');
         rows += row(@json(__('شريط الرأس')), [h1, h2], Math.min(G.contrast('#FFFFFF', h1), G.contrast('#FFFFFF', h2)), Math.min(G.contrast('#FFFFFF', h1), G.contrast('#FFFFFF', h2)) >= 4.5);
@@ -580,10 +584,10 @@
         report.innerHTML = rows;
         var raw = G.contrast('#FFFFFF', seed);
         note.textContent = p.step === 0
-            ? @json(__('اللون الأساسي يحقق التباين كما هو (:ratio:1 مع الأبيض) — لا تعديل.')).replace(':ratio', raw.toFixed(2))
+            ? @json(__('يحقق اللون الأساسي التباين المطلوب دون تعديل (:ratio:1 مع الأبيض).')).replace(':ratio', raw.toFixed(2))
             : (p.step === 1
-                ? @json(__('النص الأبيض على :seed يعطي :ratio:1 فقط؛ غمّق الحارس اللون :shift درجة إلى :fill مع الحفاظ على هوية العلامة.')).replace(':seed', seed).replace(':ratio', raw.toFixed(2)).replace(':shift', p.shift).replace(':fill', p.fill)
-                : @json(__('لون فاتح: يبقى كتعبئة مع نص داكن، ويُشتق لون أغمق (:text) للنصوص والأيقونات.')).replace(':text', p.text));
+                ? @json(__('النص الأبيض على :seed لا يتجاوز تباينه :ratio:1، فغمّق الحارس اللون إلى :fill بمقدار :shift مع الحفاظ على هوية العلامة.')).replace(':seed', seed).replace(':ratio', raw.toFixed(2)).replace(':shift', p.shift).replace(':fill', p.fill)
+                : @json(__('اللون فاتح، فيبقى تعبئةً مع نص داكن، ويُشتق منه لون أغمق (:text) للنصوص والأيقونات.')).replace(':text', p.text));
     }
 
     function setLang(l) {

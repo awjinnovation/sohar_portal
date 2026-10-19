@@ -58,7 +58,7 @@
                         <div class="kv">
                             <div class="k">{{ __('التقييم') }}</div>
                             <div class="v num"><i class="bi bi-star-fill text-warning"></i> {{ $restaurant->rating ?? '—' }}
-                                <span class="text-muted small fw-normal">({{ __(':count تقييم', ['count' => number_format((int) $restaurant->total_ratings)]) }})</span></div>
+                                <span class="text-muted small fw-normal">({{ __('التقييمات: :count', ['count' => number_format((int) $restaurant->total_ratings)]) }})</span></div>
                         </div>
                         <div class="kv"><div class="k">{{ __('نوع المطبخ') }}</div><div class="v">{{ $restaurant->cuisine_ar }}</div></div>
                         <div class="kv"><div class="k">{{ __('الموقع') }}</div><div class="v">{{ $restaurant->location_ar }}</div></div>
@@ -126,7 +126,7 @@
                         @endforeach
                     </dl>
                 @else
-                    <p class="text-muted text-center mb-0">{{ __('لم يتم تحديد ساعات العمل') }}</p>
+                    <p class="text-muted text-center mb-0">{{ __('لم تُحدَّد ساعات العمل') }}</p>
                 @endif
             </x-admin.card>
 
@@ -162,7 +162,7 @@
             <x-admin.card>
                 <div class="d-flex gap-2 justify-content-between align-items-center">
                     <a href="{{ route('admin.restaurants.edit', $restaurant) }}" class="btn btn-tonal"><i class="bi bi-pencil"></i> {{ __('تعديل') }}</a>
-                    <form action="{{ route('admin.restaurants.destroy', $restaurant) }}" method="POST" class="m-0" data-confirm="{{ __('سيتم حذف المطعم «:name» نهائيًا.', ['name' => $restaurant->name_ar]) }}">
+                    <form action="{{ route('admin.restaurants.destroy', $restaurant) }}" method="POST" class="m-0" data-confirm="{{ __('سيُحذف المطعم «:name» نهائيًا.', ['name' => $restaurant->name_ar]) }}">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> {{ __('حذف') }}</button>

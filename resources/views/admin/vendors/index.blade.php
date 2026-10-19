@@ -16,7 +16,7 @@
     @include('admin.partials.alerts')
 
     <x-admin.data-table title="جميع التجار" icon="shop-window" :count="$vendors->total()" search="q"
-        search-placeholder="بحث بالاسم أو التصنيف" :paginator="$vendors">
+        search-placeholder="ابحث بالاسم أو التصنيف" :paginator="$vendors">
         <x-slot:head>
             <th style="width: 56px">#</th>
             <th>{{ __('التاجر') }}</th>
@@ -58,7 +58,7 @@
                         <a href="{{ route('admin.vendors.show', $vendor) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.vendors.edit', $vendor) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
                         <form action="{{ route('admin.vendors.destroy', $vendor) }}" method="POST"
-                              data-confirm="{{ __('سيتم حذف التاجر «:name» نهائيًا. لا يمكن حذف تاجر لديه عمليات مالية.', ['name' => $vendor->name['ar'] ?? '']) }}" data-confirm-ok="{{ __('حذف') }}">
+                              data-confirm="{{ __('سيُحذف التاجر «:name» نهائيًا، ولا يُحذف التاجر الذي له معاملات مالية.', ['name' => $vendor->name['ar'] ?? '']) }}" data-confirm-ok="{{ __('حذف') }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>

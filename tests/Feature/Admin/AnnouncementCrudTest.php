@@ -98,7 +98,7 @@ class AnnouncementCrudTest extends TestCase
         $response = $this->post(route('admin.announcements.store'), $this->validPayload());
 
         $response->assertRedirect(route('admin.announcements.index'));
-        $response->assertSessionHas('success', 'تم إضافة الإعلان بنجاح');
+        $response->assertSessionHas('success', 'أُضيف الإعلان');
 
         $this->assertDatabaseHas('announcements', [
             'title' => 'New Test Announcement',
@@ -207,7 +207,7 @@ class AnnouncementCrudTest extends TestCase
         ]));
 
         $response->assertRedirect(route('admin.announcements.index'));
-        $response->assertSessionHas('success', 'تم تحديث الإعلان بنجاح');
+        $response->assertSessionHas('success', 'حُدِّث الإعلان');
 
         $this->assertDatabaseHas('announcements', [
             'id' => $announcement->id,
@@ -228,7 +228,7 @@ class AnnouncementCrudTest extends TestCase
         $response = $this->delete(route('admin.announcements.destroy', $announcement));
 
         $response->assertRedirect(route('admin.announcements.index'));
-        $response->assertSessionHas('success', 'تم حذف الإعلان بنجاح');
+        $response->assertSessionHas('success', 'حُذف الإعلان');
 
         $this->assertDatabaseMissing('announcements', [
             'id' => $announcement->id,

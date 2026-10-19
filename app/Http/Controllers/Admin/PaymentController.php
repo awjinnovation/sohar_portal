@@ -78,8 +78,8 @@ class PaymentController extends Controller
         }
 
         $message = $payment->method === Payment::METHOD_WALLET
-            ? 'تم استرداد الدفعة وإعادة المبلغ إلى المحفظة'
-            : 'تم تسجيل الدفعة كمستردة — يرجى إتمام الاسترداد عبر بوابة البنك';
+            ? 'استُردت الدفعة وأُعيد المبلغ إلى المحفظة'
+            : 'سُجِّلت الدفعة مستردة. أكمل الاسترداد عبر بوابة الدفع.';
 
         return redirect()->route('admin.payments.show', $payment)->with('success', $message);
     }

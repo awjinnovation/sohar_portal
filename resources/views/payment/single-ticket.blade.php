@@ -40,7 +40,7 @@
             @if($isValid)
                 <div class="qr-caption"><i class="bi bi-brightness-high"></i> {{ $t('ارفع سطوع الشاشة واعرض الرمز عند البوابة', 'Turn up the brightness and show this code at the gate') }}</div>
             @elseif($ticket->status === 'used')
-                <div class="qr-caption"><i class="bi bi-check2-circle"></i> {{ $t('تم استخدام هذه التذكرة', 'This ticket has been used') }}@if($usedAt) · <span class="num">{{ $usedAt->locale($lang)->translatedFormat('j F Y') }} {{ $usedAt->format('H:i') }}</span>@endif</div>
+                <div class="qr-caption"><i class="bi bi-check2-circle"></i> {{ $t('استُخدمت هذه التذكرة', 'This ticket has been used') }}@if($usedAt) · <span class="num">{{ $usedAt->locale($lang)->translatedFormat('j F Y') }} {{ $usedAt->format('H:i') }}</span>@endif</div>
             @else
                 <div class="qr-caption"><i class="bi bi-x-circle"></i> {{ $t('هذه التذكرة غير صالحة للدخول', 'This ticket is not valid for entry') }}</div>
             @endif
@@ -59,14 +59,14 @@
                     <div><dt>{{ $t('تاريخ الشراء', 'Purchased') }}</dt><dd class="num">{{ $ticket->purchase_date->copy()->setTimezone($tz)->locale($lang)->translatedFormat('j F Y') }}</dd></div>
                 @endif
                 @if($ticket->transaction_id)
-                    <div><dt>{{ $t('رقم العملية', 'Transaction') }}</dt><dd class="mono ltr">{{ $ticket->transaction_id }}</dd></div>
+                    <div><dt>{{ $t('رقم المعاملة', 'Transaction') }}</dt><dd class="mono ltr">{{ $ticket->transaction_id }}</dd></div>
                 @endif
             </dl>
         </div>
     </article>
 
     <div class="actions no-print">
-        <button class="btn btn-primary" type="button" id="saveTicket"><i class="bi bi-download"></i> {{ $t('حفظ التذكرة كصورة', 'Save ticket as image') }}</button>
+        <button class="btn btn-primary" type="button" id="saveTicket"><i class="bi bi-download"></i> {{ $t('حفظ التذكرة صورةً', 'Save ticket as image') }}</button>
         @if(! empty($downloadUrl))
             <a href="{{ $downloadUrl }}{{ str_contains($downloadUrl, '?') ? '&' : '?' }}lang={{ $lang }}" class="btn btn-tonal"><i class="bi bi-collection"></i> {{ $t('كل تذاكر الطلب', 'All tickets in this order') }}</a>
         @endif

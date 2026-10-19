@@ -56,7 +56,7 @@
                     <div class="row-actions">
                         <a href="{{ route('admin.notifications.show', $notification) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.notifications.edit', $notification) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                        <form action="{{ route('admin.notifications.destroy', $notification) }}" method="POST" data-confirm="{{ __('سيتم حذف الإشعار «:name» نهائيًا.', ['name' => $notification->title_ar ?: $notification->title]) }}">
+                        <form action="{{ route('admin.notifications.destroy', $notification) }}" method="POST" data-confirm="{{ __('سيُحذف الإشعار «:name» نهائيًا.', ['name' => $notification->title_ar ?: $notification->title]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>

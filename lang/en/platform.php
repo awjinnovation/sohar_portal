@@ -12,6 +12,7 @@ return [
         'insufficient_points' => 'Not enough points.',
         'idempotency_conflict' => 'This request key was already used for a different operation.',
         'tenant_not_found' => 'Unknown or inactive tenant.',
+        'not_found' => 'Not found.',
         'server_error' => 'Something went wrong. Please try again.',
     ],
     'tx' => [

@@ -26,7 +26,7 @@
 
     <div class="row g-4">
         <div class="col-xl-8">
-            <x-admin.card title="الصلاحيات المخصصة لهذا الدور" icon="ui-checks-grid" subtitle="مشتركة بين جميع الجهات التي تستخدم هذا الدور">
+            <x-admin.card title="الصلاحيات المخصصة لهذا الدور" icon="ui-checks-grid" subtitle="مشتركة بين جميع المنظمات التي تستعمل هذا الدور">
                 @if($groupedPermissions->isNotEmpty())
                     @include('admin.roles._permissions', ['permissions' => $groupedPermissions, 'readonly' => true])
                 @else
@@ -34,7 +34,7 @@
                 @endif
             </x-admin.card>
 
-            <x-admin.card title="المستخدمون بهذا الدور" icon="people" subtitle="أعضاء هذه الجهة فقط" :flush="true">
+            <x-admin.card title="المستخدمون بهذا الدور" icon="people" subtitle="أعضاء هذه المنظمة فقط" :flush="true">
                 <x-slot:actions>
                     <span class="pill pill-neutral pill-sm num">{{ $tenantUsers->count() }}</span>
                 </x-slot:actions>
@@ -65,10 +65,10 @@
                         </table>
                     </div>
                     @if($tenantUsers->count() > 10)
-                        <p class="text-muted small px-3 py-2 mb-0">{{ __('وآخرون... (إجمالي :count مستخدم)', ['count' => $tenantUsers->count()]) }}</p>
+                        <p class="text-muted small px-3 py-2 mb-0">{{ __('وغيرهم (عدد المستخدمين :count)', ['count' => $tenantUsers->count()]) }}</p>
                     @endif
                 @else
-                    <x-admin.empty-state icon="people" title="لا يوجد مستخدمون" text="لم يُعيَّن هذا الدور لأي مستخدم في هذه الجهة بعد." />
+                    <x-admin.empty-state icon="people" title="لا يوجد مستخدمون" text="لم يُسند هذا الدور إلى أي مستخدم في هذه المنظمة بعد." />
                 @endif
             </x-admin.card>
         </div>
@@ -92,14 +92,14 @@
                         @if($isProtected)
                             <x-admin.status-pill variant="neutral" label="محمي من النظام" icon="lock-fill" />
                         @else
-                            <x-admin.status-pill variant="info" label="{{ $role->team_id ? 'خاص بهذه الجهة' : 'مشترك بين الجهات' }}" />
+                            <x-admin.status-pill variant="info" label="{{ $role->team_id ? 'خاص بهذه المنظمة' : 'مشترك بين المنظمات' }}" />
                         @endif
                     </dd>
                     <dt>{{ __('تاريخ الإنشاء') }}</dt><dd class="num">{{ $role->created_at->format('Y-m-d') }}</dd>
                 </dl>
                 @if(! $isProtected && $isSuperActor && $tenantUsers->count() == 0)
                     <x-slot:footer>
-                        <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" data-confirm="{{ __('سيتم حذف الدور «:name» نهائيًا من جميع الجهات.', ['name' => $role->name]) }}">
+                        <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" data-confirm="{{ __('سيُحذف الدور «:name» نهائيًا من جميع المنظمات.', ['name' => $role->name]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-trash"></i> {{ __('حذف الدور') }}</button>

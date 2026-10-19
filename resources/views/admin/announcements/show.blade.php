@@ -6,7 +6,7 @@
 @php
     $pageIcon = 'megaphone';
     $breadcrumbs = ['المحتوى' => null, 'الإعلانات' => route('admin.announcements.index'), 'تفاصيل الإعلان' => null];
-    $audiences = ['all' => __('الجميع'), 'visitors' => __('الزوار'), 'vendors' => __('البائعون'), 'staff' => __('الموظفون')];
+    $audiences = ['all' => __('الجميع'), 'visitors' => __('الزوار'), 'vendors' => __('التجار'), 'staff' => __('الموظفون')];
     $extraTypes = ['alert' => ['error', 'تنبيه'], 'success' => ['success', 'نجاح']];
 @endphp
 @section('page-actions')
@@ -19,7 +19,7 @@
 
     <div class="row g-4">
         <div class="col-xl-8">
-            <x-admin.card title="المحتوى" icon="translate" subtitle="النص كما يظهر للمستخدم حسب لغته">
+            <x-admin.card title="المحتوى" icon="translate" subtitle="النص كما يظهر للزائر بلغته">
                 <ul class="nav nav-tabs" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="ar-tab" data-bs-toggle="tab" data-bs-target="#ar" type="button" role="tab">{{ __('العربية') }}</button>
@@ -71,7 +71,7 @@
                     <dt>{{ __('تاريخ النهاية') }}</dt>
                     <dd class="num">{{ $announcement->end_datetime?->format('Y-m-d H:i') ?? '—' }}</dd>
                     @if($announcement->creator)
-                        <dt>{{ __('أنشئ بواسطة') }}</dt>
+                        <dt>{{ __('أنشأه') }}</dt>
                         <dd>{{ $announcement->creator->name }}</dd>
                     @endif
                     <dt>{{ __('آخر تحديث') }}</dt>
@@ -80,7 +80,7 @@
                 <x-slot:footer>
                     <div class="d-flex gap-2 justify-content-between align-items-center">
                         <a href="{{ route('admin.announcements.edit', $announcement) }}" class="btn btn-tonal"><i class="bi bi-pencil"></i> {{ __('تعديل') }}</a>
-                        <form action="{{ route('admin.announcements.destroy', $announcement) }}" method="POST" class="m-0" data-confirm="{{ __('سيتم حذف الإعلان «:name» نهائيًا.', ['name' => $announcement->title_ar]) }}">
+                        <form action="{{ route('admin.announcements.destroy', $announcement) }}" method="POST" class="m-0" data-confirm="{{ __('سيُحذف الإعلان «:name» نهائيًا.', ['name' => $announcement->title_ar]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> {{ __('حذف') }}</button>

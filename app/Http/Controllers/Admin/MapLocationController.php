@@ -56,7 +56,7 @@ class MapLocationController extends Controller
         MapLocation::create($validated);
 
         return redirect()->route('admin.map-locations.index')
-                        ->with('success', 'تمت إضافة الموقع بنجاح');
+                        ->with('success', 'أُضيف الموقع');
     }
 
     public function show(MapLocation $mapLocation)
@@ -89,7 +89,7 @@ class MapLocationController extends Controller
         $mapLocation->update($validated);
 
         return redirect()->route('admin.map-locations.index')
-                        ->with('success', 'تم تحديث الموقع بنجاح');
+                        ->with('success', 'حُدِّث الموقع');
     }
 
     public function destroy(MapLocation $mapLocation)
@@ -97,6 +97,6 @@ class MapLocationController extends Controller
         $mapLocation->delete();
 
         return redirect()->route('admin.map-locations.index')
-                        ->with('success', 'تم حذف الموقع بنجاح');
+                        ->with('success', 'حُذف الموقع');
     }
 }

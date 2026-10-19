@@ -88,6 +88,11 @@ return [
             'announcements' => true, 'favorites' => true, 'notifications' => true,
             'wallet' => true, 'topup' => true, 'deposits' => true, 'points' => true, 'refunds' => true,
             'ticket_transfer' => false, 'staff_scanner' => true,
+            // AI Experience (docs/ai_and_gate_contract.md §A2) — off unless enabled per tenant.
+            'ai_assistant' => false, 'ai_plan' => false,
+            // Places to visit + custom map, and content collections + pages
+            // (docs/places_content_contract.md §1) — off unless enabled per tenant.
+            'places' => false, 'content' => false,
         ],
 
         'navigation' => ['home', 'events', 'wallet', 'tickets', 'more'],
@@ -138,6 +143,26 @@ return [
             'store_urls' => ['ios' => '', 'android' => ''],
         ],
 
+        // AI Experience (§A2). assistant_name / welcome / suggestions are
+        // public (/tenant/config → ai); the rest is server-only.
+        'ai' => [
+            'assistant_name' => ['en' => 'Ask Mawsim', 'ar' => 'اسأل موسم'],
+            'welcome' => [
+                'en' => 'Hi! Ask me about events, tickets, parking or your wallet.',
+                'ar' => 'أهلًا وسهلًا، اسألني عن الفعاليات والتذاكر والمواقف أو محفظتك.',
+            ],
+            'suggestions' => [
+                ['en' => "What's on tonight?", 'ar' => 'ما فعاليات الليلة؟'],
+                ['en' => 'Plan an evening for my family', 'ar' => 'خطّط أمسية لعائلتي'],
+                ['en' => 'How do refunds work?', 'ar' => 'كيف أسترد رصيدي؟'],
+            ],
+            // Server-only:
+            'monthly_token_budget' => 2000000,   // input + output tokens per calendar month (tenant time zone)
+            'copilot_enabled' => true,           // admin copilot, daily briefing, gate insights
+            // Free text the concierge may quote (opening hours, gates, parking, rules).
+            'venue_info' => ['en' => '', 'ar' => ''],
+        ],
+
         // Server-side only (never exposed by /tenant/config).
         'payments' => [
             'billing' => [
@@ -153,7 +178,7 @@ return [
             // Placeholders: :app (tenant name), :code (OTP), :minutes.
             'otp_sms' => [
                 'en' => 'Your :app verification code is :code. Valid for :minutes minutes.',
-                'ar' => 'رمز التحقق الخاص بك في :app هو :code. صالح لمدة :minutes دقائق.',
+                'ar' => 'رمز التحقق في :app هو :code، وصلاحيته :minutes دقائق.',
             ],
         ],
 

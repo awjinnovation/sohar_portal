@@ -25,21 +25,21 @@
         <div class="row g-4">
             <div class="col-xl-8">
                 @if($canEditIdentity)
-                    <x-admin.card title="تعديل معلومات المستخدم" icon="person-vcard" subtitle="الاسم والبريد وكلمة المرور مشتركة في جميع الجهات">
+                    <x-admin.card title="تعديل معلومات المستخدم" icon="person-vcard" subtitle="الاسم والبريد وكلمة المرور مشتركة بين جميع المنظمات">
                         <div class="row">
                             <x-admin.form-field col="col-md-6" name="name" id="name" label="الاسم الكامل" :value="old('name', $user->name)" required autocomplete="name" />
                             <x-admin.form-field col="col-md-6" name="email" id="email" type="email" label="البريد الإلكتروني" :value="old('email', $user->email)" dir="ltr" autocomplete="email" />
                         </div>
                         <div class="row">
                             <x-admin.form-field col="col-md-6" name="password" id="password" type="password" label="كلمة المرور الجديدة" dir="ltr"
-                                help="اتركه فارغاً إذا كنت لا تريد تغيير كلمة المرور" autocomplete="new-password" />
+                                help="اتركه فارغًا لتبقى كلمة المرور كما هي" autocomplete="new-password" />
                             <x-admin.form-field col="col-md-6" name="password_confirmation" id="password_confirmation" type="password" label="تأكيد كلمة المرور الجديدة" dir="ltr" autocomplete="new-password" />
                         </div>
                     </x-admin.card>
                 @else
                     <div class="alert alert-warning d-flex gap-3 align-items-start">
                         <i class="bi bi-shield-lock fs-5"></i>
-                        <div>{{ __('هذا المستخدم مرتبط بجهات أخرى؛ يمكنك تعديل أدواره في هذه الجهة فقط.') }}</div>
+                        <div>{{ __('هذا المستخدم مرتبط بمنظمات أخرى، ويمكنك تعديل أدواره في هذه المنظمة فقط.') }}</div>
                     </div>
                     <x-admin.card>
                         <div class="d-flex align-items-center gap-3">
@@ -52,14 +52,14 @@
                     </x-admin.card>
                 @endif
 
-                <x-admin.card title="الأدوار" icon="shield-lock" subtitle="تُطبَّق على هذه الجهة فقط؛ أدوار المستخدم في الجهات الأخرى لا تتغير">
+                <x-admin.card title="الأدوار" icon="shield-lock" subtitle="تسري على هذه المنظمة فقط، ولا تتغير أدوار المستخدم في المنظمات الأخرى">
                     <div class="row g-2">
                         @foreach($roles as $role)
                             <div class="col-md-6 col-xxl-4">
                                 <label class="toggle-row" for="role_{{ $role->id }}">
                                     <span class="tr-text">
                                         <span class="tr-label d-block"><span class="ltr">{{ $role->name }}</span></span>
-                                        <span class="tr-desc d-block">{{ __(':count صلاحية', ['count' => $role->permissions->count()]) }}</span>
+                                        <span class="tr-desc d-block">{{ __('الصلاحيات: :count', ['count' => $role->permissions->count()]) }}</span>
                                     </span>
                                     <span class="switch">
                                         <input type="checkbox" role="switch" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}"
@@ -94,8 +94,8 @@
                     </dl>
                     @if(auth()->user()->isSuperAdmin())
                         <div class="mt-3">
-                            <x-admin.toggle name="is_super_admin" id="is_super_admin" :hidden="true" label="مدير المنصة (Super Admin)"
-                                :description="$isSelf ? 'لا يمكنك تغيير هذه الصلاحية لحسابك' : 'صلاحية كاملة على جميع الجهات'"
+                            <x-admin.toggle name="is_super_admin" id="is_super_admin" :hidden="true" label="مدير المنصة"
+                                :description="$isSelf ? 'لا يمكنك تغيير هذه الصلاحية لحسابك' : 'صلاحية كاملة على جميع المنظمات'"
                                 :checked="old('is_super_admin', $user->is_super_admin)" :disabled="$isSelf" />
                         </div>
                     @endif

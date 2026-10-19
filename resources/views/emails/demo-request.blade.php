@@ -157,7 +157,7 @@
     </td></tr>
   </table>
   <!--[if mso]></td></tr></table><![endif]-->
-  <p style="margin:14px 0 0 0;font-family:{!! $font !!};font-size:11px;line-height:16px;color:#8A989E">Sent by the Mawsim website (AWJ Innovation) from the &ldquo;Book a demo&rdquo; form.</p>
+  <p style="margin:14px 0 0 0;font-family:{!! $font !!};font-size:11px;line-height:16px;color:#8A989E">Sent by the Mawsim website (AWJ Systems) from the &ldquo;Book a demo&rdquo; form.</p>
 </td></tr>
 </table>
 </body>

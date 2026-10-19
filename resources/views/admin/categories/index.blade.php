@@ -65,7 +65,7 @@
                     <div class="row-actions">
                         <a href="{{ route('admin.categories.show', $category) }}" class="icon-btn" title="{{ __('عرض') }}" aria-label="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.categories.edit', $category) }}" class="icon-btn brand" title="{{ __('تعديل') }}" aria-label="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                        <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" data-confirm="{{ __('سيتم حذف الفئة «:name» نهائيًا.', ['name' => $category->name_ar]) }}">
+                        <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" data-confirm="{{ __('ستُحذف الفئة «:name» نهائيًا.', ['name' => $category->name_ar]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}" aria-label="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>

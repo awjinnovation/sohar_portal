@@ -2,7 +2,7 @@
 
 @section('title', 'المنظمات')
 @section('page-title', 'إدارة المنظمات')
-@section('page-subtitle', 'كل منظمة لها هويتها وإعداداتها ووحداتها الخاصة')
+@section('page-subtitle', 'لكل منظمة هويتها وإعداداتها ووحداتها')
 @php
     $pageIcon = 'buildings';
     $breadcrumbs = ['المنصة' => null, 'المنظمات' => null];
@@ -26,7 +26,7 @@
 
     @if($tenants->isEmpty())
         <x-admin.card>
-            <x-admin.empty-state icon="buildings" title="لا توجد منظمات" text="أضف أول منظمة لتبدأ بتخصيص هويتها ووحداتها.">
+            <x-admin.empty-state icon="buildings" title="لا توجد منظمات" text="أضف أول منظمة لتبدأ تخصيص هويتها ووحداتها.">
                 <a href="{{ route('admin.tenants.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة منظمة') }}</a>
             </x-admin.empty-state>
         </x-admin.card>
@@ -64,7 +64,7 @@
 
                         <div class="x-card-body flex-grow-1" style="padding-block: 8px">
                             <dl class="dl">
-                                <dt>{{ __('المعرّف') }}</dt><dd><code class="ltr">{{ $t->slug }}</code></dd>
+                                <dt>{{ __('معرّف الرابط') }}</dt><dd><code class="ltr">{{ $t->slug }}</code></dd>
                                 <dt>{{ __('الحالة') }}</dt>
                                 <dd class="d-flex flex-wrap gap-1">
                                     <x-admin.status-pill domain="tenant" :status="$t->status" size="sm" />

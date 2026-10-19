@@ -48,11 +48,11 @@
                 </div>
             </x-admin.card>
 
-            <x-admin.card title="الصلاحيات" icon="ui-checks-grid" subtitle="مجموع صلاحيات أدوار المستخدم في هذه الجهة">
+            <x-admin.card title="الصلاحيات" icon="ui-checks-grid" subtitle="مجموع صلاحيات أدوار المستخدم في هذه المنظمة">
                 @if($groupedPermissions->isNotEmpty())
                     @include('admin.roles._permissions', ['permissions' => $groupedPermissions, 'readonly' => true])
                 @else
-                    <x-admin.empty-state icon="shield-x" title="لا توجد صلاحيات محددة" text="عيّن دورًا للمستخدم لمنحه صلاحيات في لوحة الإدارة." />
+                    <x-admin.empty-state icon="shield-x" title="لا توجد صلاحيات محددة" text="عيّن دورًا للمستخدم لمنحه صلاحيات في لوحة التحكم." />
                 @endif
             </x-admin.card>
         </div>
@@ -78,12 +78,12 @@
                     @if($user->id !== auth()->id())
                         <x-slot:footer>
                             <form action="{{ route('admin.users.destroy', $user) }}" method="POST"
-                                  data-confirm="{{ $isSuperActor ? __('سيتم حذف المستخدم «:name» نهائيًا من المنصة.', ['name' => $user->name]) : __('سيتم إزالة صلاحيات المستخدم «:name» من هذه الجهة.', ['name' => $user->name]) }}">
+                                  data-confirm="{{ $isSuperActor ? __('سيُحذف المستخدم «:name» نهائيًا من المنصة.', ['name' => $user->name]) : __('ستُزال صلاحيات المستخدم «:name» في هذه المنظمة.', ['name' => $user->name]) }}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-outline-danger w-100">
                                     <i class="bi bi-{{ $isSuperActor ? 'trash' : 'person-dash' }}"></i>
-                                    {{ $isSuperActor ? __('حذف المستخدم') : __('إزالة من هذه الجهة') }}
+                                    {{ $isSuperActor ? __('حذف المستخدم') : __('إزالة من هذه المنظمة') }}
                                 </button>
                             </form>
                         </x-slot:footer>

@@ -47,6 +47,23 @@ return [
         'webhook_ips' => array_filter(array_map('trim', explode(',', (string) env('BANK_MUSCAT_WEBHOOK_IPS', '')))),
     ],
 
+    // AI Experience (docs/ai_and_gate_contract.md §A). The key is read only
+    // through config('services.openai.key') and is never logged.
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'base_url' => rtrim((string) (env('OPENAI_BASE_URL') ?: 'https://api.openai.com/v1'), '/'),
+        'organization' => env('OPENAI_ORGANIZATION'),
+        // fast = concierge chat, ops summaries, daily briefing; smart = plan my visit, copilot.
+        'model_fast' => env('OPENAI_MODEL_FAST') ?: 'gpt-6-luna',
+        'model_smart' => env('OPENAI_MODEL_SMART') ?: 'gpt-6.1-sol',
+        // Reasoning effort per tier (none|minimal|low|medium|high; model-dependent).
+        'reasoning_fast' => env('OPENAI_REASONING_FAST', 'low'),
+        'reasoning_smart' => env('OPENAI_REASONING_SMART', 'low'),
+        'timeout' => (int) env('OPENAI_TIMEOUT', 45),
+        'connect_timeout' => (int) env('OPENAI_CONNECT_TIMEOUT', 8),
+        'retries' => (int) env('OPENAI_RETRIES', 2),
+    ],
+
     'ismartsms' => [
         'url' => env('ISMARTSMS_URL', 'https://www.ismartsms.net/iBulkSMS/HttpWS/SMSDynamicAPI.aspx'),
         'user_id' => env('ISMARTSMS_USER_ID'),

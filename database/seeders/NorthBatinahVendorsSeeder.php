@@ -11,6 +11,17 @@ use Illuminate\Database\Seeder;
 
 class NorthBatinahVendorsSeeder extends Seeder
 {
+    /**
+     * Generic Sohar Festival stalls (not real businesses). The food stall is
+     * linked to its listing in the food court (NorthBatinahEventsSeeder).
+     * Also read by `content:sync-arabic`.
+     */
+    public const VENDORS = [
+        ['en' => 'Sohar Karak House', 'ar' => 'بيت كرك صحار', 'category' => 'food', 'restaurant' => 'Sohar Karak House'],
+        ['en' => 'Omani Village Crafts', 'ar' => 'حرفيات القرية العمانية', 'category' => 'merchandise', 'restaurant' => null],
+        ['en' => 'Festival Karting', 'ar' => 'كارتينج المهرجان', 'category' => 'services', 'restaurant' => null],
+    ];
+
     /** Find a vendor of the current tenant by English name, or create it (idempotent seeding). */
     public static function vendor(array $name, string $category, ?int $restaurantId = null): Vendor
     {
@@ -26,13 +37,7 @@ class NorthBatinahVendorsSeeder extends Seeder
 
     public function run(): void
     {
-        // Generic Sohar Festival stalls (not real businesses). The food stall is
-        // linked to its listing in the food court (NorthBatinahEventsSeeder).
-        $vendors = collect([
-            ['en' => 'Sohar Karak House', 'ar' => 'بيت الكرك صحار', 'category' => 'food', 'restaurant' => 'Sohar Karak House'],
-            ['en' => 'Omani Village Crafts', 'ar' => 'حرفيات القرية العمانية', 'category' => 'merchandise', 'restaurant' => null],
-            ['en' => 'Festival Karting', 'ar' => 'كارتينج المهرجان', 'category' => 'services', 'restaurant' => null],
-        ])->map(fn ($v) => self::vendor(
+        $vendors = collect(self::VENDORS)->map(fn ($v) => self::vendor(
             ['en' => $v['en'], 'ar' => $v['ar']],
             $v['category'],
             $v['restaurant'] ? Restaurant::where('name', $v['restaurant'])->value('id') : null,

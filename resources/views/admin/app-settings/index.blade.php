@@ -2,15 +2,15 @@
 
 @section('title', 'إعدادات التطبيق')
 @section('page-title', 'إعدادات التطبيق')
-@section('page-subtitle', 'إدارة إعدادات تطبيق الهاتف المحمول')
+@section('page-subtitle', 'إدارة إعدادات تطبيق الهاتف')
 @php
     $pageIcon = 'sliders';
     $breadcrumbs = ['المنظمة' => null, 'إعدادات التطبيق' => null];
     $typeMeta = [
         'string' => [__('نص'), 'brand'],
-        'integer' => [__('رقم صحيح'), 'success'],
-        'boolean' => [__('منطقي'), 'warning'],
-        'decimal' => [__('عشري'), 'info'],
+        'integer' => [__('عدد صحيح'), 'success'],
+        'boolean' => [__('قيمة منطقية'), 'warning'],
+        'decimal' => [__('عدد عشري'), 'info'],
         'json' => ['JSON', 'neutral'],
     ];
 @endphp
@@ -30,7 +30,7 @@
         <x-admin.stat-tile label="إعدادات الألوان" :value="\App\Models\AppSetting::where('setting_key', 'like', '%color%')->count()" icon="palette" tone="accent" />
     </div>
 
-    <x-admin.data-table title="الإعدادات" icon="sliders" :count="$settings->total()" search="search" search-placeholder="البحث بالمفتاح أو الوصف..." :paginator="$settings">
+    <x-admin.data-table title="الإعدادات" icon="sliders" :count="$settings->total()" search="search" search-placeholder="البحث بالمفتاح أو الوصف" :paginator="$settings">
         <x-slot:filters>
             <select name="type" class="form-select" aria-label="{{ __('النوع') }}">
                 <option value="">{{ __('جميع الأنواع') }}</option>
@@ -84,7 +84,7 @@
                     <div class="row-actions">
                         <a href="{{ route('admin.app-settings.show', $setting) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.app-settings.edit', $setting) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                        <form action="{{ route('admin.app-settings.destroy', $setting) }}" method="POST" data-confirm="{{ __('سيتم حذف الإعداد «:key» نهائيًا وقد يتأثر التطبيق.', ['key' => $setting->setting_key]) }}">
+                        <form action="{{ route('admin.app-settings.destroy', $setting) }}" method="POST" data-confirm="{{ __('سيُحذف الإعداد «:key» نهائيًا، وقد يتأثر التطبيق.', ['key' => $setting->setting_key]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>

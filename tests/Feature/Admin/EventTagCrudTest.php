@@ -108,7 +108,7 @@ class EventTagCrudTest extends TestCase
         ]);
 
         $response->assertRedirect(route('admin.event-tags.index'));
-        $response->assertSessionHas('success', 'تم إضافة الوسم بنجاح');
+        $response->assertSessionHas('success', 'أُضيف الوسم');
 
         $this->assertDatabaseHas('event_tags', [
             'event_id' => $this->event->id,
@@ -180,7 +180,7 @@ class EventTagCrudTest extends TestCase
         ]);
 
         $response->assertRedirect(route('admin.event-tags.index'));
-        $response->assertSessionHas('success', 'تم تحديث الوسم بنجاح');
+        $response->assertSessionHas('success', 'حُدِّث الوسم');
 
         $this->assertDatabaseHas('event_tags', [
             'id' => $tag->id,
@@ -200,7 +200,7 @@ class EventTagCrudTest extends TestCase
         $response = $this->delete(route('admin.event-tags.destroy', $tag));
 
         $response->assertRedirect(route('admin.event-tags.index'));
-        $response->assertSessionHas('success', 'تم حذف الوسم بنجاح');
+        $response->assertSessionHas('success', 'حُذف الوسم');
 
         $this->assertDatabaseMissing('event_tags', [
             'id' => $tag->id,

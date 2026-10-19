@@ -25,7 +25,7 @@
             <th style="width: 56px">#</th>
             <th>{{ __('اسم الدور') }}</th>
             <th>{{ __('عدد الصلاحيات') }}</th>
-            <th>{{ __('المستخدمون في هذه الجهة') }}</th>
+            <th>{{ __('المستخدمون في هذه المنظمة') }}</th>
             <th>{{ __('تاريخ الإنشاء') }}</th>
             <th class="text-end">{{ __('الإجراءات') }}</th>
         </x-slot:head>
@@ -65,7 +65,7 @@
                         @elseif($isSuperActor)
                             <a href="{{ route('admin.roles.edit', $role) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
                             @if($memberCount === 0)
-                                <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" data-confirm="{{ __('سيتم حذف الدور «:name» نهائيًا من جميع الجهات.', ['name' => $role->name]) }}">
+                                <form action="{{ route('admin.roles.destroy', $role) }}" method="POST" data-confirm="{{ __('سيُحذف الدور «:name» نهائيًا من جميع المنظمات.', ['name' => $role->name]) }}">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
@@ -76,7 +76,7 @@
                 </td>
             </tr>
         @empty
-            <x-admin.empty-row :colspan="6" icon="shield-lock" title="لا توجد أدوار" text="أنشئ دورًا وحدد صلاحياته لتعيينه للمستخدمين.">
+            <x-admin.empty-row :colspan="6" icon="shield-lock" title="لا توجد أدوار" text="أنشئ دورًا وحدّد صلاحياته ثم أسنده إلى المستخدمين.">
                 @if($isSuperActor)
                     <a href="{{ route('admin.roles.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة دور') }}</a>
                 @endif
@@ -89,7 +89,7 @@
             <div class="col-md-6 col-xl-3">
                 <div class="d-flex gap-2">
                     <i class="bi bi-lock text-primary"></i>
-                    <div class="small">{!! __('الأدوار :first و :second محمية ولا يمكن تعديلها أو حذفها', ['first' => '<code>super-admin</code>', 'second' => '<code>admin</code>']) !!}</div>
+                    <div class="small">{!! __('الدوران :first و:second محميان، فلا يمكن تعديلهما أو حذفهما', ['first' => '<code>super-admin</code>', 'second' => '<code>admin</code>']) !!}</div>
                 </div>
             </div>
             <div class="col-md-6 col-xl-3">
@@ -101,13 +101,13 @@
             <div class="col-md-6 col-xl-3">
                 <div class="d-flex gap-2">
                     <i class="bi bi-ui-checks-grid text-primary"></i>
-                    <div class="small">{{ __('كل دور يمكن أن يحتوي على صلاحيات متعددة') }}</div>
+                    <div class="small">{{ __('يضم الدور الواحد صلاحيات متعددة') }}</div>
                 </div>
             </div>
             <div class="col-md-6 col-xl-3">
                 <div class="d-flex gap-2">
                     <i class="bi bi-person-badge text-primary"></i>
-                    <div class="small">{{ __('المستخدم يمكن أن يمتلك أكثر من دور واحد') }}</div>
+                    <div class="small">{{ __('يمكن أن يحمل المستخدم أكثر من دور') }}</div>
                 </div>
             </div>
         </div>

@@ -41,14 +41,14 @@ class AdminAuthController extends Controller
         if (! $allowed) {
             Auth::logout();
 
-            return back()->withErrors(['email' => __('ليست لديك صلاحية الدخول إلى لوحة الإدارة.')])->onlyInput('email');
+            return back()->withErrors(['email' => __('ليست لديك صلاحية الدخول إلى لوحة التحكم.')])->onlyInput('email');
         }
 
         $chosen = ! empty($credentials['tenant']) ? Tenant::where('slug', $credentials['tenant'])->value('id') : null;
         if ($chosen && ! in_array($chosen, $allowed, true)) {
             Auth::logout();
 
-            return back()->withErrors(['email' => __('ليست لديك صلاحية الوصول إلى هذه الجهة.')])->onlyInput('email');
+            return back()->withErrors(['email' => __('ليست لديك صلاحية الوصول إلى هذه المنظمة.')])->onlyInput('email');
         }
 
         $request->session()->regenerate();

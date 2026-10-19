@@ -18,7 +18,7 @@
         <div class="col-xl-8">
             <x-admin.card title="لا توجد محفظة بعد" icon="wallet2">
                 <x-admin.empty-state icon="wallet2" title="لا توجد محفظة لهذا المستخدم بعد"
-                    text="تُنشأ المحفظة تلقائيًا عند أول شحن أو عملية دفع من التطبيق. يمكنك إنشاؤها الآن يدويًا لإضافة رصيد أو تعديل.">
+                    text="تُنشأ المحفظة تلقائيًا عند أول شحن أو دفع من التطبيق، ويمكنك إنشاؤها الآن يدويًا لإضافة رصيد أو تعديله.">
                     @can('manage wallets')
                         <form method="POST" action="{{ route('admin.wallets.create', $user) }}" class="mt-3"
                               data-confirm="{{ __('إنشاء محفظة فارغة لهذا المستخدم في هذه المنظمة؟') }}" data-confirm-tone="primary" data-confirm-ok="{{ __('إنشاء المحفظة') }}">

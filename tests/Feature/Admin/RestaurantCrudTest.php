@@ -91,7 +91,7 @@ class RestaurantCrudTest extends TestCase
         $response = $this->post(route('admin.restaurants.store'), $restaurantData);
 
         $response->assertRedirect(route('admin.restaurants.index'));
-        $response->assertSessionHas('success', 'تم إضافة المطعم بنجاح');
+        $response->assertSessionHas('success', 'أُضيف المطعم');
 
         $this->assertDatabaseHas('restaurants', [
             'name' => 'Test Restaurant',
@@ -230,7 +230,7 @@ class RestaurantCrudTest extends TestCase
         $response = $this->put(route('admin.restaurants.update', $restaurant), $updatedData);
 
         $response->assertRedirect(route('admin.restaurants.index'));
-        $response->assertSessionHas('success', 'تم تحديث المطعم بنجاح');
+        $response->assertSessionHas('success', 'حُدِّث المطعم');
 
         $this->assertDatabaseHas('restaurants', [
             'id' => $restaurant->id,
@@ -261,7 +261,7 @@ class RestaurantCrudTest extends TestCase
         $response = $this->delete(route('admin.restaurants.destroy', $restaurant));
 
         $response->assertRedirect(route('admin.restaurants.index'));
-        $response->assertSessionHas('success', 'تم حذف المطعم بنجاح');
+        $response->assertSessionHas('success', 'حُذف المطعم');
 
         $this->assertDatabaseMissing('restaurants', [
             'id' => $restaurant->id,

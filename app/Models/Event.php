@@ -51,6 +51,12 @@ class Event extends Model implements HasMedia
         return $this->hasMany(Ticket::class);
     }
 
+    /** Places to visit where this event is held (docs/places_content_contract.md §2). */
+    public function places()
+    {
+        return $this->belongsToMany(Place::class, 'event_place');
+    }
+
     /**
      * Server-side unit price in minor units for a ticket type. A matching
      * entry in the `pricing` JSON ([{type, price}]) wins over the base price.

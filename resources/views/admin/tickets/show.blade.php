@@ -69,7 +69,7 @@
                         <dt>{{ __('رقم المقعد') }}</dt>
                         <dd class="num">{{ $ticket->seat_number }}</dd>
                     @endif
-                    <dt>{{ __('رقم العملية') }}</dt>
+                    <dt>{{ __('رقم المعاملة') }}</dt>
                     <dd>
                         @if($ticket->payment && Route::has('admin.payments.show'))
                             <a href="{{ route('admin.payments.show', $ticket->payment) }}" class="num" dir="ltr">{{ $ticket->transaction_id }}</a>
@@ -92,16 +92,16 @@
             <x-admin.card title="تغيير الحالة" icon="arrow-repeat">
                 @if($ticket->status !== 'used')
                     <form method="POST" action="{{ route('admin.tickets.update', $ticket) }}"
-                        @if($ticket->status === 'active') data-confirm="{{ __('سيتم إلغاء التذكرة :number ولن تكون صالحة للدخول.', ['number' => $ticket->ticket_number]) }}" data-confirm-ok="{{ __('إلغاء التذكرة') }}" @endif>
+                        @if($ticket->status === 'active') data-confirm="{{ __('ستُلغى التذكرة :number ولن تصلح للدخول.', ['number' => $ticket->ticket_number]) }}" data-confirm-ok="{{ __('إلغاء التذكرة') }}" @endif>
                         @csrf
                         @method('PUT')
                         @if($ticket->status === 'active')
                             <input type="hidden" name="status" value="cancelled">
-                            <p class="text-muted small">{{ __('التذكرة صالحة حاليًا. إلغاؤها يمنع استخدامها عند البوابة.') }}</p>
+                            <p class="text-muted small">{{ __('التذكرة صالحة حاليًا، وإلغاؤها يمنع استعمالها عند البوابة.') }}</p>
                             <button type="submit" class="btn btn-outline-danger w-100" data-busy><i class="bi bi-x-circle"></i> {{ __('إلغاء التذكرة') }}</button>
                         @else
                             <input type="hidden" name="status" value="active">
-                            <p class="text-muted small">{{ __('إعادة التفعيل تجعل التذكرة صالحة للدخول مرة أخرى.') }}</p>
+                            <p class="text-muted small">{{ __('بعد إعادة التفعيل تصلح التذكرة للدخول مرة أخرى.') }}</p>
                             <button type="submit" class="btn btn-primary w-100" data-busy><i class="bi bi-arrow-counterclockwise"></i> {{ __('إعادة تفعيل التذكرة') }}</button>
                         @endif
                     </form>

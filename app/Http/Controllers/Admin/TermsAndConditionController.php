@@ -43,7 +43,7 @@ class TermsAndConditionController extends Controller
         TermsAndCondition::create($validated);
 
         return redirect()->route('admin.terms-and-conditions.index')
-            ->with('success', 'تم إضافة الشروط والأحكام بنجاح');
+            ->with('success', 'أُضيفت الشروط والأحكام');
     }
 
     /**
@@ -80,7 +80,7 @@ class TermsAndConditionController extends Controller
         $termsAndCondition->update($validated);
 
         return redirect()->route('admin.terms-and-conditions.index')
-            ->with('success', 'تم تحديث الشروط والأحكام بنجاح');
+            ->with('success', 'حُدِّثت الشروط والأحكام');
     }
 
     /**
@@ -91,6 +91,6 @@ class TermsAndConditionController extends Controller
         $termsAndCondition->delete();
 
         return redirect()->route('admin.terms-and-conditions.index')
-            ->with('success', 'تم حذف الشروط والأحكام بنجاح');
+            ->with('success', 'حُذفت الشروط والأحكام');
     }
 }

@@ -47,7 +47,7 @@
                     <div class="row-actions">
                         <a href="{{ route('admin.announcements.show', $announcement) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.announcements.edit', $announcement) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                        <form action="{{ route('admin.announcements.destroy', $announcement) }}" method="POST" data-confirm="{{ __('سيتم حذف الإعلان «:name» نهائيًا.', ['name' => $announcement->title_ar]) }}">
+                        <form action="{{ route('admin.announcements.destroy', $announcement) }}" method="POST" data-confirm="{{ __('سيُحذف الإعلان «:name» نهائيًا.', ['name' => $announcement->title_ar]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>

@@ -53,7 +53,7 @@ class AppSettingController extends Controller
         AppSetting::clearCache();
 
         return redirect()->route('admin.app-settings.index')
-            ->with('success', 'تم إضافة الإعداد بنجاح');
+            ->with('success', 'أُضيف الإعداد');
     }
 
     public function show(AppSetting $appSetting)
@@ -82,7 +82,7 @@ class AppSettingController extends Controller
         AppSetting::clearCache();
 
         return redirect()->route('admin.app-settings.index')
-            ->with('success', 'تم تحديث الإعداد بنجاح');
+            ->with('success', 'حُدِّث الإعداد');
     }
 
     public function destroy(AppSetting $appSetting)
@@ -93,6 +93,6 @@ class AppSettingController extends Controller
         AppSetting::clearCache();
 
         return redirect()->route('admin.app-settings.index')
-            ->with('success', 'تم حذف الإعداد بنجاح');
+            ->with('success', 'حُذف الإعداد');
     }
 }

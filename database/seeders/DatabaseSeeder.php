@@ -28,11 +28,13 @@ class DatabaseSeeder extends Seeder
                 TermsAndConditionSeeder::class,
                 PrivacyPolicySeeder::class,
                 NorthBatinahVendorsSeeder::class,
+                GateSeeder::class,
+                PlacesContentSeeder::class,
             ]);
         });
 
         $context->run(Tenant::where('slug', 'demo')->firstOrFail(), function () {
-            $this->call(DemoTenantSeeder::class);
+            $this->call([DemoTenantSeeder::class, GateSeeder::class, PlacesContentSeeder::class]);
         });
     }
 }

@@ -55,6 +55,6 @@ class TicketController extends Controller
         $ticket->update(['status' => $data['status']]);
         AuditLog::record('ticket.status', $ticket, ['from' => $old, 'to' => $data['status']]);
 
-        return redirect()->route('admin.tickets.show', $ticket)->with('success', 'تم تحديث حالة التذكرة');
+        return redirect()->route('admin.tickets.show', $ticket)->with('success', 'حُدِّثت حالة التذكرة');
     }
 }

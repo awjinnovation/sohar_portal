@@ -51,6 +51,6 @@ class DemoRequestController extends Controller
 
         $demoRequest->update(['status' => $data['status']]);
 
-        return redirect()->route('admin.demo-requests.show', $demoRequest)->with('success', __('تم تحديث حالة الطلب'));
+        return redirect()->route('admin.demo-requests.show', $demoRequest)->with('success', __('حُدِّثت حالة الطلب'));
     }
 }

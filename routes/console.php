@@ -54,3 +54,17 @@ Artisan::command('payments:expire-pending {--minutes=120}', function (PaymentFul
 Schedule::command('points:expire')->dailyAt('02:00')->withoutOverlapping();
 Schedule::command('wallet:expire-promo')->dailyAt('02:15')->withoutOverlapping();
 Schedule::command('payments:expire-pending')->hourly()->withoutOverlapping();
+
+// AI Experience: concierge conversations expire 30 days after the last
+// message, shared plans after ai.plan_ttl_days (docs/ai_and_gate_contract.md §A3).
+Artisan::command('ai:prune', function () {
+    $conversations = \App\Models\AiConversation::withoutTenantScope()
+        ->where('updated_at', '<', now()->subDays((int) config('ai.conversation_ttl_days', 30)))
+        ->delete();
+    $plans = \App\Models\AiPlan::withoutTenantScope()
+        ->where('created_at', '<', now()->subDays((int) config('ai.plan_ttl_days', 90)))
+        ->delete();
+    $this->info("Pruned {$conversations} AI conversations and {$plans} plans.");
+})->purpose('Delete expired AI concierge conversations and old visit plans');
+
+Schedule::command('ai:prune')->dailyAt('03:10')->withoutOverlapping();

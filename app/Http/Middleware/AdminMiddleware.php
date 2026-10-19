@@ -77,6 +77,6 @@ class AdminMiddleware
             $request->session()->put(SetAdminLocale::SESSION_KEY, $locale);
         }
 
-        return redirect('/admin/login')->withErrors(['email' => __('ليست لديك صلاحية الدخول إلى لوحة الإدارة.')]);
+        return redirect('/admin/login')->withErrors(['email' => __('ليست لديك صلاحية الدخول إلى لوحة التحكم.')]);
     }
 }

@@ -19,9 +19,9 @@
         <div class="col-xl-8">
             <x-admin.card title="بيانات الوسم" icon="tag">
                 <dl class="dl">
-                    <dt>{{ __('المعرف') }}</dt>
+                    <dt>{{ __('المعرّف') }}</dt>
                     <dd class="num">{{ $eventTag->id }}</dd>
-                    <dt>{{ __('الوسم (العربية)') }}</dt>
+                    <dt>{{ __('الوسم بالعربية') }}</dt>
                     <dd><span class="pill pill-neutral"><i class="bi bi-tag"></i>{{ $eventTag->tag_ar }}</span></dd>
                     <dt>Tag (English)</dt>
                     <dd><span dir="ltr">{{ $eventTag->tag }}</span></dd>
@@ -46,7 +46,7 @@
                     @if($eventTag->event)
                         <a href="{{ route('admin.event-tags.index', ['event_id' => $eventTag->event_id]) }}" class="btn btn-tonal"><i class="bi bi-tags"></i> {{ __('وسوم هذه الفعالية') }}</a>
                     @endif
-                    <form action="{{ route('admin.event-tags.destroy', $eventTag) }}" method="POST" data-confirm="{{ __('سيتم حذف الوسم «:name» نهائيًا.', ['name' => $eventTag->tag_ar]) }}">
+                    <form action="{{ route('admin.event-tags.destroy', $eventTag) }}" method="POST" data-confirm="{{ __('سيُحذف الوسم «:name» نهائيًا.', ['name' => $eventTag->tag_ar]) }}">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-trash"></i> {{ __('حذف الوسم') }}</button>

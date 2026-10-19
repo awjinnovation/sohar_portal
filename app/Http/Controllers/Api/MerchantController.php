@@ -134,7 +134,11 @@ class MerchantController extends Controller
 
         $query = WalletTransaction::query()
             ->whereIn('type', ['vendor_payment', 'deposit_hold', 'deposit_release', 'deposit_forfeit', 'refund'])
-            ->whereDate('created_at', $date)
+            // created_at is UTC; $date is a tenant-local day.
+            ->whereBetween('created_at', [
+                \Carbon\Carbon::parse($date, \App\Support\TenantTime::zone($tenant))->startOfDay()->setTimezone(config('app.timezone')),
+                \Carbon\Carbon::parse($date, \App\Support\TenantTime::zone($tenant))->endOfDay()->setTimezone(config('app.timezone')),
+            ])
             ->when($vendor, fn ($q) => $q->where('vendor_id', $vendor->id), fn ($q) => $q->where('created_by', $request->user()->id))
             ->orderByDesc('id');
 

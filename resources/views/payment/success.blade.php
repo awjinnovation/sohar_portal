@@ -11,20 +11,20 @@
     $qty = $tickets->isNotEmpty() ? $tickets->count() : (int) ($payment->metadata['quantity'] ?? 1);
     $pointsLabel = $brand ? (string) ($brand->setting('points.label.'.$lang) ?: $t('نقاط', 'Points')) : $t('نقاط', 'Points');
 @endphp
-@section('title', $t('تم الدفع بنجاح', 'Payment successful'))
+@section('title', $t('اكتمل الدفع', 'Payment successful'))
 @section('band-sub', $t('إيصال الدفع', 'Payment receipt'))
 
 @section('content')
     <section class="s-card">
         <div class="result">
             <div class="result-ico ok"><i class="bi bi-check-lg"></i></div>
-            <h1>{{ $t('تم الدفع بنجاح', 'Payment successful') }}</h1>
-            <p>{{ $isTicket ? $t('تم تأكيد حجزك. ستجد تذاكرك في التطبيق ويمكنك تنزيلها من هنا.', 'Your booking is confirmed. Your tickets are in the app and can be downloaded here.') : $t('تمت إضافة المبلغ إلى رصيد محفظتك.', 'The amount has been added to your wallet balance.') }}</p>
+            <h1>{{ $t('اكتمل الدفع', 'Payment successful') }}</h1>
+            <p>{{ $isTicket ? $t('تأكّد حجزك. ستجد تذاكرك في التطبيق، ويمكنك تنزيلها من هنا.', 'Your booking is confirmed. Your tickets are in the app and can be downloaded here.') : $t('أُضيف المبلغ إلى رصيد محفظتك.', 'The amount has been added to your wallet balance.') }}</p>
             <x-admin.money :minor="(int) $payment->amount_minor" :currency="$payment->currency" size="lg" />
         </div>
 
         <dl class="rows">
-            <div><dt>{{ $t('رقم العملية', 'Transaction ID') }}</dt><dd class="mono ltr">{{ $transactionId }}</dd></div>
+            <div><dt>{{ $t('رقم المعاملة', 'Transaction ID') }}</dt><dd class="mono ltr">{{ $transactionId }}</dd></div>
             <div><dt>{{ $t('النوع', 'Type') }}</dt><dd>{{ $isTicket ? $t('شراء تذاكر', 'Ticket purchase') : $t('شحن المحفظة', 'Wallet top-up') }}</dd></div>
             @if($isTicket)
                 <div><dt>{{ $t('عدد التذاكر', 'Tickets') }}</dt><dd class="num">{{ $qty }}</dd></div>

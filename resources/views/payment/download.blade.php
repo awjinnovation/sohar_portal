@@ -12,7 +12,7 @@
     <section class="s-card">
         <h2><i class="bi bi-receipt"></i> {{ $t('ملخص الطلب', 'Order summary') }}</h2>
         <dl class="rows">
-            <div><dt>{{ $t('رقم العملية', 'Transaction ID') }}</dt><dd class="mono ltr">{{ $payment->transaction_id }}</dd></div>
+            <div><dt>{{ $t('رقم المعاملة', 'Transaction ID') }}</dt><dd class="mono ltr">{{ $payment->transaction_id }}</dd></div>
             <div><dt>{{ $t('المبلغ المدفوع', 'Amount paid') }}</dt><dd><x-admin.money :minor="(int) $payment->amount_minor" :currency="$payment->currency" /></dd></div>
             <div><dt>{{ $t('عدد التذاكر', 'Tickets') }}</dt><dd class="num">{{ $tickets->count() }}</dd></div>
             @if($payment->user?->name)

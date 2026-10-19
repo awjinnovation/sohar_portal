@@ -17,7 +17,7 @@
         @csrf
         <div class="row g-4">
             <div class="col-xl-8">
-                <x-admin.card title="بيانات الوسم" icon="tag" subtitle="يظهر الاسم العربي أو الإنجليزي حسب لغة المستخدم">
+                <x-admin.card title="بيانات الوسم" icon="tag" subtitle="يظهر الاسم العربي أو الإنجليزي بحسب لغة الزائر">
                     @include('admin.event-tags._form')
                     <x-slot:footer>
                         <div class="d-flex gap-2 justify-content-end">
@@ -29,7 +29,7 @@
             </div>
             <div class="col-xl-4">
                 <x-admin.card title="عن الوسوم" icon="lightbulb">
-                    <p class="text-muted small mb-2">{{ __('الوسوم كلمات قصيرة تصف الفعالية (مثل: عائلي، مجاني، في الهواء الطلق) وتساعد الزوار على تصفية الفعاليات.') }}</p>
+                    <p class="text-muted small mb-2">{{ __('الوسوم كلمات قصيرة تصف الفعالية، مثل عائلي ومجاني وفي الهواء الطلق، وتساعد الزوار على تصفية الفعاليات.') }}</p>
                     <p class="text-muted small mb-0">{{ __('يجب أن يكون اسم الوسم الإنجليزي فريدًا لكل فعالية.') }}</p>
                 </x-admin.card>
             </div>

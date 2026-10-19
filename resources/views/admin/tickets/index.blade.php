@@ -13,7 +13,7 @@
     @include('admin.partials.alerts')
 
     <x-admin.data-table title="جميع التذاكر" icon="ticket-perforated" :count="$tickets->total()" search="q"
-        search-placeholder="رقم التذكرة / الاسم / رقم العملية" :paginator="$tickets">
+        search-placeholder="رقم التذكرة أو الاسم أو رقم المعاملة" :paginator="$tickets">
         <x-slot:filters>
             <select name="event_id" class="form-select" aria-label="{{ __('الفعالية') }}">
                 <option value="">{{ __('كل الفعاليات') }}</option>

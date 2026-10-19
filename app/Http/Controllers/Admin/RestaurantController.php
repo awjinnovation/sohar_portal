@@ -44,7 +44,7 @@ class RestaurantController extends Controller
         Restaurant::create($validated);
 
         return redirect()->route("admin.restaurants.index")
-            ->with("success", "تم إضافة المطعم بنجاح");
+            ->with("success", "أُضيف المطعم");
     }
 
     public function show(Restaurant $restaurant)
@@ -84,13 +84,13 @@ class RestaurantController extends Controller
         $restaurant->update($validated);
 
         return redirect()->route("admin.restaurants.index")
-            ->with("success", "تم تحديث المطعم بنجاح");
+            ->with("success", "حُدِّث المطعم");
     }
 
     public function destroy(Restaurant $restaurant)
     {
         $restaurant->delete();
         return redirect()->route("admin.restaurants.index")
-            ->with("success", "تم حذف المطعم بنجاح");
+            ->with("success", "حُذف المطعم");
     }
 }

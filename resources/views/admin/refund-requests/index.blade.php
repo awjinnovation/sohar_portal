@@ -2,7 +2,7 @@
 
 @section('title', 'طلبات الاسترداد')
 @section('page-title', 'طلبات الاسترداد')
-@section('page-subtitle', 'مراجعة طلبات استرداد الرصيد النقدي والموافقة عليها أو رفضها')
+@section('page-subtitle', 'مراجعة طلبات استرداد الرصيد النقدي وقبولها أو رفضها')
 @use('App\Support\AdminLabels')
 @php
     $pageIcon = 'arrow-counterclockwise';
@@ -24,16 +24,16 @@
 
     <div class="stat-grid">
         <x-admin.stat-tile label="بانتظار المراجعة" :money="$sum('pending')" icon="hourglass-split" :tone="$cnt('pending') ? 'warning' : 'neutral'"
-            :hint="__(':count طلب', ['count' => $cnt('pending')])" :href="route('admin.refund-requests.index', ['status' => 'pending'])" />
+            :hint="__('الطلبات: :count', ['count' => $cnt('pending')])" :href="route('admin.refund-requests.index', ['status' => 'pending'])" />
         <x-admin.stat-tile label="موافق عليها (بانتظار التحويل)" :money="$sum('approved')" icon="check2-circle" tone="info"
-            :hint="__(':count طلب', ['count' => $cnt('approved')])" :href="route('admin.refund-requests.index', ['status' => 'approved'])" />
+            :hint="__('الطلبات: :count', ['count' => $cnt('approved')])" :href="route('admin.refund-requests.index', ['status' => 'approved'])" />
         <x-admin.stat-tile label="مدفوعة" :money="$sum('paid')" icon="cash-coin" tone="success"
-            :hint="__(':count طلب', ['count' => $cnt('paid')])" :href="route('admin.refund-requests.index', ['status' => 'paid'])" />
+            :hint="__('الطلبات: :count', ['count' => $cnt('paid')])" :href="route('admin.refund-requests.index', ['status' => 'paid'])" />
     </div>
 
     <x-admin.data-table :title="$tabs[$status] ?? 'الطلبات'" icon="inbox" :count="$requests->total()" :paginator="$requests">
         <x-slot:actions>
-            <nav class="seg-scroll" aria-label="{{ __('تصفية حسب الحالة') }}"><div class="segmented">
+            <nav class="seg-scroll" aria-label="{{ __('التصفية بحسب الحالة') }}"><div class="segmented">
                 @foreach($tabs as $key => $label)
                     <a href="{{ route('admin.refund-requests.index', ['status' => $key]) }}" class="{{ $status === $key ? 'active' : '' }}" @if($status === $key) aria-current="page" @endif>
                         {{ __($label) }}@if($key !== 'all' && $cnt($key))<span class="cnt">{{ $cnt($key) }}</span>@endif
@@ -87,9 +87,9 @@
                         @endif
                         @if($rr->status === 'approved')
                             <form action="{{ route('admin.refund-requests.paid', $rr) }}" method="POST"
-                                  data-confirm="{{ __('تأكيد أنه تم تحويل المبلغ للمستخدم :name؟', ['name' => $rr->user?->name]) }}" data-confirm-ok="{{ __('تسجيل كمدفوع') }}" data-confirm-tone="primary">
+                                  data-confirm="{{ __('تأكيد تحويل المبلغ إلى :name؟', ['name' => $rr->user?->name]) }}" data-confirm-ok="{{ __('تسجيله مدفوعًا') }}" data-confirm-tone="primary">
                                 @csrf
-                                <button type="submit" class="icon-btn brand" title="{{ __('تسجيل كمدفوع') }}"><i class="bi bi-cash-coin"></i></button>
+                                <button type="submit" class="icon-btn brand" title="{{ __('تسجيله مدفوعًا') }}"><i class="bi bi-cash-coin"></i></button>
                             </form>
                         @endif
                         @if(in_array($rr->status, ['pending', 'approved'], true))

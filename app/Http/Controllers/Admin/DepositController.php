@@ -62,6 +62,6 @@ class DepositController extends Controller
 
         AuditLog::record($forfeit ? 'deposit.forfeit' : 'deposit.release', $deposit, ['amount_minor' => $deposit->amount_minor]);
 
-        return back()->with('success', $forfeit ? 'تمت مصادرة التأمين' : 'تم إرجاع التأمين إلى رصيد المستخدم');
+        return back()->with('success', $forfeit ? 'صودر التأمين' : 'أُرجع التأمين إلى رصيد المستخدم');
     }
 }

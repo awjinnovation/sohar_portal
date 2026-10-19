@@ -11,7 +11,7 @@ class AdminLabels
     public const TX_TYPES = [
         'topup' => 'شحن رصيد',
         'ticket_purchase' => 'شراء تذاكر',
-        'vendor_payment' => 'دفع لتاجر',
+        'vendor_payment' => 'دفع إلى تاجر',
         'deposit_hold' => 'حجز تأمين',
         'deposit_release' => 'إرجاع تأمين',
         'deposit_forfeit' => 'مصادرة تأمين',
@@ -58,8 +58,8 @@ class AdminLabels
 
     public const DEPOSIT_STATUSES = [
         'held' => ['محجوز', 'warning'],
-        'released' => ['مُرجع', 'success'],
-        'forfeited' => ['مُصادر', 'danger'],
+        'released' => ['مُرجَع', 'success'],
+        'forfeited' => ['مُصادَر', 'danger'],
     ];
 
     public const DEPOSIT_TYPES = [
@@ -75,7 +75,7 @@ class AdminLabels
         'processing' => ['قيد المعالجة', 'info'],
         'completed' => ['مكتمل', 'success'],
         'failed' => ['فشل', 'danger'],
-        'cancelled' => ['ملغي', 'secondary'],
+        'cancelled' => ['ملغى', 'secondary'],
         'refunded' => ['مسترد', 'dark'],
     ];
 

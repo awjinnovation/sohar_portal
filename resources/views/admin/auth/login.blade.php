@@ -96,7 +96,7 @@
         </div>
 
         <div class="auth-inner">
-            <h1>{{ __('مرحباً بعودتك') }}</h1>
+            <h1>{{ __('مرحبًا بعودتك') }}</h1>
             <p class="lead-text">{{ __('سجّل الدخول إلى لوحة إدارة منظمتك لإدارة الفعاليات والتذاكر والمحافظ.') }}</p>
 
             @if($errors->any())
@@ -111,11 +111,11 @@
 
                 @if($tenantList->count() > 0)
                     <div class="field">
-                        <label for="tenant" class="form-label">{{ __('الجهة المنظمة') }} <span class="text-muted fw-normal">({{ __('اختياري') }})</span></label>
+                        <label for="tenant" class="form-label">{{ __('المنظمة') }} <span class="text-muted fw-normal">({{ __('اختياري') }})</span></label>
                         <div class="input-icon">
                             <i class="bi bi-buildings"></i>
                             <select class="form-select @error('tenant') is-invalid @enderror" id="tenant" name="tenant">
-                                <option value="">— {{ __('الجهة الافتراضية') }} —</option>
+                                <option value="">{{ __('المنظمة الافتراضية') }}</option>
                                 @foreach($tenantList as $tenantOption)
                                     <option value="{{ $tenantOption->slug }}" @selected($selectedSlug === $tenantOption->slug)>{{ $tenantOption->localizedName($loginLocale) }}</option>
                                 @endforeach
@@ -175,8 +175,8 @@
             <p class="tag" id="brandTag">{{ ($initial['tagline'] ?? '') ?: __('منصة إدارة الفعاليات المتكاملة') }}</p>
         </div>
         <div class="brand-cards">
-            <div><i class="bi bi-calendar-event"></i><b>{{ __('الفعاليات والتذاكر') }}</b><span>{{ __('جدولة، بيع، وتحقق عند البوابة') }}</span></div>
-            <div><i class="bi bi-wallet2"></i><b>{{ __('المحفظة والمدفوعات') }}</b><span>{{ __('شحن، استرداد، وتأمينات') }}</span></div>
+            <div><i class="bi bi-calendar-event"></i><b>{{ __('الفعاليات والتذاكر') }}</b><span>{{ __('الجدولة والبيع والتحقق عند البوابة') }}</span></div>
+            <div><i class="bi bi-wallet2"></i><b>{{ __('المحفظة والمدفوعات') }}</b><span>{{ __('الشحن والاسترداد والتأمينات') }}</span></div>
             <div><i class="bi bi-palette"></i><b>{{ __('هوية منظمتك') }}</b><span>{{ __('ألوانك وشعارك في كل شاشة') }}</span></div>
         </div>
     </section>

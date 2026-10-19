@@ -103,7 +103,7 @@ class PointsController extends Controller
         }
 
         return redirect()->route('admin.points.show', $account)
-            ->with('success', __('تم تعديل النقاط: :points', ['points' => ($signed > 0 ? '+' : '−').number_format(abs($signed))]));
+            ->with('success', __('عُدِّلت النقاط: :points', ['points' => ($signed > 0 ? '+' : '−').number_format(abs($signed))]));
     }
 
     /** [min lifetime, next tier min | null] of a tier code. */

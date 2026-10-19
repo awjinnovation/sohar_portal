@@ -51,7 +51,7 @@
                     <div class="row-actions">
                         <a href="{{ route('admin.event-tags.show', $tag) }}" class="icon-btn" title="{{ __('عرض') }}" aria-label="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.event-tags.edit', $tag) }}" class="icon-btn brand" title="{{ __('تعديل') }}" aria-label="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                        <form action="{{ route('admin.event-tags.destroy', $tag) }}" method="POST" data-confirm="{{ __('سيتم حذف الوسم «:name» نهائيًا.', ['name' => $tag->tag_ar]) }}">
+                        <form action="{{ route('admin.event-tags.destroy', $tag) }}" method="POST" data-confirm="{{ __('سيُحذف الوسم «:name» نهائيًا.', ['name' => $tag->tag_ar]) }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}" aria-label="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>

@@ -5,7 +5,7 @@
         <x-slot:head><th>…</th></x-slot:head>
         …<tr> rows (use @forelse … @empty <x-admin.empty-row :colspan="5" /> )…
      </x-admin.data-table> --}}
-@props(['title' => null, 'icon' => null, 'count' => null, 'search' => null, 'searchPlaceholder' => 'بحث…', 'paginator' => null, 'preserve' => []])
+@props(['title' => null, 'icon' => null, 'count' => null, 'search' => null, 'searchPlaceholder' => 'بحث', 'paginator' => null, 'preserve' => []])
 @php
     $hasToolbar = $title || $search || isset($filters) || isset($actions);
     $keep = collect(request()->query())->except(array_values(array_filter([$search, 'page'])))->all();

@@ -23,7 +23,7 @@
         @method('PUT')
         <div class="row g-4">
             <div class="col-xl-8">
-                <x-admin.card title="معلومات الفئة" icon="translate" subtitle="يظهر النص العربي أو الإنجليزي حسب لغة المستخدم">
+                <x-admin.card title="معلومات الفئة" icon="translate" subtitle="يظهر النص العربي أو الإنجليزي بحسب لغة الزائر">
                     <ul class="nav nav-tabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="arabic-tab" data-bs-toggle="tab" data-bs-target="#arabic-content" type="button" role="tab">{{ __('العربية') }}</button>
@@ -66,7 +66,7 @@
 
                 <x-admin.card title="النشر" icon="broadcast">
                     <x-admin.form-field name="display_order" label="الترتيب" type="number" min="0" dir="ltr" :value="old('display_order', $model ? $model->display_order : 0)"
-                        help="الأرقام الأصغر تظهر أولاً" />
+                        help="يظهر الرقم الأصغر أولًا" />
                     <x-admin.toggle name="is_active" id="is_active" label="نشط" description="تظهر الفئة في التطبيق" :checked="old('is_active', $model ? $model->is_active : true)" />
                     <x-slot:footer>
                         <div class="d-flex gap-2">

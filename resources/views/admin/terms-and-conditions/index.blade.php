@@ -40,7 +40,7 @@
                     <div class="row-actions">
                         <a href="{{ route('admin.terms-and-conditions.show', $term) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
                         <a href="{{ route('admin.terms-and-conditions.edit', $term) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
-                        <form action="{{ route('admin.terms-and-conditions.destroy', $term) }}" method="POST" data-confirm="{{ __('سيتم حذف هذه الشروط نهائيًا.') }}">
+                        <form action="{{ route('admin.terms-and-conditions.destroy', $term) }}" method="POST" data-confirm="{{ __('ستُحذف هذه الشروط نهائيًا.') }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
@@ -49,7 +49,7 @@
                 </td>
             </tr>
         @empty
-            <x-admin.empty-row :colspan="6" icon="file-earmark-text" title="لا توجد شروط وأحكام" text="أضف الشروط والأحكام لتظهر للمستخدمين في التطبيق.">
+            <x-admin.empty-row :colspan="6" icon="file-earmark-text" title="لا توجد شروط وأحكام" text="أضف الشروط والأحكام لتظهر للزوار في التطبيق.">
                 <a href="{{ route('admin.terms-and-conditions.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة شروط') }}</a>
             </x-admin.empty-row>
         @endforelse

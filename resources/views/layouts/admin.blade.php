@@ -32,6 +32,12 @@
             ['admin.categories.index', 'admin.categories.*', 'grid', 'الفئات', 'manage events'],
             ['admin.event-tags.index', 'admin.event-tags.*', 'tags', 'الوسوم', 'manage events'],
         ]],
+        ['title' => 'البوابات', 'items' => [
+            ['admin.gates.dashboard', 'admin.gates.dashboard', 'broadcast', 'لوحة البوابات المباشرة', 'manage gates'],
+            ['admin.gates.index', ['admin.gates.index', 'admin.gates.create', 'admin.gates.edit'], 'door-open', 'البوابات', 'manage gates'],
+            ['admin.gates.devices.index', 'admin.gates.devices.*', 'upc-scan', 'أجهزة المسح', 'manage gates'],
+            ['admin.gates.scans.index', 'admin.gates.scans.*', 'list-check', 'سجل المسح', 'manage gates'],
+        ]],
         ['title' => 'المحفظة والمدفوعات', 'items' => [
             ['admin.wallets.index', 'admin.wallets.*', 'wallet2', 'المحافظ', 'manage wallets'],
             ['admin.payments.index', 'admin.payments.*', 'credit-card-2-front', 'المدفوعات', 'view payments'],
@@ -41,6 +47,11 @@
             ['admin.points.index', 'admin.points.*', 'stars', 'النقاط', 'manage wallets'],
         ]],
         ['title' => 'المحتوى', 'items' => [
+            ['admin.places.index', ['admin.places.index', 'admin.places.create', 'admin.places.edit'], 'pin-map', 'الأماكن', 'manage places'],
+            ['admin.place-categories.index', 'admin.place-categories.*', 'tags', 'فئات الأماكن', 'manage places'],
+            ['admin.places.map', 'admin.places.map', 'map', 'خريطة الأماكن', 'manage places'],
+            ['admin.content-collections.index', ['admin.content-collections.*', 'admin.content-items.*'], 'collection', 'المجموعات', 'manage content'],
+            ['admin.content-pages.index', 'admin.content-pages.*', 'file-earmark-richtext', 'الصفحات', 'manage content'],
             ['admin.announcements.index', 'admin.announcements.*', 'megaphone', 'الإعلانات', 'manage announcements'],
             ['admin.notifications.index', 'admin.notifications.*', 'bell', 'الإشعارات', 'manage notifications'],
             ['admin.map-locations.index', 'admin.map-locations.*', 'geo-alt', 'مواقع الخريطة', 'manage locations'],
@@ -91,7 +102,7 @@
                         <span class="tenant-mark">@if($brandMark)<img src="{{ $brandMark }}" alt="">@else<span class="initial">{{ $tenantInitial }}</span>@endif</span>
                         <span class="tenant-meta">
                             <span class="tenant-name d-block">{{ $brandName }}</span>
-                            <span class="tenant-sub d-block">{{ $isSuper ? __('مشرف المنصة') : __('لوحة الإدارة') }} · {{ __(':count منظمات', ['count' => $panelTenants->count()]) }}</span>
+                            <span class="tenant-sub d-block">{{ $isSuper ? __('مشرف المنصة') : __('إدارة المنظمة') }} · {{ __('المنظمات: :count', ['count' => $panelTenants->count()]) }}</span>
                         </span>
                         <i class="bi bi-chevron-expand chev"></i>
                     </button>
@@ -125,7 +136,7 @@
                     <span class="tenant-mark">@if($brandMark)<img src="{{ $brandMark }}" alt="">@else<span class="initial">{{ $tenantInitial }}</span>@endif</span>
                     <span class="tenant-meta">
                         <span class="tenant-name d-block">{{ $brandName }}</span>
-                        <span class="tenant-sub d-block">{{ __('لوحة الإدارة') }}</span>
+                        <span class="tenant-sub d-block">{{ __('إدارة المنظمة') }}</span>
                     </span>
                 </div>
             @endif

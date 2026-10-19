@@ -5,7 +5,7 @@
 @php
     $pageIcon = 'sliders';
     $breadcrumbs = ['المنظمة' => null, 'إعدادات التطبيق' => route('admin.app-settings.index'), $appSetting->setting_key => null];
-    $typeLabels = ['string' => __('نص'), 'integer' => __('رقم صحيح'), 'boolean' => __('منطقي'), 'decimal' => __('عشري'), 'json' => 'JSON'];
+    $typeLabels = ['string' => __('نص'), 'integer' => __('عدد صحيح'), 'boolean' => __('قيمة منطقية'), 'decimal' => __('عدد عشري'), 'json' => 'JSON'];
     $jsonPretty = null;
     if ($appSetting->setting_type === 'json') {
         $decoded = json_decode((string) $appSetting->setting_value, true);
@@ -43,7 +43,7 @@
         <div class="col-xl-4">
             <x-admin.card title="معلومات" icon="info-circle">
                 <dl class="dl">
-                    <dt>{{ __('المعرف') }}</dt><dd class="num">{{ $appSetting->id }}</dd>
+                    <dt>{{ __('المعرّف') }}</dt><dd class="num">{{ $appSetting->id }}</dd>
                     <dt>{{ __('الظهور') }}</dt>
                     <dd>
                         @if($appSetting->is_public)
@@ -56,7 +56,7 @@
                     <dt>{{ __('آخر تحديث') }}</dt><dd><span class="num ltr">{{ $appSetting->updated_at?->format('Y-m-d H:i') }}</span></dd>
                 </dl>
                 <x-slot:footer>
-                    <form action="{{ route('admin.app-settings.destroy', $appSetting) }}" method="POST" data-confirm="{{ __('سيتم حذف الإعداد «:key» نهائيًا وقد يتأثر التطبيق.', ['key' => $appSetting->setting_key]) }}">
+                    <form action="{{ route('admin.app-settings.destroy', $appSetting) }}" method="POST" data-confirm="{{ __('سيُحذف الإعداد «:key» نهائيًا، وقد يتأثر التطبيق.', ['key' => $appSetting->setting_key]) }}">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-trash"></i> {{ __('حذف الإعداد') }}</button>

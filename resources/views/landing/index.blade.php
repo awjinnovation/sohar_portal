@@ -315,7 +315,7 @@
 <footer>
   <div class="wrap">
     <span class="brand"><b>Mawsim</b><span>موسم</span></span>
-    <span data-i18n="ft_by">An events platform by AWJ Innovation, Oman.</span>
+    <span data-i18n="ft_by">An events platform by AWJ Systems, Oman.</span>
     <span class="ft-end"><a class="ft-signin" href="{{ url('/admin/login') }}" data-i18n="ft_signin">Staff sign in</a><span>© <span id="yr">{{ date('Y') }}</span></span></span>
   </div>
 </footer>

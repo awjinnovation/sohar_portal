@@ -93,7 +93,7 @@ class WalletController extends Controller
         }
 
         return redirect()->route('admin.wallets.show', $wallet)
-            ->with('success', $existed ? null : 'تم إنشاء المحفظة');
+            ->with('success', $existed ? null : 'أُنشئت المحفظة');
     }
 
     public function show(Wallet $wallet, PointsService $points)
@@ -141,12 +141,12 @@ class WalletController extends Controller
             'bucket' => ['required', 'in:cash,promo'],
             'reason' => ['required', 'string', 'max:500'],
         ], [
-            'amount.regex' => "المبلغ يجب أن يكون رقمًا موجبًا بحد أقصى $decimals منازل عشرية.",
+            'amount.regex' => "أدخل مبلغًا موجبًا لا تتجاوز منازله العشرية $decimals.",
         ]);
 
         $minor = $tenant->toMinor($data['amount']);
         if ($minor <= 0) {
-            throw ValidationException::withMessages(['amount' => 'المبلغ يجب أن يكون أكبر من صفر.']);
+            throw ValidationException::withMessages(['amount' => 'أدخل مبلغًا أكبر من صفر.']);
         }
         $signed = $data['direction'] === 'debit' ? -$minor : $minor;
 
@@ -157,7 +157,7 @@ class WalletController extends Controller
         }
 
         return redirect()->route('admin.wallets.show', $wallet)
-            ->with('success', 'تم تنفيذ التعديل: '.($signed > 0 ? '+' : '-').$tenant->formatMoney($minor).' '.$tenant->currency());
+            ->with('success', 'نُفِّذ التعديل: '.($signed > 0 ? '+' : '-').$tenant->formatMoney($minor).' '.$tenant->currency());
     }
 
     public function status(Request $request, Wallet $wallet)
@@ -172,7 +172,7 @@ class WalletController extends Controller
         AuditLog::record('wallet.status', $wallet, ['from' => $from, 'to' => $data['status'], 'reason' => $data['reason'] ?? null]);
 
         return redirect()->route('admin.wallets.show', $wallet)
-            ->with('success', $data['status'] === Wallet::STATUS_FROZEN ? 'تم تجميد المحفظة' : 'تم تفعيل المحفظة');
+            ->with('success', $data['status'] === Wallet::STATUS_FROZEN ? 'جُمِّدت المحفظة' : 'فُعِّلت المحفظة');
     }
 
     public function refundCharge(Request $request, WalletTransaction $transaction)
@@ -186,6 +186,6 @@ class WalletController extends Controller
         }
 
         return redirect()->route('admin.wallets.show', $transaction->wallet_id)
-            ->with('success', 'تم استرداد عملية الدفع إلى المحفظة');
+            ->with('success', 'استُرد مبلغ الدفعة إلى المحفظة');
     }
 }

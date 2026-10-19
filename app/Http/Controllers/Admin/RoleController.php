@@ -67,7 +67,7 @@ class RoleController extends Controller
         });
 
         return redirect()->route('admin.roles.index')
-            ->with('success', 'تم إنشاء الدور بنجاح');
+            ->with('success', 'أُنشئ الدور');
     }
 
     public function show(Role $role)
@@ -125,7 +125,7 @@ class RoleController extends Controller
         });
 
         return redirect()->route('admin.roles.index')
-            ->with('success', 'تم تحديث الدور بنجاح');
+            ->with('success', 'حُدِّث الدور');
     }
 
     public function destroy(Request $request, Role $role)
@@ -150,12 +150,12 @@ class RoleController extends Controller
         $role->delete();
 
         return redirect()->route('admin.roles.index')
-            ->with('success', 'تم حذف الدور بنجاح');
+            ->with('success', 'حُذف الدور');
     }
 
     private function ensureSuperAdmin(Request $request): void
     {
-        abort_unless($request->user()?->isSuperAdmin(), 403, 'تعريفات الأدوار مشتركة بين جميع الجهات ويديرها مدير المنصة فقط.');
+        abort_unless($request->user()?->isSuperAdmin(), 403, 'تعريفات الأدوار مشتركة بين جميع المنظمات، ويديرها مشرف المنصة وحده.');
     }
 
     /** Global roles plus (legacy) roles scoped to the current tenant. */

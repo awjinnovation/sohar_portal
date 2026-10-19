@@ -68,7 +68,7 @@
                 <dl class="dl">
                     <dt>{{ __('الحالة') }}</dt>
                     <dd><x-admin.status-pill domain="active" :status="$privacyPolicy->is_active" /></dd>
-                    <dt>{{ __('العنوان (English)') }}</dt>
+                    <dt>{{ __('العنوان بالإنجليزية') }}</dt>
                     <dd class="ltr text-start">{{ $privacyPolicy->title }}</dd>
                     <dt>{{ __('تاريخ الإنشاء') }}</dt>
                     <dd class="num">{{ $privacyPolicy->created_at?->format('Y-m-d H:i') ?? '—' }}</dd>
@@ -78,7 +78,7 @@
                 <x-slot:footer>
                     <div class="d-flex gap-2 justify-content-between align-items-center">
                         <a href="{{ route('admin.privacy-policies.edit', $privacyPolicy) }}" class="btn btn-tonal"><i class="bi bi-pencil"></i> {{ __('تعديل') }}</a>
-                        <form action="{{ route('admin.privacy-policies.destroy', $privacyPolicy) }}" method="POST" class="m-0" data-confirm="{{ __('سيتم حذف هذه السياسة نهائيًا.') }}">
+                        <form action="{{ route('admin.privacy-policies.destroy', $privacyPolicy) }}" method="POST" class="m-0" data-confirm="{{ __('ستُحذف هذه السياسة نهائيًا.') }}">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> {{ __('حذف') }}</button>

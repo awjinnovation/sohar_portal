@@ -43,4 +43,15 @@ class PublicPageController extends Controller
 
         return view('public.terms-and-conditions', compact('terms'));
     }
+
+    /** GET /discover/places/{slug}?tenant=&lang= — share page of a published place (module `places`). */
+    public function place(Request $request, string $slug)
+    {
+        $this->resolveTenant($request);
+        abort_unless($this->context->get()?->moduleEnabled('places'), 404);
+        $place = \App\Models\Place::query()->published()->with(['category', 'media'])->where('slug', $slug)->first();
+        abort_unless($place, 404);
+
+        return view('public.discover.place', compact('place'));
+    }
 }

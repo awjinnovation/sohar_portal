@@ -33,14 +33,17 @@ class RolesAndPermissionsSeeder extends Seeder
         'manage vendors',
         'manage deposits',
         'charge wallets',       // vendor-staff API
+        'manage gates',         // gates, scanner devices, live gate dashboard, scan log
+        'manage places',        // places to visit, place categories, places map
+        'manage content',       // content collections + items, pages
     ];
 
     public const ROLES = [
         // Tenant admin: everything inside the tenant (also via Gate::before).
         'admin' => self::PERMISSIONS,
         'event-manager' => ['view dashboard', 'manage events', 'manage tickets', 'view payments', 'manage announcements'],
-        'ticket-manager' => ['view dashboard', 'manage tickets', 'validate tickets', 'view payments', 'refund payments'],
-        'content-manager' => ['view dashboard', 'manage events', 'manage restaurants', 'manage locations', 'manage announcements', 'manage notifications', 'manage settings'],
+        'ticket-manager' => ['view dashboard', 'manage tickets', 'validate tickets', 'view payments', 'refund payments', 'manage gates'],
+        'content-manager' => ['view dashboard', 'manage events', 'manage restaurants', 'manage locations', 'manage announcements', 'manage notifications', 'manage settings', 'manage places', 'manage content'],
         'finance-manager' => ['view dashboard', 'view payments', 'refund payments', 'manage wallets', 'manage refunds', 'manage deposits', 'manage vendors'],
         'viewer' => ['view dashboard', 'view payments'],
         // App-side roles
