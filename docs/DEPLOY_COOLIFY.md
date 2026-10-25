@@ -36,6 +36,7 @@ At the DNS host of `awj.om` (TTL 300 while setting up):
 | `mawsim.awj.om` | `A` | public IPv4 of the Coolify server |
 | `mawsim.awj.om` | `AAAA` | public IPv6 (only if the server has one) |
 | `gate.mawsim.awj.om` | `A` / `AAAA` | same server (gate web app, separate resource) |
+| `app.mawsim.awj.om` | `A` / `AAAA` | same server (visitor web app, separate resource) |
 | `awj.om` (optional) | `CAA` | `0 issue "letsencrypt.org"` |
 
 Mail records (SPF, DKIM, DMARC) are in [§8](#8-smtp-spf-dkim-dmarc). Coolify
@@ -95,7 +96,7 @@ existing MySQL volume.
 | `ISMARTSMS_USER_ID`, `ISMARTSMS_PASSWORD` | Without them no OTP SMS is sent, so nobody can sign in to the app. |
 | `BANK_MUSCAT_GATEWAY_URL`, `BANK_MUSCAT_MERCHANT_ID`, `BANK_MUSCAT_ACCESS_CODE`, `BANK_MUSCAT_WORKING_KEY` | Platform fallback; a tenant can instead have its own (encrypted) in *Admin → Tenants*. The default URL is the UAT gateway. |
 | `BANK_MUSCAT_WEBHOOK_IPS` | Comma-separated IPs of Bank Muscat's callback servers. |
-| `CORS_ALLOWED_ORIGINS` | e.g. `https://gate.mawsim.awj.om` (plus a visitor web build if any). Default `*`. |
+| `CORS_ALLOWED_ORIGINS` | The web apps, comma-separated: `https://gate.mawsim.awj.om,https://app.mawsim.awj.om`. Default `*`. |
 
 **Optional**: `OPENAI_API_KEY` (empty = AI features off), `OPENAI_MODEL_FAST/SMART`,
 `AI_CHAT_RATE_*`, `PAY_LINK_BASE_URL`, `DEMO_REQUEST_CC`, `LOG_LEVEL` (`info`),
@@ -304,7 +305,7 @@ columns / widen, never drop in the same release that stops using them). If a
 release changed data irreversibly, restore the database from the last dump
 ([§10](#10-backups)) instead.
 
-## 13. Gate web app (separate resource)
+## 13. Gate and visitor web apps (separate resources)
 
 The gate scanner's web build (`lib/gate/**` in the Flutter app repository
 `../sohar_north_app`) is deployed as **its own Coolify resource from that
@@ -313,6 +314,12 @@ repository**, not from this one, on `https://gate.mawsim.awj.om`. Point it at
 to this resource's `CORS_ALLOWED_ORIGINS` (it calls `/api/v1/gate/*` and loads
 `/tenants/*` and `/storage/*` images). Devices pair from *Admin → Gates →
 Scanner devices → Pair new device* (the QR carries `api=https://mawsim.awj.om`).
+
+The visitor app's web build (events, tickets, wallet, map in the browser) uses
+the same Dockerfile from the same repository as a second resource, with the
+build variables `APP=visitor` and `PUBLIC_URL=https://app.mawsim.awj.om`, on
+`https://app.mawsim.awj.om`. Add that origin to `CORS_ALLOWED_ORIGINS` as well.
+Steps: `deploy/gate-web/README.md` → "Visitor web app" in the app repository.
 
 ## 14. Test the stack locally
 
