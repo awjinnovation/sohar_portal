@@ -1,0 +1,251 @@
+# Events Platform (Mawsim) backend: production stack for Coolify.
+#
+#   Coolify: New resource → Docker Compose (build pack "Docker Compose") from
+#   this repository, branch main, compose file /docker-compose.yml.
+#   Step-by-step guide: docs/DEPLOY_COOLIFY.md.
+#
+#   app        Laravel web (PHP-FPM + NGINX on 8080). Runs migrations and
+#              caches on every deploy (serversideup Laravel automations).
+#   worker     queue:work (SMS jobs, …)          same image, no migrations
+#   scheduler  schedule:work (expiries, pruning) same image, no migrations
+#   mysql      MySQL 8.4 (utf8mb4)
+#   redis      Redis 7 (cache, sessions, queue; append-only file)
+#
+# Coolify conventions used here:
+#   SERVICE_URL_APP_8080   the "app" service gets a domain routed to port 8080
+#                          (set it to https://mawsim.awj.om:8080 in Domains);
+#                          ${SERVICE_URL_APP} is that URL without the port.
+#   SERVICE_USER_* / SERVICE_PASSWORD_*  generated once by Coolify, kept.
+#   ${VAR:?}               required: the deploy is blocked until it is set.
+#   ${VAR:-default}        editable in the UI with that initial value.
+#   No host "ports": only the proxy reaches the app (expose).
+#
+# Seeding never runs automatically (one-off command in docs/DEPLOY_COOLIFY.md).
+
+x-build: &build
+  context: .
+  dockerfile: Dockerfile
+  target: production
+
+x-laravel-env: &laravel-env
+  # --- App ---------------------------------------------------------------
+  APP_NAME: ${APP_NAME:-Mawsim}
+  APP_ENV: ${APP_ENV:-production}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_KEY: ${APP_KEY:?}
+  APP_URL: ${SERVICE_URL_APP}
+  ASSET_URL: ${ASSET_URL:-}
+  APP_LOCALE: ${APP_LOCALE:-ar}
+  APP_FALLBACK_LOCALE: ${APP_FALLBACK_LOCALE:-en}
+  BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  LOG_DEPRECATIONS_CHANNEL: "null"
+  TRUSTED_PROXIES: ${TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1,::1,fd00::/8}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
+  # --- Database ----------------------------------------------------------
+  DB_CONNECTION: mysql
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_DATABASE: ${DB_DATABASE:-mawsim}
+  DB_USERNAME: ${SERVICE_USER_MYSQL}
+  DB_PASSWORD: ${SERVICE_PASSWORD_MYSQL}
+  DB_CHARSET: utf8mb4
+  DB_COLLATION: utf8mb4_unicode_ci
+  # --- Redis: cache, sessions, queue -------------------------------------
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
+  REDIS_PREFIX: ${REDIS_PREFIX:-mawsim_}
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: redis
+  SESSION_LIFETIME: ${SESSION_LIFETIME:-120}
+  SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-true}
+  SESSION_ENCRYPT: ${SESSION_ENCRYPT:-false}
+  BROADCAST_CONNECTION: log
+  FILESYSTEM_DISK: local
+  # --- Mail (SMTP) -------------------------------------------------------
+  MAIL_MAILER: ${MAIL_MAILER:-smtp}
+  MAIL_SCHEME: ${MAIL_SCHEME:-smtps}
+  MAIL_HOST: ${MAIL_HOST:-}
+  MAIL_PORT: ${MAIL_PORT:-465}
+  MAIL_USERNAME: ${MAIL_USERNAME:-}
+  MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+  MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@awj.om}
+  MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Mawsim}
+  DEMO_REQUEST_TO: ${DEMO_REQUEST_TO:-systems@awj.om}
+  DEMO_REQUEST_CC: ${DEMO_REQUEST_CC:-}
+  DEMO_REQUEST_CONFIRMATION: ${DEMO_REQUEST_CONFIRMATION:-true}
+  # --- Payments (Bank Muscat) --------------------------------------------
+  PAYMENT_DRIVER: ${PAYMENT_DRIVER:-bankmuscat}
+  PAYMENT_LINK_TTL_MINUTES: ${PAYMENT_LINK_TTL_MINUTES:-60}
+  PAY_LINK_BASE_URL: ${PAY_LINK_BASE_URL:-}
+  PAY_TOKEN_TTL_SECONDS: ${PAY_TOKEN_TTL_SECONDS:-60}
+  BANK_MUSCAT_GATEWAY_URL: ${BANK_MUSCAT_GATEWAY_URL:-https://spayuattrns.bmtest.om/transaction.do?command=initiateTransaction}
+  BANK_MUSCAT_ACCESS_CODE: ${BANK_MUSCAT_ACCESS_CODE:-}
+  BANK_MUSCAT_WORKING_KEY: ${BANK_MUSCAT_WORKING_KEY:-}
+  BANK_MUSCAT_MERCHANT_ID: ${BANK_MUSCAT_MERCHANT_ID:-}
+  BANK_MUSCAT_WEBHOOK_IPS: ${BANK_MUSCAT_WEBHOOK_IPS:-}
+  # --- SMS (iSmartSMS: OTP + box office links) ---------------------------
+  ISMARTSMS_URL: ${ISMARTSMS_URL:-https://www.ismartsms.net/iBulkSMS/HttpWS/SMSDynamicAPI.aspx}
+  ISMARTSMS_USER_ID: ${ISMARTSMS_USER_ID:-}
+  ISMARTSMS_PASSWORD: ${ISMARTSMS_PASSWORD:-}
+  # --- OTP (no OTP_DEBUG / OTP_TEST_CODE in production) ------------------
+  OTP_TTL_MINUTES: ${OTP_TTL_MINUTES:-5}
+  OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
+  # --- AI (OpenAI; empty key = AI features off) --------------------------
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_MODEL_FAST: ${OPENAI_MODEL_FAST:-}
+  OPENAI_MODEL_SMART: ${OPENAI_MODEL_SMART:-}
+  OPENAI_REASONING_FAST: ${OPENAI_REASONING_FAST:-low}
+  OPENAI_REASONING_SMART: ${OPENAI_REASONING_SMART:-low}
+  OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+  OPENAI_ORGANIZATION: ${OPENAI_ORGANIZATION:-}
+  OPENAI_TIMEOUT: ${OPENAI_TIMEOUT:-45}
+  OPENAI_RETRIES: ${OPENAI_RETRIES:-2}
+  AI_CHAT_RATE_USER: ${AI_CHAT_RATE_USER:-20}
+  AI_CHAT_RATE_GUEST: ${AI_CHAT_RATE_GUEST:-8}
+  AI_CHAT_RATE_GUEST_IP: ${AI_CHAT_RATE_GUEST_IP:-60}
+  # --- Tenancy -----------------------------------------------------------
+  TENANCY_DEFAULT_TENANT: ${TENANCY_DEFAULT_TENANT:-north-batinah}
+  TENANCY_CONFIG_CACHE_TTL: ${TENANCY_CONFIG_CACHE_TTL:-300}
+  # --- serversideup/php --------------------------------------------------
+  PHP_OPCACHE_ENABLE: "1"
+  PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-256M}
+  TRUSTED_PROXY: "off"
+
+x-app-storage: &app-storage
+  - app-storage:/var/www/html/storage/app
+
+# Queue worker (SMS jobs, …). To scale out, add another service with the same
+# definition, e.g. `worker-2: *worker` under services (Coolify names every
+# container, so `deploy.replicas` / `scale` are not allowed).
+x-worker: &worker
+  build: *build
+  restart: unless-stopped
+  command: ["php", "/var/www/html/artisan", "queue:work", "redis", "--tries=3", "--max-time=3600", "--sleep=3"]
+  # queue:work finishes the running job on SIGTERM, then exits.
+  stop_signal: SIGTERM
+  stop_grace_period: 60s
+  environment:
+    <<: *laravel-env
+    AUTORUN_ENABLED: "true"
+    AUTORUN_LARAVEL_MIGRATION: "false"
+    AUTORUN_LARAVEL_STORAGE_LINK: "false"
+  volumes: *app-storage
+  depends_on:
+    app:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "healthcheck-queue"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 30s
+
+services:
+  app:
+    build: *build
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      <<: *laravel-env
+      SERVICE_URL_APP_8080:
+      # Laravel automations on deploy: wait for MySQL, migrate --force
+      # (isolated through a Redis lock), then optimize (config, routes,
+      # views, events). Never seeds.
+      AUTORUN_ENABLED: "true"
+      AUTORUN_LARAVEL_MIGRATION: "true"
+      AUTORUN_LARAVEL_MIGRATION_ISOLATION: "true"
+      AUTORUN_LARAVEL_MIGRATION_TIMEOUT: "60"
+      AUTORUN_LARAVEL_MIGRATION_SEED: "false"
+      AUTORUN_LARAVEL_STORAGE_LINK: "false"
+      AUTORUN_LARAVEL_OPTIMIZE: "true"
+    volumes: *app-storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--output", "/dev/null", "http://127.0.0.1:8080/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  worker: *worker
+  # worker-2: *worker
+
+  scheduler:
+    build: *build
+    restart: unless-stopped
+    command: ["php", "/var/www/html/artisan", "schedule:work"]
+    # schedule:work installs no signal handler; as PID 1 it would ignore
+    # SIGTERM and be killed after the grace period on every deploy. A tiny
+    # init (tini) as PID 1 lets SIGTERM stop it at once.
+    init: true
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    environment:
+      <<: *laravel-env
+      AUTORUN_ENABLED: "true"
+      AUTORUN_LARAVEL_MIGRATION: "false"
+      AUTORUN_LARAVEL_STORAGE_LINK: "false"
+    volumes: *app-storage
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "healthcheck-schedule"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  mysql:
+    image: mysql:8.4.13-oraclelinux9
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
+      - --skip-name-resolve
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-mawsim}
+      MYSQL_USER: ${SERVICE_USER_MYSQL}
+      MYSQL_PASSWORD: ${SERVICE_PASSWORD_MYSQL}
+      MYSQL_ROOT_PASSWORD: ${SERVICE_PASSWORD_MYSQLROOT}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - mysql-backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$${MYSQL_PASSWORD}\" mysql -h 127.0.0.1 -u \"$${MYSQL_USER}\" -e 'SELECT 1' \"$${MYSQL_DATABASE}\" > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  redis:
+    image: redis:7.4.11-alpine3.21
+    restart: unless-stopped
+    command: ["sh", "-c", "exec redis-server --appendonly yes --appendfsync everysec --requirepass \"$$REDIS_PASSWORD\""]
+    environment:
+      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  app-storage:
+  mysql-data:
+  mysql-backups:
+  redis-data:

@@ -45,7 +45,7 @@ class TenantManagementTest extends AdminPlatformTestCase
         $response->assertSessionHasNoErrors();
 
         $tenant = Tenant::where('slug', 'acme-mall')->firstOrFail();
-        $this->assertSame(['en' => 'Acme Mall', 'ar' => 'مول أكمي'], $tenant->name);
+        $this->assertSameJson(['en' => 'Acme Mall', 'ar' => 'مول أكمي'], $tenant->name);
         $this->assertSame('acme.example.com', $tenant->domain);
 
         $settings = $tenant->settings;

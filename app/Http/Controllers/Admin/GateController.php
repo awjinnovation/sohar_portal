@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\Gate;
 use App\Services\Gate\GateDay;
 use App\Services\Gate\GateStatsService;
+use App\Support\DbLike;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -22,8 +23,13 @@ class GateController extends Controller
         $q = trim((string) $request->input('q'));
         $gates = Gate::with('event:id,title,title_ar')
             ->withCount(['devices', 'devices as active_devices_count' => fn ($d) => $d->where('status', 'active')])
-            ->when($q !== '', fn ($query) => $query->where(fn ($w) => $w
-                ->where('name->ar', 'like', "%$q%")->orWhere('name->en', 'like', "%$q%")->orWhere('code', 'like', "%$q%")))
+            ->when($q !== '', fn ($query) => $query->where(function ($w) use ($q) {
+                // Case-insensitive on MySQL too (JSON paths compare as binary there).
+                $like = DbLike::contains($q);
+                DbLike::orWhere($w, 'name->ar', $like);
+                DbLike::orWhere($w, 'name->en', $like);
+                $w->orWhere('code', 'like', $like);
+            }))
             ->orderBy('sort_order')->orderBy('id')
             ->paginate(25)->withQueryString();
 

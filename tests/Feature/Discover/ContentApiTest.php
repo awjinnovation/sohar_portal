@@ -86,13 +86,51 @@ class ContentApiTest extends DiscoverTestCase
     #[Test]
     public function api_and_storage_paths_send_cors_headers_for_web_builds(): void
     {
-        $this->assertSame(['api/*', 'sanctum/csrf-cookie', 'storage/*'], config('cors.paths'));
+        $this->assertSame(['api/*', 'sanctum/csrf-cookie', 'storage/*', 'tenants/*', 'images/*'], config('cors.paths'));
         $this->getJson('/api/v1/places/map', $this->tenantHeaders(null, ['Origin' => 'http://localhost:5000']))
             ->assertOk()->assertHeader('Access-Control-Allow-Origin', '*');
+        // Tenant branding (logos, onboarding images) is fetched by the web builds too.
+        $this->get('/tenants/north-batinah/logo.png', ['Origin' => 'http://localhost:5000'])->assertHeader('Access-Control-Allow-Origin', '*');
         // Admin / web routes stay without CORS.
         $this->get('/admin/login', ['Origin' => 'http://localhost:5000'])->assertHeaderMissing('Access-Control-Allow-Origin');
-        // The dev router (php artisan serve) adds the same header to /storage/* files.
-        $this->assertStringContainsString("header('Access-Control-Allow-Origin: *')", file_get_contents(base_path('server.php')));
+        // The dev router (php artisan serve) adds the same header to /storage/*, /tenants/* and /images/* files.
+        $router = file_get_contents(base_path('server.php'));
+        $this->assertStringContainsString("header('Access-Control-Allow-Origin: *')", $router);
+        $this->assertStringContainsString("['/storage/', '/tenants/', '/images/']", $router);
+    }
+
+    #[Test]
+    public function cors_origins_come_from_the_environment(): void
+    {
+        $key = 'CORS_ALLOWED_ORIGINS';
+        $saved = [$_SERVER[$key] ?? null, $_ENV[$key] ?? null, getenv($key)];
+        $load = function (?string $value) use ($key): array {
+            unset($_SERVER[$key], $_ENV[$key]);
+            putenv($key);
+            if ($value !== null) {
+                $_SERVER[$key] = $_ENV[$key] = $value;
+                putenv("$key=$value");
+            }
+
+            return (require config_path('cors.php'))['allowed_origins'];
+        };
+
+        $this->assertSame(['*'], $load(null));
+        $this->assertSame(['*'], $load(''));
+        $this->assertSame(['https://gate.mawsim.awj.om', 'http://localhost:5173'], $load(' https://gate.mawsim.awj.om/, http://localhost:5173 '));
+        $this->assertSame(['*'], $load('https://gate.mawsim.awj.om,*'));
+
+        unset($_SERVER[$key], $_ENV[$key]);
+        putenv($key);
+        if ($saved[0] !== null) {
+            $_SERVER[$key] = $saved[0];
+        }
+        if ($saved[1] !== null) {
+            $_ENV[$key] = $saved[1];
+        }
+        if ($saved[2] !== false) {
+            putenv("$key={$saved[2]}");
+        }
     }
 
     #[Test]

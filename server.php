@@ -2,19 +2,28 @@
 
 /*
  * Router for `php artisan serve` (ServeCommand uses ./server.php when it
- * exists). Same as the framework's router, plus CORS headers on files under
- * /storage/* (uploaded images) so Flutter web builds on another origin can
- * load them — the built-in server would otherwise send static files without
- * any header. Production web servers need the equivalent rule (README).
+ * exists). Same as the framework's router, plus CORS headers on the public
+ * images under /storage/* (uploads), /tenants/* (tenant branding) and
+ * /images/* so Flutter web builds on another origin can load them — the
+ * built-in server would otherwise send static files without any header.
+ * The Docker image's NGINX does the same (docker/nginx/public-assets.conf).
  */
 
 $publicPath = getcwd();
 
 $uri = urldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '');
 
-if (str_starts_with($uri, '/storage/') && in_array($_SERVER['REQUEST_METHOD'], ['GET', 'HEAD', 'OPTIONS'], true)) {
+$corsPrefix = null;
+foreach (['/storage/', '/tenants/', '/images/'] as $prefix) {
+    if (str_starts_with($uri, $prefix)) {
+        $corsPrefix = rtrim($prefix, '/');
+        break;
+    }
+}
+
+if ($corsPrefix !== null && in_array($_SERVER['REQUEST_METHOD'], ['GET', 'HEAD', 'OPTIONS'], true)) {
     $file = realpath($publicPath.$uri);
-    $root = realpath($publicPath.'/storage');
+    $root = realpath($publicPath.$corsPrefix);
     if ($file !== false && $root !== false && str_starts_with($file, $root.DIRECTORY_SEPARATOR) && is_file($file)) {
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, HEAD, OPTIONS');

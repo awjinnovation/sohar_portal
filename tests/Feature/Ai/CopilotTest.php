@@ -146,7 +146,7 @@ class CopilotTest extends AiTestCase
         $this->assertSame('Ask Sohar', $t->setting('ai.assistant_name.en'));
         $this->assertSame(500000, $t->setting('ai.monthly_token_budget'));
         $this->assertFalse($t->setting('ai.copilot_enabled'));
-        $this->assertSame([['en' => 'Parking?', 'ar' => 'المواقف؟']], $t->setting('ai.suggestions'));
+        $this->assertSameJson([['en' => 'Parking?', 'ar' => 'المواقف؟']], $t->setting('ai.suggestions'));
         $this->assertSame('Gates open 16:00', $t->setting('ai.venue_info.en'));
 
         $this->actingAs($admin)->put(route('admin.branding.update'), ['name' => ['en' => 'N', 'ar' => 'ش'], 's' => ['ai' => ['suggestions' => '[{"fr": "x"}]']]])

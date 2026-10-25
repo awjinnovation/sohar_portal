@@ -1,0 +1,54 @@
+# Build context for the Dockerfile. The production stage copies only app,
+# bootstrap, config, database, lang, public, resources, routes, artisan and
+# composer.*; this list keeps secrets and local state out of the context.
+
+# VCS, editors, OS files
+.git
+.gitattributes
+.github
+.claude
+.idea
+.vscode
+.fleet
+.nova
+.zed
+.phpactor.json
+**/.DS_Store
+**/Thumbs.db
+
+# Secrets and local environment files
+.env
+.env.*
+auth.json
+storage/*.key
+
+# Dependencies and build output (rebuilt inside the image)
+vendor
+node_modules
+public/build
+public/hot
+public/storage
+
+# Local databases, uploads, logs, caches
+database/*.sqlite
+database/*.sqlite-journal
+database/*.sqlite-wal
+database/*.sqlite-shm
+storage
+bootstrap/cache/*.php
+.phpunit.result.cache
+.phpunit.cache
+coverage
+*.log
+
+# Docs, API examples and tooling not needed at runtime
+docs
+business-data
+scripts
+*.md
+package.json
+package-lock.json
+vite.config.js
+docker-compose*.yml
+Dockerfile
+.dockerignore

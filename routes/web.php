@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [LandingController::class, 'index'])->name('home');
 Route::post('/demo-request', [LandingController::class, 'store'])
     ->middleware('throttle:demo-requests')->name('landing.demo-request');
+// robots.txt / sitemap.xml with absolute URLs from APP_URL (no session needed)
+Route::get('/robots.txt', [LandingController::class, 'robots'])->withoutMiddleware('web')->name('landing.robots');
+Route::get('/sitemap.xml', [LandingController::class, 'sitemap'])->withoutMiddleware('web')->name('landing.sitemap');
 
 // Public Pages (tenant via ?tenant=<slug>, default tenant otherwise)
 Route::get('/privacy-policy', [PublicPageController::class, 'privacyPolicy'])->name('public.privacy-policy');

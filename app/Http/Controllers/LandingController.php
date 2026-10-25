@@ -9,6 +9,7 @@ use App\Support\Landing\FormTimestamp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -45,6 +46,41 @@ class LandingController extends Controller
         }
 
         return $response;
+    }
+
+    /**
+     * robots.txt from APP_URL. Outside production (staging, a test domain)
+     * nothing is indexed; in production the homepage is, private paths
+     * (admin, payment links, API) are not.
+     */
+    public function robots(): Response
+    {
+        $base = rtrim((string) config('app.url'), '/');
+        $lines = app()->isProduction()
+            ? ['User-agent: *', 'Allow: /', 'Disallow: /admin', 'Disallow: /api/', 'Disallow: /pay/', 'Disallow: /payment/', 'Disallow: /ticket/', '', 'Sitemap: '.$base.'/sitemap.xml']
+            : ['User-agent: *', 'Disallow: /'];
+
+        return response(implode("\n", $lines)."\n", 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+
+    /** sitemap.xml: the homepage (bilingual, ?lang=en|ar), absolute from APP_URL. */
+    public function sitemap(): Response
+    {
+        $home = e(rtrim((string) config('app.url'), '/').'/');
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n"
+            .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">'."\n"
+            ."  <url><loc>{$home}</loc><changefreq>monthly</changefreq><priority>1.0</priority>"
+            ."<xhtml:link rel=\"alternate\" hreflang=\"en\" href=\"{$home}?lang=en\"/>"
+            ."<xhtml:link rel=\"alternate\" hreflang=\"ar\" href=\"{$home}?lang=ar\"/></url>\n"
+            .'</urlset>'."\n";
+
+        return response($xml, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
     }
 
     public function store(Request $request): JsonResponse|RedirectResponse

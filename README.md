@@ -77,7 +77,7 @@ The fake driver refuses to run when `APP_ENV=production`.
 
 ## Public landing page (Mawsim) and demo requests
 
-`GET /` is the product homepage (`LandingController@index`, `resources/views/landing/index.blade.php`, assets in `public/landing/` with `?v=filemtime` cache busting; no build step). It is bilingual: the server picks the first-paint language from `?lang=ar|en`, then the `mawsim_lang` cookie (also written by the page's EN/AR toggle), then `Accept-Language`, and sets `<html lang dir>` accordingly; the JS dictionary in `landing.js` renders the copy. Staff reach the admin through the footer's "Staff sign in" link (`/admin/login`).
+`GET /` is the product homepage (`LandingController@index`, `resources/views/landing/index.blade.php`, assets in `public/landing/` with `?v=filemtime` cache busting; no build step). It is bilingual: the server picks the first-paint language from `?lang=ar|en`, then the `mawsim_lang` cookie (also written by the page's EN/AR toggle), then `Accept-Language`, and sets `<html lang dir>` accordingly; the JS dictionary in `landing.js` renders the copy. Staff reach the admin through the footer's "Staff sign in" link (`/admin/login`). Content and meta match the standalone `../landing_page` (field photos, Open Graph / Twitter cards with `landing/img/og-image.jpg` 1200×630, JSON-LD, icons + `landing/site.webmanifest`, self-hosted fonts in `landing/fonts*`, no outside requests); canonical, link-preview and JSON-LD URLs are absolute from `APP_URL`. `/robots.txt` and `/sitemap.xml` are routes built from `APP_URL` (outside production robots disallows everything and the page is `noindex`).
 
 **Book a demo** posts to `POST /demo-request` (`landing.demo-request`): JSON via `fetch` when JS is on (inline, localized errors), or a normal form POST that redirects to `/#demo` with a server-rendered confirmation. Fields use stable keys (`event_type`: festival/expo/concerts/mall/governorate/sports/other, `expected_visitors`: lt5k/5k-25k/25k-100k/gt100k); `contact` must be an email or a phone with 7–15 digits. Spam protection: hidden `website` honeypot (silently "succeeds"), a signed render timestamp (`App\Support\Landing\FormTimestamp`, rejected under 3 s or after 2 days) and the `demo-requests` rate limiter (5/hour and 20/day per IP).
 
@@ -139,7 +139,7 @@ Contract: [`../docs/places_content_contract.md`](../docs/places_content_contract
 
 **Seeded app entry points.** The tabs are unchanged; Discover is reached from the home blocks `places_featured`, `places_map_teaser`, `collection:<key>`, the `places` quick action (demo) and More.
 
-**CORS (web builds).** `config/cors.php` covers `api/*` and `storage/*`. Uploaded images are static files, so the web server must add the header itself: `php artisan serve` uses `./server.php` (adds `Access-Control-Allow-Origin: *` to `/storage/*`); on nginx add e.g. `location /storage/ { add_header Access-Control-Allow-Origin * always; }`.
+**CORS (web builds).** `config/cors.php` covers `api/*`, `storage/*` (uploads), `tenants/*` (bundled tenant branding) and `images/*`, with the origins from `CORS_ALLOWED_ORIGINS` (comma-separated, default `*`). Images are static files, so the web server must add the header itself: `php artisan serve` uses `./server.php` (adds `Access-Control-Allow-Origin: *` to the same paths); the Docker image's NGINX does it from `CORS_ALLOWED_ORIGINS` (`docker/nginx/public-assets.conf`).
 
 ## Gate scanner
 
@@ -209,6 +209,17 @@ curl -X POST http://127.0.0.1:8002/api/v1/gate/sales/orders -H "Authorization: B
 ```
 Only events running on the gate day are sold (the seeded Sohar Festival starts on 2026-12-22); to test earlier, switch on *Sell for later days* and pass `booking_date` / `?date=`.
 
+## Deploy (Docker / Coolify)
+
+Production runs as one Docker Compose resource on Coolify: `Dockerfile` (serversideup/php 8.3 FPM + NGINX, non-root, port 8080) and `docker-compose.yml` with `app` (web, migrates and caches on every deploy, health check `/up`), `worker` (`queue:work`), `scheduler` (`schedule:work`), `mysql` 8.4 and `redis` 7; uploads live in the `app-storage` volume. Step-by-step guide (domain, variables, APP_KEY, first deploy, seeding, DNS, SMTP / SPF / DKIM, Bank Muscat URLs, backups, logs, scaling, rollback): **[`docs/DEPLOY_COOLIFY.md`](docs/DEPLOY_COOLIFY.md)**. Every environment variable, with the secrets marked: [`.env.production.example`](.env.production.example).
+
+```bash
+php artisan db:seed --force                                    # once, by hand (never automatic)
+php artisan platform:create-admin ops@awj.om --lock-seeded     # real super-admin; locks the seeded password123 accounts
+```
+
+The app runs on SQLite locally and MySQL 8.4 in production; the test suite passes on both (MySQL run: docs/DEPLOY_COOLIFY.md §14).
+
 ## Adding a tenant
 1. **Admin panel** (super-admin) → *Tenants* → *New*: slug, names, status; branding (logo upload, colours, fonts), modules, wallet/points/refund rules, billing address, OTP text and (optionally) Bank Muscat credentials. Optionally create the tenant's first admin user.
    Or in code: `App\Models\Tenant::create(['slug' => 'acme', 'name' => ['en' => 'Acme', 'ar' => 'أكمي'], 'status' => 'active', 'settings' => [...]])` (only store values that differ from `config('tenancy.defaults')`).
@@ -220,6 +231,8 @@ Only events running on the gate day are sold (the seeded Sohar Festival starts o
 | Variable | Default | Purpose |
 |---|---|---|
 | `TENANCY_DEFAULT_TENANT` | `north-batinah` | Tenant used when `X-Tenant` is absent (old app builds), and for public pages without `?tenant=`. |
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated web origins (gate web app, visitor web) for the API and the public image paths. |
+| `TRUSTED_PROXIES` | private ranges + localhost | Proxies whose `X-Forwarded-*` headers are trusted (`config/trustedproxy.php`); add Cloudflare's ranges behind its proxy. |
 | `TENANCY_CONFIG_CACHE_TTL` | `300` | Seconds `/tenant/config` is cached (busted on tenant save). |
 | `PAYMENT_DRIVER` | `bankmuscat` | `bankmuscat` or `fake`. |
 | `PAYMENT_LINK_TTL_MINUTES` | `60` | Lifetime of the signed `payment_url`. |
@@ -257,6 +270,8 @@ It reads the texts from the seeder classes (`TenantSeeder::northBatinah()/demo()
 php artisan test                         # whole suite (in-memory sqlite, PAYMENT_DRIVER=fake)
 php artisan test tests/Feature/Platform  # tenancy, wallet, points, merchant, payments, OTP
 ```
+
+Against MySQL: build the `test` target of the `Dockerfile` and run it with `DB_CONNECTION=mysql` and a separate database (docs/DEPLOY_COOLIFY.md §14). Values read back from JSON columns come back with their object keys reordered on MySQL; compare them with `assertSameJson()` (`tests/TestCase.php`).
 
 `tests/Feature/Platform` covers tenant isolation, the tenant config/ETag, server-side pricing, fake-gateway top-ups credited once, Bank Muscat callback verification, wallet checkout + `INSUFFICIENT_BALANCE`, idempotent debits, deposits, refund requests (refundable cash only), points earn/redeem/expire/reversal, merchant charges with expired/reused/forged pay tokens, OTP throttling and owner-scoped payment endpoints. `tests/Feature/Admin*` cover the admin panel. `tests/Feature/Gate` covers pairing (expired/used/foreign codes, rate limit, artisan command), device auth and revocation, every scan result, concurrency/idempotency, re-entry rules, manifest hashing/ETag, offline sync conflicts, tenant isolation, stats/heartbeat, staff OTP login, the legacy staff endpoints and the permission-gated admin pages. `tests/Feature/Gate/BoxOffice*` cover the box office (access rules, catalog, server pricing with items, error codes, seat holds released on expiry / cancel, idempotency, the full pay-by-link flow with a replayed callback, failed / expired / cancelled links, the SMS limit, admit, tenant isolation, admin pages and settings); `tests/Feature/Platform/TicketTypesTest` and `tests/Feature/Admin/TicketTypesAdminTest` the ticket types (resources, quotes with lines, per-type rules, issuance, multi-entry scans, manifest, admin editor). `tests/Feature/Discover` covers the places/content API (shapes, drafts, scheduling, tenant isolation, `MODULE_DISABLED`, near-sort, ETag, sanitizer), the admin CRUD with uploads and permissions and the seeder; `tests/Feature/Ai/ConciergePlacesTest` the concierge tools/cards. `tests/Feature/Landing` covers the homepage (language/dir) and the demo form (storage, mails, validation, honeypot, timing, rate limit, non-JS flow).
 

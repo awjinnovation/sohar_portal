@@ -27,7 +27,7 @@ class VendorAdminTest extends AdminPlatformTestCase
 
         $vendor = Vendor::firstOrFail();
         $response->assertRedirect(route('admin.vendors.show', $vendor));
-        $this->assertSame(['en' => 'Coffee Stall', 'ar' => 'كشك القهوة'], $vendor->name);
+        $this->assertSameJson(['en' => 'Coffee Stall', 'ar' => 'كشك القهوة'], $vendor->name);
         $this->assertSame($this->tenant->id, $vendor->tenant_id);
         $this->assertTrue($vendor->is_active);
         $this->assertStringStartsWith('tenants/north-batinah/vendors/', $vendor->logo_path);

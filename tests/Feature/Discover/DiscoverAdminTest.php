@@ -87,7 +87,7 @@ class DiscoverAdminTest extends DiscoverTestCase
         $res->assertRedirect(route('admin.places.edit', $place));
 
         $this->assertSame('sohar-fort', $place->slug);
-        $this->assertSame(['en' => null, 'ar' => 'قلعة تاريخية'], $place->summary);
+        $this->assertSameJson(['en' => null, 'ar' => 'قلعة تاريخية'], $place->summary);
         $this->assertSame('<p>نص <b>مهم</b></p>', $place->description['ar']);
         $this->assertSame('<p>Line one</p>', $place->description['en']);
         $this->assertSame(500, $place->entry_fee_minor);

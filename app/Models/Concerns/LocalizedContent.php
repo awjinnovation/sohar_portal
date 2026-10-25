@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Support\DbLike;
 use App\Support\Localized;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
@@ -60,9 +61,10 @@ trait LocalizedContent
         return $query->where(function ($w) use ($terms, $fields) {
             foreach ($terms as $t) {
                 // Wildcards typed by users are dropped (sqlite LIKE has no default ESCAPE).
-                $like = '%'.str_replace(['%', '_'], '', $t).'%';
+                $like = DbLike::contains($t);
                 foreach ($fields as $field) {
-                    $w->orWhere($this->qualifyColumn($field), 'like', $like);
+                    // Case-insensitive on MySQL too (JSON compares as binary there).
+                    DbLike::orWhere($w, $this->qualifyColumn($field), $like);
                 }
             }
         });

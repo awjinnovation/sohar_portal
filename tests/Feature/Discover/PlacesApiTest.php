@@ -118,6 +118,8 @@ class PlacesApiTest extends DiscoverTestCase
 
         $this->getJson('/api/v1/places?category=beaches', $this->tenantHeaders())->assertJsonCount(1, 'data')->assertJsonPath('data.0.icon', 'waves');
         $this->getJson('/api/v1/places?q='.urlencode('كورنيش'), $this->tenantHeaders())->assertJsonCount(1, 'data')->assertJsonPath('data.0.slug', 'corniche');
+        // Case-insensitive on every database (MySQL compares JSON as binary unless cast).
+        $this->getJson('/api/v1/places?q=CORNICHE', $this->tenantHeaders())->assertJsonCount(1, 'data')->assertJsonPath('data.0.slug', 'corniche');
         $this->getJson('/api/v1/places?featured=1', $this->tenantHeaders())->assertJsonCount(1, 'data')->assertJsonPath('data.0.slug', 'sohar-fort');
         $cats = $this->getJson('/api/v1/places/categories', $this->tenantHeaders(null, ['Accept-Language' => 'ar']))->assertOk();
         $this->assertSame([['forts', 1, 'قلاع'], ['beaches', 1, 'شواطئ']], array_map(fn ($c) => [$c['key'], $c['places_count'], $c['name_text']], $cats->json('data')));

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,6 +27,14 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Behind a TLS-terminating proxy (Coolify's Traefik / Caddy) the
+        // proxy's X-Forwarded-Proto is trusted (config/trustedproxy.php);
+        // this is the safety net so generated URLs, redirects and signed
+        // links never fall back to http:// in production.
+        if ($this->app->isProduction() && str_starts_with((string) config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
+
         // Use custom Bootstrap 5 pagination view
         Paginator::useBootstrapFive();
 

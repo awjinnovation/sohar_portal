@@ -8,6 +8,7 @@ use App\Models\Restaurant;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Models\WalletTransaction;
+use App\Support\DbLike;
 use App\Tenancy\TenantContext;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -27,10 +28,13 @@ class VendorController extends Controller
         $q = trim((string) $request->input('q'));
 
         $vendors = Vendor::withCount('staff')
-            ->when($q !== '', fn ($query) => $query->where(fn ($w) => $w
-                ->where('name->ar', 'like', "%$q%")
-                ->orWhere('name->en', 'like', "%$q%")
-                ->orWhere('category', 'like', "%$q%")))
+            ->when($q !== '', fn ($query) => $query->where(function ($w) use ($q) {
+                // Case-insensitive on MySQL too (JSON paths compare as binary there).
+                $like = DbLike::contains($q);
+                DbLike::orWhere($w, 'name->ar', $like);
+                DbLike::orWhere($w, 'name->en', $like);
+                $w->orWhere('category', 'like', $like);
+            }))
             ->latest('id')
             ->paginate(20)
             ->withQueryString();

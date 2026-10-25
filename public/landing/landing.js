@@ -55,6 +55,7 @@
       types:["Festival","Exhibition or expo","Concert series","Mall season","Governorate or municipality","Sports event","Other"],
       sizes:["Under 5,000","5,000 – 25,000","25,000 – 100,000","More than 100,000"],
       sum:{name:"Name",org:"Organization",type:"Event type",size:"Expected visitors",when:"Season",contact:"Contact",notes:"Notes",head:"Mawsim demo request"},
+      fi_eyebrow:"At the event",fi_title:"How it looks on the night",fi_lede:"Illustrative scenes generated with AI from the real app screens.",fi_1:"Paying for karak with the wallet code",fi_2:"Gate staff scan tickets on a handheld",fi_3:"The team follows the season from the dashboard",fi_4:"Asking the assistant what's on tonight",fi_5:"The visitor app and the gate scanner",
       ft_by:"An events platform by AWJ Systems, Oman.",ft_signin:"Staff sign in",lang_btn:"عربي"
     },
     ar:{
@@ -109,6 +110,7 @@
       types:["مهرجان","معرض","سلسلة حفلات","موسم في مركز تجاري","محافظة أو بلدية","فعالية رياضية","أخرى"],
       sizes:["أقل من 5,000","5,000 – 25,000","25,000 – 100,000","أكثر من 100,000"],
       sum:{name:"الاسم",org:"الجهة",type:"نوع الفعالية",size:"الزوار المتوقعون",when:"الموسم",contact:"التواصل",notes:"ملاحظات",head:"طلب عرض توضيحي لموسم"},
+      fi_eyebrow:"في الفعالية",fi_title:"هكذا يبدو في ليلة المهرجان",fi_lede:"مشاهد توضيحية وُلّدت بالذكاء الاصطناعي من شاشات التطبيق الحقيقية.",fi_1:"دفع ثمن الكرك برمز المحفظة",fi_2:"يمسح موظف البوابة التذاكر بجهازٍ محمول",fi_3:"يتابع الفريق الموسم من لوحة التحكم",fi_4:"سؤال المساعد عن فعاليات الليلة",fi_5:"تطبيق الزائر وجهاز البوابة",
       ft_by:"منصة فعاليات من أوج الأنظمة، عُمان.",ft_signin:"دخول فريق العمل",lang_btn:"English"
     }
   };

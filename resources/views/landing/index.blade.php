@@ -1,11 +1,49 @@
 @php
     $title = 'Mawsim Event Platform';
     $description = 'A white-label event app for Gulf organizers: tickets, a cashless wallet, deposits and loyalty points, in your own brand.';
-    $home = rtrim(url('/'), '/').'/';
-    $ogImage = asset('landing/img/web_demo_branding.jpg');
+    $shareTitle = 'Mawsim · Your season. Your app.';
+    $shareDescription = 'Your season. Your app. Tickets, a cashless wallet, cup and wristband deposits and loyalty points for festivals, governorates, malls and expos, in your own brand. By AWJ Systems, Oman.';
+    // Absolute URLs for link previews, canonical and JSON-LD come from APP_URL
+    // (https://mawsim.awj.om in production), never from the request host.
+    $base = rtrim((string) config('app.url'), '/');
+    $home = $base.'/';
+    $abs = fn (string $path) => $base.'/'.ltrim($path, '/');
+    $ogImage = $abs('landing/img/og-image.jpg');
     $v = fn (string $f) => @filemtime(public_path('landing/'.$f)) ?: 1;
     $done = is_array($demoDone ?? null) ? $demoDone : null;
     $formError = $errors->first();
+    $jsonLd = [
+        [
+            '@context' => 'https://schema.org',
+            '@type' => 'Organization',
+            'name' => 'AWJ Systems',
+            'alternateName' => 'أوج الأنظمة',
+            'url' => 'https://awj.om',
+            'email' => 'systems@awj.om',
+            'logo' => $abs('landing/icon-512.png'),
+            'address' => ['@type' => 'PostalAddress', 'addressCountry' => 'OM'],
+        ],
+        [
+            '@context' => 'https://schema.org',
+            '@type' => 'SoftwareApplication',
+            'name' => 'Mawsim',
+            'alternateName' => 'موسم',
+            'applicationCategory' => 'BusinessApplication',
+            'operatingSystem' => 'iOS, Android, Web',
+            'description' => $description,
+            'url' => $home,
+            'image' => $ogImage,
+            'inLanguage' => ['en', 'ar'],
+            'publisher' => ['@type' => 'Organization', 'name' => 'AWJ Systems'],
+        ],
+        [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => 'Mawsim',
+            'url' => $home,
+            'inLanguage' => ['en', 'ar'],
+        ],
+    ];
 @endphp
 <!DOCTYPE html>
 <html lang="{{ $locale }}" dir="{{ $dir }}">
@@ -14,30 +52,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{{ $title }}</title>
 <meta name="description" content="{{ $description }}">
+<meta name="author" content="AWJ Systems">
+<meta name="robots" content="{{ app()->isProduction() ? 'index, follow' : 'noindex, nofollow' }}">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <meta name="theme-color" content="#0C1820">
+<meta name="color-scheme" content="light dark">
 <link rel="canonical" href="{{ $home }}">
 <link rel="alternate" hreflang="en" href="{{ $home }}?lang=en">
 <link rel="alternate" hreflang="ar" href="{{ $home }}?lang=ar">
+<link rel="alternate" hreflang="x-default" href="{{ $home }}">
+
+{{-- Link previews: WhatsApp, Facebook, LinkedIn, Telegram, iMessage --}}
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Mawsim">
-<meta property="og:title" content="{{ $title }}">
-<meta property="og:description" content="{{ $description }}">
+<meta property="og:site_name" content="Mawsim · موسم">
 <meta property="og:url" content="{{ $home }}">
+<meta property="og:title" content="{{ $shareTitle }}">
+<meta property="og:description" content="{{ $shareDescription }}">
 <meta property="og:image" content="{{ $ogImage }}">
-<meta property="og:image:width" content="1400">
-<meta property="og:image:height" content="875">
-<meta property="og:image:alt" content="Mawsim branding editor with a live phone preview">
+@if (str_starts_with($ogImage, 'https://'))
+<meta property="og:image:secure_url" content="{{ $ogImage }}">
+@endif
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Mawsim app on two phones: wallet balance, pay and top-up, with the headline Your season. Your app.">
 <meta property="og:locale" content="{{ $locale === 'ar' ? 'ar_OM' : 'en_US' }}">
 <meta property="og:locale:alternate" content="{{ $locale === 'ar' ? 'en_US' : 'ar_OM' }}">
+
+{{-- X (Twitter) --}}
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{ $title }}">
-<meta name="twitter:description" content="{{ $description }}">
+<meta name="twitter:title" content="{{ $shareTitle }}">
+<meta name="twitter:description" content="{{ $shareDescription }}">
 <meta name="twitter:image" content="{{ $ogImage }}">
+<meta name="twitter:image:alt" content="Mawsim app on two phones: wallet balance, pay and top-up.">
+
+{{-- Icons --}}
 <link rel="icon" href="{{ asset('landing/favicon.svg') }}?v={{ $v('favicon.svg') }}" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@@12..96,500;12..96,700;12..96,800&family=Readex+Pro:wght@300;400;500;600;700&family=Reem+Kufi:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="icon" href="{{ asset('landing/icon-192.png') }}?v={{ $v('icon-192.png') }}" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="{{ asset('landing/apple-touch-icon.png') }}?v={{ $v('apple-touch-icon.png') }}">
+<link rel="manifest" href="{{ asset('landing/site.webmanifest') }}?v={{ $v('site.webmanifest') }}">
+
+<script type="application/ld+json">
+{!! json_encode($jsonLd, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) !!}
+</script>
+{{-- Self-hosted fonts (OFL): Bricolage Grotesque, Readex Pro, Reem Kufi, IBM Plex Mono; no outside requests. --}}
+<link rel="stylesheet" href="{{ asset('landing/fonts.css') }}?v={{ $v('fonts.css') }}">
 <link rel="stylesheet" href="{{ asset('landing/landing.css') }}?v={{ $v('landing.css') }}">
 </head>
 <body>
@@ -152,6 +211,23 @@
       <li class="step"><span class="n">05</span><h3 data-i18n="s5_t">Points</h3><p data-i18n="s5_p">Spending earns points with tier multipliers. Points convert into wallet credit.</p><div class="slip"><span>Earned</span><b class="plus">+13 pts</b></div></li>
       <li class="step"><span class="n">06</span><h3 data-i18n="s6_t">Refund</h3><p data-i18n="s6_p">Unused cash goes back on request within your refund window. Promo credit stays promotional.</p><div class="slip"><span>Refundable</span><b>8.200</b></div></li>
     </ol>
+  </div>
+</section>
+
+<section id="field" aria-labelledby="fiTitle">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" data-i18n="fi_eyebrow">At the event</p>
+      <h2 id="fiTitle" data-i18n="fi_title">How it looks on the night</h2>
+      <p data-i18n="fi_lede">Illustrative scenes generated with AI from the real app screens.</p>
+    </div>
+    <div class="field-grid">
+      <figure class="tall"><img src="{{ asset('landing/img/hf_01_family_pay_at_stall.jpg') }}" alt="A family pays at a karak stall with the wallet pay code" loading="lazy" width="1120" height="1400"><figcaption data-i18n="fi_1">Paying for karak with the wallet code</figcaption></figure>
+      <figure class="wide"><img src="{{ asset('landing/img/hf_03_gate_staff_scanning.jpg') }}" alt="Gate staff scanning a ticket on a handheld terminal" loading="lazy" width="1400" height="930"><figcaption data-i18n="fi_2">Gate staff scan tickets on a handheld</figcaption></figure>
+      <figure class="wide"><img src="{{ asset('landing/img/hf_04_organizer_dashboard.jpg') }}" alt="Organizer team reviewing the admin dashboard" loading="lazy" width="1400" height="930"><figcaption data-i18n="fi_3">The team follows the season from the dashboard</figcaption></figure>
+      <figure class="sq"><img src="{{ asset('landing/img/hf_05_ai_assistant.jpg') }}" alt="The AI assistant chat on a phone at the festival" loading="lazy" width="1120" height="1400"><figcaption data-i18n="fi_4">Asking the assistant what's on tonight</figcaption></figure>
+      <figure class="sq"><img src="{{ asset('landing/img/hf_06_flatlay.jpg') }}" alt="Visitor app and gate scanner on a palm-leaf mat" loading="lazy" width="1400" height="1400"><figcaption data-i18n="fi_5">The visitor app and the gate scanner</figcaption></figure>
+    </div>
   </div>
 </section>
 
