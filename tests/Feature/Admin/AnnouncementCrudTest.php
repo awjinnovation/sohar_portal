@@ -4,11 +4,11 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Announcement;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Tests\TestCase;
-use Spatie\Permission\Models\Role;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
 class AnnouncementCrudTest extends TestCase
 {
@@ -20,8 +20,9 @@ class AnnouncementCrudTest extends TestCase
     {
         parent::setUp();
 
-        // Create admin role
-        $adminRole = Role::create(['name' => 'admin']);
+        // Global role definitions; the assignment below is made in the
+        // current tenant (north-batinah, set by the base TestCase).
+        $this->seed(RolesAndPermissionsSeeder::class);
 
         // Create admin user
         $this->admin = User::factory()->create([
@@ -30,6 +31,38 @@ class AnnouncementCrudTest extends TestCase
             'password' => bcrypt('password'),
         ]);
         $this->admin->assignRole('admin');
+    }
+
+    private function makeAnnouncement(array $attributes = []): Announcement
+    {
+        return Announcement::create(array_merge([
+            'title' => 'Test Announcement',
+            'title_ar' => 'إعلان تجريبي',
+            'content' => 'Test content',
+            'content_ar' => 'محتوى تجريبي',
+            'type' => 'info',
+            'priority' => 0,
+            'is_active' => true,
+            'start_datetime' => now(),
+            'end_datetime' => now()->addDays(7),
+            'created_by' => $this->admin->id,
+        ], $attributes));
+    }
+
+    private function validPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'title' => 'New Test Announcement',
+            'title_ar' => 'إعلان جديد للاختبار',
+            'content' => 'This is a test announcement content',
+            'content_ar' => 'هذا محتوى إعلان تجريبي',
+            'type' => 'warning',
+            'priority' => 5,
+            'is_pinned' => 1,
+            'is_active' => 1,
+            'start_datetime' => now()->format('Y-m-d H:i:s'),
+            'end_datetime' => now()->addDays(7)->format('Y-m-d H:i:s'),
+        ], $overrides);
     }
 
     #[Test]
@@ -60,48 +93,38 @@ class AnnouncementCrudTest extends TestCase
     #[Test]
     public function admin_can_create_new_announcement_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $announcementData = [
-            'title' => 'New Test Announcement',
-            'title_ar' => 'إعلان جديد للاختبار',
-            'content' => 'This is a test announcement content',
-            'content_ar' => 'هذا محتوى إعلان تجريبي',
-            'image_url' => 'https://example.com/test-image.jpg',
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addDays(7)->format('Y-m-d'),
-            'priority' => 'high',
-            'is_active' => true,
-        ];
-
-        $response = $this->post(route('admin.announcements.store'), $announcementData);
+        $response = $this->post(route('admin.announcements.store'), $this->validPayload());
 
         $response->assertRedirect(route('admin.announcements.index'));
-        $response->assertSessionHas('success', 'تم إضافة الإعلان بنجاح');
+        $response->assertSessionHas('success', 'أُضيف الإعلان');
 
         $this->assertDatabaseHas('announcements', [
             'title' => 'New Test Announcement',
             'title_ar' => 'إعلان جديد للاختبار',
-            'priority' => 'high',
+            'type' => 'warning',
+            'priority' => 5,
             'is_active' => true,
+            'created_by' => $this->admin->id,
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
     #[Test]
     public function announcement_creation_fails_with_invalid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $invalidData = [
-            'title' => '', // Required field is empty
-            'title_ar' => '', // Required field is empty
-            'content' => '', // Required field is empty
-            'content_ar' => '', // Required field is empty
-            'start_date' => 'invalid-date',
-            'end_date' => 'invalid-date',
+            'title' => '',
+            'title_ar' => '',
+            'content' => '',
+            'content_ar' => '',
+            'type' => 'invalid-type',
             'priority' => 'invalid-priority',
+            'start_datetime' => 'invalid-date',
+            'end_datetime' => 'invalid-date',
         ];
 
         $response = $this->post(route('admin.announcements.store'), $invalidData);
@@ -111,9 +134,10 @@ class AnnouncementCrudTest extends TestCase
             'title_ar',
             'content',
             'content_ar',
-            'start_date',
-            'end_date',
+            'type',
             'priority',
+            'start_datetime',
+            'end_datetime',
         ]);
 
         $this->assertDatabaseCount('announcements', 0);
@@ -122,23 +146,14 @@ class AnnouncementCrudTest extends TestCase
     #[Test]
     public function end_date_must_be_after_start_date()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $invalidData = [
-            'title' => 'Test Announcement',
-            'title_ar' => 'إعلان تجريبي',
-            'content' => 'Test content',
-            'content_ar' => 'محتوى تجريبي',
-            'start_date' => now()->addDays(7)->format('Y-m-d'),
-            'end_date' => now()->format('Y-m-d'), // Before start date
-            'priority' => 'medium',
-            'is_active' => true,
-        ];
+        $response = $this->post(route('admin.announcements.store'), $this->validPayload([
+            'start_datetime' => now()->addDays(7)->format('Y-m-d H:i:s'),
+            'end_datetime' => now()->format('Y-m-d H:i:s'),
+        ]));
 
-        $response = $this->post(route('admin.announcements.store'), $invalidData);
-
-        $response->assertSessionHasErrors('end_date');
+        $response->assertSessionHasErrors('end_datetime');
     }
 
     #[Test]
@@ -146,16 +161,10 @@ class AnnouncementCrudTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $announcement = Announcement::create([
+        $announcement = $this->makeAnnouncement([
             'title' => 'Detail Test Announcement',
             'title_ar' => 'إعلان تفاصيل الاختبار',
-            'content' => 'Test announcement content',
             'content_ar' => 'محتوى إعلان تجريبي',
-            'image_url' => 'https://example.com/image.jpg',
-            'start_date' => now(),
-            'end_date' => now()->addDays(7),
-            'priority' => 'high',
-            'is_active' => true,
         ]);
 
         $response = $this->get(route('admin.announcements.show', $announcement));
@@ -171,15 +180,8 @@ class AnnouncementCrudTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $announcement = Announcement::create([
-            'title' => 'Edit Test Announcement',
+        $announcement = $this->makeAnnouncement([
             'title_ar' => 'إعلان تعديل الاختبار',
-            'content' => 'Test content',
-            'content_ar' => 'محتوى تجريبي',
-            'start_date' => now(),
-            'end_date' => now()->addDays(7),
-            'priority' => 'low',
-            'is_active' => true,
         ]);
 
         $response = $this->get(route('admin.announcements.edit', $announcement));
@@ -193,66 +195,40 @@ class AnnouncementCrudTest extends TestCase
     #[Test]
     public function admin_can_update_announcement_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $announcement = Announcement::create([
-            'title' => 'Original Title',
-            'title_ar' => 'العنوان الأصلي',
-            'content' => 'Original content',
-            'content_ar' => 'المحتوى الأصلي',
-            'start_date' => now(),
-            'end_date' => now()->addDays(7),
-            'priority' => 'low',
-            'is_active' => true,
-        ]);
+        $announcement = $this->makeAnnouncement(['title' => 'Original Title']);
 
-        $updatedData = [
+        $response = $this->put(route('admin.announcements.update', $announcement), $this->validPayload([
             'title' => 'Updated Title',
             'title_ar' => 'العنوان المحدث',
-            'content' => 'Updated content',
-            'content_ar' => 'المحتوى المحدث',
-            'image_url' => 'https://example.com/updated-image.jpg',
-            'start_date' => now()->addDay()->format('Y-m-d'),
-            'end_date' => now()->addDays(14)->format('Y-m-d'),
-            'priority' => 'high',
-            'is_active' => 1,
-        ];
-
-        $response = $this->put(route('admin.announcements.update', $announcement), $updatedData);
+            'type' => 'celebration',
+            'priority' => 9,
+        ]));
 
         $response->assertRedirect(route('admin.announcements.index'));
-        $response->assertSessionHas('success', 'تم تحديث الإعلان بنجاح');
+        $response->assertSessionHas('success', 'حُدِّث الإعلان');
 
         $this->assertDatabaseHas('announcements', [
             'id' => $announcement->id,
             'title' => 'Updated Title',
             'title_ar' => 'العنوان المحدث',
-            'priority' => 'high',
+            'type' => 'celebration',
+            'priority' => 9,
         ]);
     }
 
     #[Test]
     public function admin_can_delete_announcement()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $announcement = Announcement::create([
-            'title' => 'To Be Deleted',
-            'title_ar' => 'سيتم الحذف',
-            'content' => 'Test content',
-            'content_ar' => 'محتوى تجريبي',
-            'start_date' => now(),
-            'end_date' => now()->addDays(7),
-            'priority' => 'low',
-            'is_active' => true,
-        ]);
+        $announcement = $this->makeAnnouncement(['title' => 'To Be Deleted']);
 
         $response = $this->delete(route('admin.announcements.destroy', $announcement));
 
         $response->assertRedirect(route('admin.announcements.index'));
-        $response->assertSessionHas('success', 'تم حذف الإعلان بنجاح');
+        $response->assertSessionHas('success', 'حُذف الإعلان');
 
         $this->assertDatabaseMissing('announcements', [
             'id' => $announcement->id,
@@ -272,18 +248,9 @@ class AnnouncementCrudTest extends TestCase
     #[Test]
     public function title_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $announcementData = [
-            'title' => '', // Missing required field
-            'title_ar' => 'إعلان تجريبي',
-            'content' => 'Test content',
-            'content_ar' => 'محتوى تجريبي',
-            'is_active' => true,
-        ];
-
-        $response = $this->post(route('admin.announcements.store'), $announcementData);
+        $response = $this->post(route('admin.announcements.store'), $this->validPayload(['title' => '']));
 
         $response->assertSessionHasErrors('title');
     }
@@ -291,18 +258,9 @@ class AnnouncementCrudTest extends TestCase
     #[Test]
     public function title_ar_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $announcementData = [
-            'title' => 'Test Announcement',
-            'title_ar' => '', // Missing required field
-            'content' => 'Test content',
-            'content_ar' => 'محتوى تجريبي',
-            'is_active' => true,
-        ];
-
-        $response = $this->post(route('admin.announcements.store'), $announcementData);
+        $response = $this->post(route('admin.announcements.store'), $this->validPayload(['title_ar' => '']));
 
         $response->assertSessionHasErrors('title_ar');
     }
@@ -310,18 +268,9 @@ class AnnouncementCrudTest extends TestCase
     #[Test]
     public function content_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $announcementData = [
-            'title' => 'Test Announcement',
-            'title_ar' => 'إعلان تجريبي',
-            'content' => '', // Missing required field
-            'content_ar' => 'محتوى تجريبي',
-            'is_active' => true,
-        ];
-
-        $response = $this->post(route('admin.announcements.store'), $announcementData);
+        $response = $this->post(route('admin.announcements.store'), $this->validPayload(['content' => '']));
 
         $response->assertSessionHasErrors('content');
     }
@@ -329,18 +278,9 @@ class AnnouncementCrudTest extends TestCase
     #[Test]
     public function content_ar_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $announcementData = [
-            'title' => 'Test Announcement',
-            'title_ar' => 'إعلان تجريبي',
-            'content' => 'Test content',
-            'content_ar' => '', // Missing required field
-            'is_active' => true,
-        ];
-
-        $response = $this->post(route('admin.announcements.store'), $announcementData);
+        $response = $this->post(route('admin.announcements.store'), $this->validPayload(['content_ar' => '']));
 
         $response->assertSessionHasErrors('content_ar');
     }
@@ -348,39 +288,40 @@ class AnnouncementCrudTest extends TestCase
     #[Test]
     public function priority_must_be_valid_value()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $announcementData = [
-            'title' => 'Test Announcement',
-            'title_ar' => 'إعلان تجريبي',
-            'content' => 'Test content',
-            'content_ar' => 'محتوى تجريبي',
-            'priority' => 'invalid', // Invalid priority value
-            'is_active' => true,
-        ];
-
-        $response = $this->post(route('admin.announcements.store'), $announcementData);
+        $response = $this->post(route('admin.announcements.store'), $this->validPayload(['priority' => 'invalid']));
 
         $response->assertSessionHasErrors('priority');
     }
 
     #[Test]
-    public function announcement_can_be_created_without_optional_fields()
+    public function type_and_start_datetime_are_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $announcementData = [
+        $payload = $this->validPayload();
+        unset($payload['type'], $payload['start_datetime']);
+
+        $response = $this->post(route('admin.announcements.store'), $payload);
+
+        $response->assertSessionHasErrors(['type', 'start_datetime']);
+    }
+
+    #[Test]
+    public function announcement_can_be_created_without_optional_fields()
+    {
+        $this->actingAs($this->admin);
+
+        $response = $this->post(route('admin.announcements.store'), [
             'title' => 'Minimal Announcement',
             'title_ar' => 'إعلان بسيط',
             'content' => 'Minimal content',
             'content_ar' => 'محتوى بسيط',
-            'is_active' => true,
-            // Optional fields not provided: image_url, start_date, end_date, priority
-        ];
-
-        $response = $this->post(route('admin.announcements.store'), $announcementData);
+            'type' => 'info',
+            'start_datetime' => now()->format('Y-m-d H:i:s'),
+            // Optional: priority, is_pinned, is_active, end_datetime
+        ]);
 
         $response->assertRedirect(route('admin.announcements.index'));
         $response->assertSessionHas('success');
@@ -388,6 +329,7 @@ class AnnouncementCrudTest extends TestCase
         $this->assertDatabaseHas('announcements', [
             'title' => 'Minimal Announcement',
             'title_ar' => 'إعلان بسيط',
+            'end_datetime' => null,
         ]);
     }
 
@@ -396,21 +338,15 @@ class AnnouncementCrudTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        // Create active announcement
-        $activeAnnouncement = Announcement::create([
+        $this->makeAnnouncement([
             'title' => 'Active Announcement',
             'title_ar' => 'إعلان نشط',
-            'content' => 'Active content',
-            'content_ar' => 'محتوى نشط',
             'is_active' => true,
         ]);
 
-        // Create inactive announcement
-        $inactiveAnnouncement = Announcement::create([
+        $this->makeAnnouncement([
             'title' => 'Inactive Announcement',
             'title_ar' => 'إعلان غير نشط',
-            'content' => 'Inactive content',
-            'content_ar' => 'محتوى غير نشط',
             'is_active' => false,
         ]);
 

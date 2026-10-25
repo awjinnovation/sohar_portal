@@ -13,14 +13,17 @@ class SendOtpSms implements ShouldQueue
 
     public $phone;
     public $message;
+    /** otp | box_office — box office links are logged in full outside production. */
+    public $purpose;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $phone, string $message)
+    public function __construct(string $phone, string $message, string $purpose = 'otp')
     {
         $this->phone = $phone;
         $this->message = $message;
+        $this->purpose = $purpose;
     }
 
     /**
@@ -33,9 +36,13 @@ class SendOtpSms implements ShouldQueue
             $password = config('services.ismartsms.password');
 
             if (!$userId || !$password) {
-                Log::error('SMS not sent: iSmartSMS credentials are not configured', [
+                // Local / unconfigured: the text of non-OTP messages (e.g. a
+                // box office payment link) is logged so it can be opened.
+                Log::error('SMS not sent: iSmartSMS credentials are not configured', array_filter([
                     'phone' => $this->phone,
-                ]);
+                    'purpose' => $this->purpose ?? 'otp',
+                    'message' => ($this->purpose ?? 'otp') !== 'otp' && ! app()->environment('production') ? $this->message : null,
+                ]));
                 return;
             }
 

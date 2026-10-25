@@ -26,7 +26,7 @@ class AnnouncementController extends Controller
             "title_ar" => "required|max:255",
             "content" => "required",
             "content_ar" => "required",
-            "type" => "required|in:info,warning,emergency,celebration",
+            "type" => ["required", \Illuminate\Validation\Rule::in(Announcement::TYPES)],
             "priority" => "nullable|integer",
             "is_pinned" => "boolean",
             "is_active" => "boolean",
@@ -39,7 +39,7 @@ class AnnouncementController extends Controller
         Announcement::create($validated);
 
         return redirect()->route("admin.announcements.index")
-            ->with("success", "تم إضافة الإعلان بنجاح");
+            ->with("success", "أُضيف الإعلان");
     }
 
     public function show(Announcement $announcement)
@@ -59,7 +59,8 @@ class AnnouncementController extends Controller
             "title_ar" => "required|max:255",
             "content" => "required",
             "content_ar" => "required",
-            "type" => "required|in:info,warning,emergency,celebration",
+            // A stored legacy type (alert, success...) may be kept unchanged.
+            "type" => ["required", \Illuminate\Validation\Rule::in(array_unique(array_merge(Announcement::TYPES, [$announcement->type])))],
             "priority" => "nullable|integer",
             "is_pinned" => "boolean",
             "is_active" => "boolean",
@@ -70,13 +71,13 @@ class AnnouncementController extends Controller
         $announcement->update($validated);
 
         return redirect()->route("admin.announcements.index")
-            ->with("success", "تم تحديث الإعلان بنجاح");
+            ->with("success", "حُدِّث الإعلان");
     }
 
     public function destroy(Announcement $announcement)
     {
         $announcement->delete();
         return redirect()->route("admin.announcements.index")
-            ->with("success", "تم حذف الإعلان بنجاح");
+            ->with("success", "حُذف الإعلان");
     }
 }

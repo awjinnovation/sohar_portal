@@ -2,117 +2,88 @@
 
 @section('title', 'المطاعم')
 @section('page-title', 'إدارة المطاعم')
+@section('page-subtitle', 'المطاعم والأكشاك التي تظهر للزوار في التطبيق')
+@php
+    $pageIcon = 'cup-hot';
+    $breadcrumbs = ['المحتوى' => null, 'المطاعم والأكشاك' => null];
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.restaurants.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> {{ __('إضافة مطعم جديد') }}
+    </a>
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold">جميع المطاعم</h5>
-                        <a href="{{ route('admin.restaurants.create') }}" class="btn btn-primary btn-sm">
-                            <i class="bi bi-plus-lg"></i>
-                            إضافة مطعم جديد
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body">
-                    @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    @endif
+    @include('admin.partials.alerts')
 
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th width="50">#</th>
-                                    <th>الاسم</th>
-                                    <th>المطبخ</th>
-                                    <th>الموقع</th>
-                                    <th>التقييم</th>
-                                    <th>السعر</th>
-                                    <th>الحالة</th>
-                                    <th width="150">الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($restaurants as $restaurant)
-                                <tr>
-                                    <td>{{ $restaurant->id }}</td>
-                                    <td>
-                                        <div>
-                                            <strong>{{ $restaurant->name_ar }}</strong>
-                                            <small class="text-muted d-block">{{ $restaurant->name }}</small>
-                                        </div>
-                                    </td>
-                                    <td>{{ $restaurant->cuisine_ar }}</td>
-                                    <td>{{ $restaurant->location_ar }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <span class="me-1">{{ $restaurant->rating }}</span>
-                                            <i class="bi bi-star-fill text-warning"></i>
-                                        </div>
-                                    </td>
-                                    <td>{{ $restaurant->price_range }}</td>
-                                    <td>
-                                        @if($restaurant->is_active)
-                                        <span class="badge bg-success">نشط</span>
-                                        @else
-                                        <span class="badge bg-secondary">غير نشط</span>
-                                        @endif
-                                        @if($restaurant->is_featured)
-                                        <span class="badge bg-warning">مميز</span>
-                                        @endif
-                                        @if($restaurant->is_open)
-                                        <span class="badge bg-info">مفتوح</span>
-                                        @else
-                                        <span class="badge bg-danger">مغلق</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('admin.restaurants.show', $restaurant) }}" class="btn btn-outline-info">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                            <a href="{{ route('admin.restaurants.edit', $restaurant) }}" class="btn btn-outline-primary">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <form action="{{ route('admin.restaurants.destroy', $restaurant) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="8" class="text-center py-4">
-                                        <div class="text-muted">
-                                            <i class="bi bi-inbox display-4"></i>
-                                            <p class="mt-2">لا توجد مطاعم حتى الآن</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+    <x-admin.data-table title="جميع المطاعم" icon="cup-hot" :count="$restaurants->total()" :paginator="$restaurants">
+        <x-slot:head>
+            <th>{{ __('المطعم') }}</th>
+            <th>{{ __('المطبخ') }}</th>
+            <th>{{ __('الموقع') }}</th>
+            <th>{{ __('التقييم') }}</th>
+            <th>{{ __('السعر') }}</th>
+            <th>{{ __('الحالة') }}</th>
+            <th class="text-end">{{ __('الإجراءات') }}</th>
+        </x-slot:head>
 
-                    @if($restaurants->hasPages())
-                    <div class="mt-3">
-                        {{ $restaurants->links() }}
+        @forelse($restaurants as $restaurant)
+            <tr>
+                <td>
+                    <div class="cell-media">
+                        @if($restaurant->image_url)
+                            <img src="{{ $restaurant->image_url }}" alt="" loading="lazy">
+                        @else
+                            <span class="ph"><i class="bi bi-cup-hot"></i></span>
+                        @endif
+                        <div style="min-width: 0">
+                            <div class="cell-title">
+                                {{ $restaurant->name_ar }}
+                                @if($restaurant->is_featured)
+                                    <i class="bi bi-star-fill text-warning" title="{{ __('مميز') }}"></i>
+                                @endif
+                            </div>
+                            <div class="cell-sub">{{ $restaurant->name }}</div>
+                        </div>
                     </div>
+                </td>
+                <td>{{ $restaurant->cuisine_ar }}</td>
+                <td class="text-muted">{{ $restaurant->location_ar }}</td>
+                <td class="num nowrap">
+                    @if($restaurant->rating !== null)
+                        <i class="bi bi-star-fill text-warning"></i> {{ $restaurant->rating }}
+                        @if($restaurant->total_ratings)<span class="text-muted small">({{ number_format($restaurant->total_ratings) }})</span>@endif
+                    @else
+                        <span class="text-muted">—</span>
                     @endif
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+                </td>
+                <td class="num ltr text-start">{{ $restaurant->price_range }}</td>
+                <td>
+                    <div class="d-flex flex-wrap gap-1">
+                        <x-admin.status-pill domain="active" :status="$restaurant->is_active" size="sm" />
+                        @if($restaurant->is_open)
+                            <x-admin.status-pill variant="info" label="مفتوح" size="sm" />
+                        @else
+                            <x-admin.status-pill variant="neutral" label="مغلق" size="sm" />
+                        @endif
+                    </div>
+                </td>
+                <td class="text-end">
+                    <div class="row-actions">
+                        <a href="{{ route('admin.restaurants.show', $restaurant) }}" class="icon-btn" title="{{ __('عرض') }}"><i class="bi bi-eye"></i></a>
+                        <a href="{{ route('admin.restaurants.edit', $restaurant) }}" class="icon-btn brand" title="{{ __('تعديل') }}"><i class="bi bi-pencil"></i></a>
+                        <form action="{{ route('admin.restaurants.destroy', $restaurant) }}" method="POST" data-confirm="{{ __('سيُحذف المطعم «:name» نهائيًا.', ['name' => $restaurant->name_ar]) }}">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="icon-btn danger" title="{{ __('حذف') }}"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        @empty
+            <x-admin.empty-row :colspan="7" icon="cup-hot" title="لا توجد مطاعم حتى الآن" text="أضف مطعمًا أو كشكًا ليظهر للزوار في التطبيق.">
+                <a href="{{ route('admin.restaurants.create') }}" class="btn btn-tonal"><i class="bi bi-plus-lg"></i> {{ __('إضافة مطعم') }}</a>
+            </x-admin.empty-row>
+        @endforelse
+    </x-admin.data-table>
 @endsection

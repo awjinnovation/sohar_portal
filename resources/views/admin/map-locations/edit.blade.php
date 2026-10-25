@@ -1,49 +1,23 @@
 @extends('layouts.admin')
 
-@section('content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1 text-gray-800 fw-bold">
-                <i class="bi bi-pencil-square text-warning"></i> تعديل موقع على الخريطة
-            </h1>
-            <p class="text-muted mb-0">تحديث معلومات الموقع: {{ $mapLocation->name }}</p>
-        </div>
-        <a href="{{ route('admin.map-locations.index') }}" class="btn btn-secondary shadow-sm">
-            <i class="bi bi-arrow-right"></i> رجوع
-        </a>
-    </div>
+@section('title', 'تعديل موقع')
+@section('page-title', 'تعديل موقع على الخريطة')
+@section('page-subtitle', __('تحديث معلومات الموقع: :name', ['name' => $mapLocation->name_ar ?: $mapLocation->name]))
+@php
+    $pageIcon = 'geo-alt';
+    $breadcrumbs = ['المحتوى' => null, 'مواقع الخريطة' => route('admin.map-locations.index'), 'تعديل' => null];
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.map-locations.show', $mapLocation) }}" class="btn"><i class="bi bi-eye"></i> {{ __('عرض') }}</a>
+    <a href="{{ route('admin.map-locations.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>
+@endsection
 
-    @if ($errors->any())
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm">
-            <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> هناك بعض الأخطاء!</h5>
-            <ul class="mb-0">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+@section('content')
+    @include('admin.partials.alerts')
 
     <form action="{{ route('admin.map-locations.update', $mapLocation) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
-
-        @include('admin.map-locations._form')
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        <i class="bi bi-check-circle"></i> حفظ التغييرات
-                    </button>
-                    <a href="{{ route('admin.map-locations.index') }}" class="btn btn-secondary btn-lg">
-                        <i class="bi bi-x-circle"></i> إلغاء
-                    </a>
-                </div>
-            </div>
-        </div>
+        @include('admin.map-locations._form', ['submitLabel' => 'حفظ التغييرات'])
     </form>
-</div>
 @endsection

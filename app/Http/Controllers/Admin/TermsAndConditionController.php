@@ -31,19 +31,19 @@ class TermsAndConditionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'required|string|max:255',
-            'language' => 'required|string|max:10',
             'title' => 'required|string|max:255',
+            'title_ar' => 'required|string|max:255',
             'content' => 'required|string',
+            'content_ar' => 'required|string',
             'is_active' => 'boolean',
         ]);
 
-        $validated['is_active'] = $request->has('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         TermsAndCondition::create($validated);
 
         return redirect()->route('admin.terms-and-conditions.index')
-            ->with('success', 'Terms and conditions created successfully.');
+            ->with('success', 'أُضيفت الشروط والأحكام');
     }
 
     /**
@@ -68,19 +68,19 @@ class TermsAndConditionController extends Controller
     public function update(Request $request, TermsAndCondition $termsAndCondition)
     {
         $validated = $request->validate([
-            'type' => 'required|string|max:255',
-            'language' => 'required|string|max:10',
             'title' => 'required|string|max:255',
+            'title_ar' => 'required|string|max:255',
             'content' => 'required|string',
+            'content_ar' => 'required|string',
             'is_active' => 'boolean',
         ]);
 
-        $validated['is_active'] = $request->has('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         $termsAndCondition->update($validated);
 
         return redirect()->route('admin.terms-and-conditions.index')
-            ->with('success', 'Terms and conditions updated successfully.');
+            ->with('success', 'حُدِّثت الشروط والأحكام');
     }
 
     /**
@@ -91,6 +91,6 @@ class TermsAndConditionController extends Controller
         $termsAndCondition->delete();
 
         return redirect()->route('admin.terms-and-conditions.index')
-            ->with('success', 'Terms and conditions deleted successfully.');
+            ->with('success', 'حُذفت الشروط والأحكام');
     }
 }

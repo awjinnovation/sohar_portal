@@ -29,7 +29,6 @@ class NotificationController extends Controller
     public function public()
     {
         $notifications = Notification::where('is_public', true)
-            ->where('status', 'active')
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();

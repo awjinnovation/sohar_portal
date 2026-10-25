@@ -25,8 +25,8 @@ class EventResource extends JsonResource
             'organizer_name' => LocaleHelper::getLocalizedField($this, 'organizer_name'),
             'image_url' => $this->image_url,
             'images' => $this->images ?? [],
-            'start_date' => $this->start_time?->toIso8601String(),
-            'end_date' => $this->end_time?->toIso8601String(),
+            'start_date' => \App\Support\TenantTime::iso($this->start_time),
+            'end_date' => \App\Support\TenantTime::iso($this->end_time),
             'map_location' => $this->mapLocation ? [
                 'id' => $this->mapLocation->id,
                 'name' => LocaleHelper::getLocalizedField($this->mapLocation, 'name'),
@@ -43,21 +43,38 @@ class EventResource extends JsonResource
                 'name' => LocaleHelper::getLocalizedField($this->category, 'name'),
                 'description' => LocaleHelper::getLocalizedField($this->category, 'description'),
             ] : null,
-            'tags' => $this->tags->map(function($tag) {
+            'tags' => $this->tags->map(function ($tag) {
                 return [
                     'id' => $tag->id,
-                    'name' => LocaleHelper::getLocalizedField($tag, 'name'),
+                    'name' => LocaleHelper::getLocalizedField($tag, 'tag'),
                 ];
             })->toArray(),
             'price' => $this->price ? (float) $this->price : null,
+            'price_minor' => $this->unitPriceMinor(null, app(\App\Tenancy\TenantContext::class)->get()?->currencyDecimals() ?? 3),
+            // Ticket types (docs/ticket_types_contract.md §2): public, active,
+            // `available` for the next day the event runs (today when running).
+            'ticket_types' => $this->ticketTypesPayload(),
+            'price_from_minor' => $priceFrom = $this->priceFromMinor(),
+            'price_from' => $priceFrom === null ? null : \App\Support\Money::format($priceFrom, app(\App\Tenancy\TenantContext::class)->get()?->currencyDecimals() ?? 3),
+            'deposit_minor' => (int) ($this->deposit_minor ?? 0),
+            'deposit_type' => $this->deposit_type,
             'currency' => $this->currency,
             'total_tickets_per_day' => $this->total_tickets,
             'is_unlimited' => $this->total_tickets === -1,
             'daily_availability' => $this->getDailyAvailability(),
             'is_featured' => $this->is_featured ?? false,
             'is_active' => $this->is_active ?? true,
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'created_at' => \App\Support\TenantTime::iso($this->created_at),
+            'updated_at' => \App\Support\TenantTime::iso($this->updated_at),
         ];
+    }
+
+    private function ticketTypesPayload(): array
+    {
+        $date = $this->resource->nextSaleDate();
+        $eventAvailable = $date ? $this->resource->getAvailableTicketsForDate($date) : null;
+
+        return $this->resource->sellableTicketTypes(\App\Models\EventTicketType::CHANNEL_APP)
+            ->map(fn ($t) => $t->toApi($date, null, $eventAvailable))->values()->all();
     }
 }

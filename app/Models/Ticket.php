@@ -6,8 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Ticket extends Model
 {
+    use \App\Tenancy\BelongsToTenant;
+
     protected $fillable = [
-        'ticket_number', 'event_id', 'user_id', 'transaction_id', 'booking_date', 'quantity', 'ticket_type', 'status', 'price', 'currency',
+        'ticket_number', 'event_id', 'user_id', 'transaction_id', 'booking_date', 'quantity', 'ticket_type', 'ticket_type_id', 'status', 'price', 'currency',
         'holder_name', 'seat_number', 'qr_code', 'purchase_date', 'used_at', 'validated_by', 'check_in_count',
         'max_check_ins', 'validation_location', 'validation_notes'
     ];
@@ -30,6 +32,31 @@ class Ticket extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** docs/ticket_types_contract.md — `ticket_type` keeps the type key. */
+    public function ticketType()
+    {
+        return $this->belongsTo(EventTicketType::class, 'ticket_type_id')->withoutGlobalScopes();
+    }
+
+    /** People admitted by this ticket (multi-entry, stored as max_check_ins). */
+    public function admits(): int
+    {
+        return max(1, (int) ($this->max_check_ins ?: 1));
+    }
+
+    /** {id, key, name_text, category, color, admits} for ticket resources. */
+    public function ticketTypeApi(): ?array
+    {
+        $type = $this->ticketType;
+        if (! $type) {
+            return $this->ticket_type ? ['id' => null, 'key' => $this->ticket_type, 'name_text' => $this->ticket_type,
+                'category' => 'general', 'color' => EventTicketType::CATEGORY_COLORS['general'], 'admits' => $this->admits()] : null;
+        }
+
+        return ['id' => $type->id, 'key' => $type->key, 'name_text' => $type->nameText(), 'category' => $type->category,
+            'color' => $type->colorValue(), 'admits' => $this->admits()];
     }
 
     public function payment()
@@ -98,7 +125,7 @@ class Ticket extends Model
             return [
                 'is_valid' => false,
                 'reason' => 'TICKET_EXPIRED',
-                'message' => 'التذكرة منتهية الصلاحية / Ticket expired'
+                'message' => 'انتهت صلاحية التذكرة / Ticket expired'
             ];
         }
 
@@ -106,7 +133,7 @@ class Ticket extends Model
             return [
                 'is_valid' => false,
                 'reason' => 'TICKET_ALREADY_USED',
-                'message' => 'التذكرة مستخدمة بالفعل / Ticket already used',
+                'message' => 'التذكرة مستخدمة من قبل / Ticket already used',
                 'data' => [
                     'validated_at' => $this->used_at?->toIso8601String(),
                     'validated_by' => $this->validated_by
@@ -118,7 +145,7 @@ class Ticket extends Model
             return [
                 'is_valid' => false,
                 'reason' => 'TICKET_EXPIRED',
-                'message' => 'التذكرة منتهية الصلاحية / Ticket expired',
+                'message' => 'انتهت صلاحية التذكرة / Ticket expired',
                 'data' => [
                     'expiry_date' => $this->booking_date->toIso8601String()
                 ]
@@ -129,7 +156,7 @@ class Ticket extends Model
             return [
                 'is_valid' => false,
                 'reason' => 'EVENT_ENDED',
-                'message' => 'الفعالية انتهت / Event has ended'
+                'message' => 'انتهت الفعالية / Event has ended'
             ];
         }
 
@@ -172,7 +199,10 @@ class Ticket extends Model
         $year = now()->year;
 
         // Get the last ticket number for this year
-        $lastTicket = static::where('ticket_number', 'like', "{$prefix}-{$year}-%")
+        // Ticket numbers are unique platform-wide (they are the QR payload),
+        // so look across all tenants.
+        $lastTicket = static::withoutTenantScope()
+            ->where('ticket_number', 'like', "{$prefix}-{$year}-%")
             ->orderBy('ticket_number', 'desc')
             ->first();
 
@@ -199,8 +229,10 @@ class Ticket extends Model
                 $ticket->ticket_number = static::generateTicketNumber();
             }
 
+            // QR payload = ticket number + random suffix: human readable for
+            // gate staff, but not guessable/forgeable from the sequence.
             if (empty($ticket->qr_code)) {
-                $ticket->qr_code = $ticket->ticket_number;
+                $ticket->qr_code = $ticket->ticket_number.'-'.\Illuminate\Support\Str::upper(\Illuminate\Support\Str::random(12));
             }
         });
     }

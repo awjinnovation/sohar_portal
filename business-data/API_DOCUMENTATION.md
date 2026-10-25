@@ -1,5 +1,10 @@
 # Sohar Festival API Documentation
 
+> **Platform update (white-label):** every request is now scoped to a tenant via the `X-Tenant: <slug>` header (default `north-batinah`).
+> Payments no longer accept a client `amount`. New endpoints — tenant config, wallet, top-ups, points, merchant, quote — are documented in
+> [`PLATFORM_API.md`](PLATFORM_API.md) and the shared contract `../../docs/platform_contract.md`.
+
+
 Base URL: `https://your-domain.com/api/v1`
 Development: `http://localhost:8000/api/v1`
 

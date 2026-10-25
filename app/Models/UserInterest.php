@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserInterest extends Model
 {
+    use \App\Tenancy\BelongsToTenant;
+
     protected $fillable = [
         'user_id',
         'category_id',

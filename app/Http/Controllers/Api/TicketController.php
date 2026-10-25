@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Support\TenantTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -18,7 +19,7 @@ class TicketController extends Controller
      */
     private function eventToTicket(Event $event): array
     {
-        $date = $event->start_time?->format('Y-m-d') ?? now()->format('Y-m-d');
+        $date = $event->start_time?->format('Y-m-d') ?? TenantTime::today();
         $available = $event->getAvailableTicketsForDate($date);
 
         return [
@@ -32,8 +33,8 @@ class TicketController extends Controller
             'currency' => $event->currency,
             'quantity' => $event->total_tickets,
             'available_quantity' => $available === -1 ? 9999 : $available,
-            'valid_from' => $event->start_time,
-            'valid_to' => $event->end_time,
+            'valid_from' => TenantTime::iso($event->start_time),
+            'valid_to' => TenantTime::iso($event->end_time),
             'image' => $event->image_url,
             'is_active' => $event->is_active,
         ];
@@ -43,7 +44,7 @@ class TicketController extends Controller
     {
         // Active, ticketed events whose window hasn't ended yet.
         $events = Event::where('is_active', true)
-            ->whereDate('end_time', '>=', now())
+            ->whereDate('end_time', '>=', TenantTime::today())
             ->orderBy('start_time')
             ->get();
 
@@ -118,7 +119,7 @@ class TicketController extends Controller
 
     public function myTickets(Request $request)
     {
-        $tickets = Ticket::with('event')
+        $tickets = Ticket::with(['event', 'ticketType'])
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
@@ -134,6 +135,11 @@ class TicketController extends Controller
                 'status' => $t->status,
                 'purchase_date' => $t->purchase_date,
                 'used_at' => $t->used_at,
+                // docs/ticket_types_contract.md §2
+                'booking_date' => $t->booking_date?->format('Y-m-d'),
+                'ticket_type' => $t->ticketTypeApi(),
+                'admits' => $t->admits(),
+                'entries_used' => (int) $t->check_in_count,
                 'ticket' => [
                     'id' => $t->event_id,
                     'event_id' => $t->event_id,
@@ -141,8 +147,8 @@ class TicketController extends Controller
                     'title' => $event ? LocaleHelper::getLocalizedField($event, 'title') : $t->ticket_type,
                     'price' => (float) $t->price,
                     'currency' => $t->currency,
-                    'valid_from' => optional($t->booking_date)->toIso8601String() ?? optional($event)->start_time?->toIso8601String(),
-                    'valid_to' => optional($event)->end_time?->toIso8601String() ?? optional($t->booking_date)->toIso8601String(),
+                    'valid_from' => TenantTime::isoDate($t->booking_date) ?? TenantTime::iso($event?->start_time),
+                    'valid_to' => TenantTime::iso($event?->end_time) ?? TenantTime::isoDate($t->booking_date),
                     'image' => $event->image_url ?? null,
                 ],
             ];
@@ -167,7 +173,13 @@ class TicketController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $ticket
+            // ticket_type is the type object (docs/ticket_types_contract.md §2); the key stays in ticket_type_key.
+            'data' => array_merge($ticket->toArray(), [
+                'ticket_type' => $ticket->ticketTypeApi(),
+                'ticket_type_key' => $ticket->ticket_type,
+                'admits' => $ticket->admits(),
+                'entries_used' => (int) $ticket->check_in_count,
+            ]),
         ]);
     }
 

@@ -1,285 +1,94 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket #{{ $ticket->id }} - Sohar Festival</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <style>
-        @page {
-            size: A4 landscape;
-            margin: 0;
-        }
-        body {
-            background: #f5f5f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-        }
-        .ticket-wrapper {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-        .ticket-container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            overflow: hidden;
-            display: flex;
-            height: 400px;
-        }
-        .ticket-left {
-            flex: 1;
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .ticket-right {
-            width: 400px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            position: relative;
-            overflow: hidden;
-        }
-        .ticket-right::before {
-            content: '';
-            position: absolute;
-            width: 200%;
-            height: 200%;
-            background: url('{{ asset("sohar_fastival_logo_no_bg.png") }}') center/contain no-repeat;
-            opacity: 0.1;
-            transform: rotate(-15deg);
-        }
-        .logo {
-            max-width: 120px;
-            margin-bottom: 20px;
-        }
-        .ticket-title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-        }
-        .qr-container {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            text-align: center;
-            position: relative;
-            z-index: 1;
-        }
-        .qr-container h4 {
-            color: #333;
-            margin-top: 15px;
-            font-size: 16px;
-        }
-        .ticket-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-        }
-        .info-item {
-            display: flex;
-            flex-direction: column;
-        }
-        .info-label {
-            font-size: 12px;
-            color: #999;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-        .info-value {
-            font-size: 16px;
-            color: #333;
-            font-weight: 600;
-        }
-        .ticket-footer {
-            border-top: 2px dashed #e0e0e0;
-            padding-top: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .ticket-id {
-            font-size: 14px;
-            color: #666;
-        }
-        .status-badge {
-            background: #2ecc71;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 14px;
-        }
-        .actions {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        @media print {
-            body {
-                background: white;
-                padding: 0;
-            }
-            .actions {
-                display: none !important;
-            }
-            .ticket-wrapper {
-                max-width: 100%;
-            }
-            .ticket-container {
-                box-shadow: none;
-                page-break-inside: avoid;
-            }
-        }
-        @media (max-width: 768px) {
-            .ticket-container {
-                flex-direction: column;
-                height: auto;
-            }
-            .ticket-right {
-                width: 100%;
-                padding: 30px;
-            }
-            .ticket-info {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="ticket-wrapper">
-        <div class="ticket-container">
-            <div class="ticket-left">
-                <div>
-                    <img src="{{ asset('sohar_fastival_logo_no_bg.png') }}" alt="Logo" class="logo">
-                    <div class="ticket-title">{{ $ticket->event->title ?? 'Event Ticket' }}</div>
+@extends('layouts.public')
+@php
+    $lang = \App\View\PublicPage::locale($brand ?? null);
+    $isAr = $lang === 'ar';
+    $t = fn ($ar, $en) => $isAr ? $ar : $en;
+    $event = $ticket->event;
+    $tz = $brand?->setting('tenant.timezone') ?: config('app.timezone');
+    $start = $event?->start_time?->copy()->setTimezone($tz);
+    $venue = $event?->mapLocation ? \App\View\PublicPage::pick($event->mapLocation, 'name', $lang) : \App\View\PublicPage::pick($event, 'location', $lang);
+    $statusMap = [
+        'active' => ['pill-success', $t('صالحة', 'Valid')], 'used' => ['pill-neutral', $t('مستخدمة', 'Used')],
+        'expired' => ['pill-neutral', $t('منتهية', 'Expired')], 'cancelled' => ['pill-error', $t('ملغاة', 'Cancelled')], 'refunded' => ['pill-error', $t('مستردة', 'Refunded')],
+    ];
+    $isValid = $ticket->status === 'active';
+    $usedAt = $ticket->used_at?->copy()->setTimezone($tz);
+    [$stClass, $stLabel] = $statusMap[$ticket->status] ?? ['pill-neutral', $ticket->status];
+    $typeLabels = ['standard' => $t('عادية', 'Standard'), 'vip' => 'VIP', 'premium' => $t('مميزة', 'Premium'), 'early_bird' => $t('حجز مبكر', 'Early bird')];
+@endphp
+@section('title', $t('تذكرتك', 'Your ticket'))
+@section('band-sub', $t('تذكرة دخول', 'Entry ticket'))
 
-                    <div class="ticket-info">
-                        <div class="info-item">
-                            <span class="info-label">Date & Time</span>
-                            <span class="info-value">{{ $ticket->event->start_time->format('d M Y, h:i A') }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Holder</span>
-                            <span class="info-value">{{ $ticket->holder_name }}</span>
-                        </div>
-                        @if($ticket->event->mapLocation)
-                        <div class="info-item">
-                            <span class="info-label">Location</span>
-                            <span class="info-value">{{ $ticket->event->mapLocation->name }}</span>
-                        </div>
-                        @endif
-                        <div class="info-item">
-                            <span class="info-label">Type</span>
-                            <span class="info-value text-uppercase">{{ $ticket->ticket_type }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Purchase Date</span>
-                            <span class="info-value">{{ $ticket->purchase_date->format('d M Y') }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Amount Paid</span>
-                            <span class="info-value">{{ $ticket->price }} {{ $ticket->currency }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="ticket-footer">
-                    <span class="ticket-id">{{ $ticket->transaction_id }}</span>
-                    <span class="status-badge">{{ strtoupper($ticket->status) }}</span>
-                </div>
-            </div>
-
-            <div class="ticket-right">
-                <div class="qr-container">
-                    {!! QrCode::size(250)->generate($ticket->qr_code) !!}
-                    <h4>Scan to Enter</h4>
-                </div>
+@section('content')
+    <article class="ticket" id="ticketCard">
+        <div class="ticket-head">
+            <span class="pill {{ $isValid ? '' : $stClass }}" data-ticket-status="{{ $ticket->status }}"><span class="dot"></span>{{ $stLabel }}</span>
+            <h1 class="ev-title">{{ \App\View\PublicPage::pick($event, 'title', $lang) ?: $t('تذكرة فعالية', 'Event ticket') }}</h1>
+            <div class="ev-meta">
+                @if($start)
+                    <span><i class="bi bi-calendar3"></i> {{ $start->locale($lang)->translatedFormat('l j F') }}</span>
+                    <span class="num"><i class="bi bi-clock"></i> {{ $start->format('H:i') }}</span>
+                @endif
+                @if($venue)<span><i class="bi bi-geo-alt"></i> {{ $venue }}</span>@endif
             </div>
         </div>
+        <div class="ticket-perf"><i></i></div>
+        <div class="ticket-body">
+            <div class="qr-panel" @unless($isValid) style="opacity:.35; filter: grayscale(1)" @endunless aria-label="{{ $t('رمز QR للدخول', 'Entry QR code') }}">
+                {!! QrCode::size(300)->margin(2)->errorCorrection('M')->generate($ticket->qr_code) !!}
+            </div>
+            @if($isValid)
+                <div class="qr-caption"><i class="bi bi-brightness-high"></i> {{ $t('ارفع سطوع الشاشة واعرض الرمز عند البوابة', 'Turn up the brightness and show this code at the gate') }}</div>
+            @elseif($ticket->status === 'used')
+                <div class="qr-caption"><i class="bi bi-check2-circle"></i> {{ $t('استُخدمت هذه التذكرة', 'This ticket has been used') }}@if($usedAt) · <span class="num">{{ $usedAt->locale($lang)->translatedFormat('j F Y') }} {{ $usedAt->format('H:i') }}</span>@endif</div>
+            @else
+                <div class="qr-caption"><i class="bi bi-x-circle"></i> {{ $t('هذه التذكرة غير صالحة للدخول', 'This ticket is not valid for entry') }}</div>
+            @endif
+            <div class="qr-code-text mono ltr">{{ $ticket->ticket_number ?: $ticket->qr_code }}</div>
 
-        <div class="actions">
-            <button class="btn btn-primary" onclick="downloadTicket()">
-                <i class="bi bi-download"></i> Download Image
-            </button>
-            <a href="{{ route('payment.download', $ticket->transaction_id) }}" class="btn btn-secondary">
-                <i class="bi bi-list"></i> View All Tickets
-            </a>
+            <dl class="rows">
+                @if($ticket->holder_name)
+                    <div><dt>{{ $t('حامل التذكرة', 'Ticket holder') }}</dt><dd>{{ $ticket->holder_name }}</dd></div>
+                @endif
+                <div><dt>{{ $t('نوع التذكرة', 'Ticket type') }}</dt><dd>{{ $typeLabels[$ticket->ticket_type] ?? $ticket->ticket_type }}</dd></div>
+                @if($ticket->seat_number)
+                    <div><dt>{{ $t('المقعد', 'Seat') }}</dt><dd class="num">{{ $ticket->seat_number }}</dd></div>
+                @endif
+                <div><dt>{{ $t('السعر', 'Price') }}</dt><dd><x-admin.money :amount="$ticket->price" :currency="$ticket->currency ?: \App\View\Fmt::currency()" /></dd></div>
+                @if($ticket->purchase_date)
+                    <div><dt>{{ $t('تاريخ الشراء', 'Purchased') }}</dt><dd class="num">{{ $ticket->purchase_date->copy()->setTimezone($tz)->locale($lang)->translatedFormat('j F Y') }}</dd></div>
+                @endif
+                @if($ticket->transaction_id)
+                    <div><dt>{{ $t('رقم المعاملة', 'Transaction') }}</dt><dd class="mono ltr">{{ $ticket->transaction_id }}</dd></div>
+                @endif
+            </dl>
         </div>
+    </article>
+
+    <div class="actions no-print">
+        <button class="btn btn-primary" type="button" id="saveTicket"><i class="bi bi-download"></i> {{ $t('حفظ التذكرة صورةً', 'Save ticket as image') }}</button>
+        @if(! empty($downloadUrl))
+            <a href="{{ $downloadUrl }}{{ str_contains($downloadUrl, '?') ? '&' : '?' }}lang={{ $lang }}" class="btn btn-tonal"><i class="bi bi-collection"></i> {{ $t('كل تذاكر الطلب', 'All tickets in this order') }}</a>
+        @endif
     </div>
+@endsection
 
-    <script>
-        function downloadTicket() {
-            const ticketContainer = document.querySelector('.ticket-container');
-            const actions = document.querySelector('.actions');
-
-            // Hide actions temporarily
-            actions.style.display = 'none';
-
-            html2canvas(ticketContainer, {
-                scale: 2,
-                backgroundColor: '#ffffff',
-                logging: false,
-                useCORS: true,
-                width: ticketContainer.offsetWidth,
-                height: ticketContainer.offsetHeight
-            }).then(canvas => {
-                // Restore actions
-                actions.style.display = 'flex';
-
-                // Convert to blob and download
-                canvas.toBlob(function(blob) {
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = 'sohar_festival_ticket_{{ $ticket->id }}.png';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                });
-            });
-        }
-
-        // Track ticket view
-        if (typeof gtag !== 'undefined') {
-            gtag('event', 'ticket_view', {
-                ticket_id: '{{ $ticket->id }}',
-                event_name: '{{ $ticket->event->title ?? "Unknown" }}'
-            });
-        }
-    </script>
-</body>
-</html>
+@push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+document.getElementById('saveTicket').addEventListener('click', function () {
+    var card = document.getElementById('ticketCard');
+    if (!window.html2canvas) { window.print(); return; }
+    html2canvas(card, { scale: 2, backgroundColor: null, logging: false, useCORS: true }).then(function (canvas) {
+        canvas.toBlob(function (blob) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = @json(\Illuminate\Support\Str::slug($brand?->slug ?? 'event').'_ticket_'.$ticket->id.'.png');
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        });
+    });
+});
+</script>
+@endpush

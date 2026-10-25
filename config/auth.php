@@ -112,4 +112,16 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    | Phone OTP login (Api\AuthController).
+    | OTP_DEBUG=true returns the code in the send-otp response (never in
+    | production). OTP_TEST_CODE forces a fixed code outside production.
+    */
+    'otp' => [
+        'debug' => (bool) env('OTP_DEBUG', false),
+        'test_code' => env('OTP_TEST_CODE'),
+        'ttl_minutes' => (int) env('OTP_TTL_MINUTES', 5),
+        'max_attempts' => (int) env('OTP_MAX_ATTEMPTS', 5),
+    ],
+
 ];

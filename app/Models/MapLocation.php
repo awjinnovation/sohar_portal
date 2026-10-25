@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class MapLocation extends Model
 {
+    use \App\Tenancy\BelongsToTenant;
+
     protected $fillable = [
         'type',
         'name',

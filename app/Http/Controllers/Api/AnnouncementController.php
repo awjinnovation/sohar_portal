@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Announcement;
+use App\Support\TenantTime;
 use Illuminate\Http\Request;
 
 class AnnouncementController extends Controller
@@ -30,11 +31,11 @@ class AnnouncementController extends Controller
         $announcements = Announcement::where('is_active', true)
             ->where(function($query) {
                 $query->whereNull('start_datetime')
-                    ->orWhere('start_datetime', '<=', now());
+                    ->orWhere('start_datetime', '<=', TenantTime::localNow());
             })
             ->where(function($query) {
                 $query->whereNull('end_datetime')
-                    ->orWhere('end_datetime', '>=', now());
+                    ->orWhere('end_datetime', '>=', TenantTime::localNow());
             })
             ->orderBy('created_at', 'desc')
             ->get();

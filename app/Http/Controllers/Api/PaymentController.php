@@ -3,364 +3,277 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Event;
+use App\Http\Resources\TicketResource;
 use App\Models\Payment;
 use App\Models\Ticket;
-use App\Services\BankMuscatPaymentService;
+use App\Services\Payments\BankMuscatCallbackHandler;
+use App\Services\Payments\CheckoutService;
+use App\Services\Payments\PaymentFulfillmentService;
+use App\Tenancy\TenantContext;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
+/**
+ * Ticket checkout + payment status (contract §8).
+ *
+ * Security: the client never sends a price — amounts are computed by
+ * CheckoutService. Every read/cancel is scoped to the authenticated owner;
+ * only a verified (decrypted) gateway response can complete or fail a
+ * payment.
+ */
 class PaymentController extends Controller
 {
-    private BankMuscatPaymentService $bankMuscatService;
+    public function __construct(private TenantContext $context, private CheckoutService $checkout) {}
 
-    public function __construct(BankMuscatPaymentService $bankMuscatService)
+    private function checkoutRules(): array
     {
-        $this->bankMuscatService = $bankMuscatService;
+        return [
+            'event_id' => 'required_without:payable_id|integer',
+            'payable_id' => 'required_without:event_id|integer', // legacy alias of event_id
+            'booking_date' => 'required|date_format:Y-m-d',
+            // Legacy single type (key; empty / `standard` = the event's default type)…
+            'quantity' => 'required_without:items|nullable|integer|min:1|max:'.config('payments.max_tickets_per_order', 10),
+            'ticket_type' => 'nullable|string|max:40',
+            // …or several types (docs/ticket_types_contract.md §2).
+            'items' => 'nullable|array|min:1|max:20',
+            'items.*.ticket_type_id' => 'required|integer',
+            'items.*.quantity' => 'required|integer|min:0|max:100',
+            'points_to_redeem' => 'nullable|integer|min:0',
+        ];
+    }
+
+    /** items[] when sent, else the legacy single quantity + ticket_type. */
+    private function items(array $data): array
+    {
+        return ! empty($data['items'])
+            ? array_values($data['items'])
+            : [['ticket_type' => $data['ticket_type'] ?? null, 'quantity' => (int) ($data['quantity'] ?? 0)]];
+    }
+
+    public static function linesPayload(array $lines, \App\Models\Tenant $tenant): array
+    {
+        return array_values(array_map(fn ($l) => [
+            'ticket_type_id' => $l['ticket_type_id'],
+            'key' => $l['key'],
+            'name_text' => \App\Models\EventTicketType::pickLocale($l['name'] ?? []) ?: ($l['name_text'] ?? $l['key']),
+            'quantity' => (int) $l['quantity'],
+            'unit_price_minor' => (int) $l['unit_price_minor'],
+            'unit_price' => $tenant->formatMoney((int) $l['unit_price_minor']),
+            'line_total_minor' => (int) $l['line_total_minor'],
+            'line_total' => $tenant->formatMoney((int) $l['line_total_minor']),
+            'admits' => max(1, (int) ($l['admits'] ?? 1)),
+        ], $lines));
+    }
+
+    /** GET /payments/quote?event_id=&booking_date=&quantity=&ticket_type=&points_to_redeem= */
+    public function quote(Request $request)
+    {
+        $data = $request->validate($this->checkoutRules());
+        $tenant = $this->context->get();
+
+        $q = $this->checkout->quoteItems($tenant, (int) ($data['event_id'] ?? $data['payable_id']), $data['booking_date'],
+            $this->items($data), (int) ($data['points_to_redeem'] ?? 0), $request->user('sanctum'));
+
+        $fmt = fn (int $m) => $tenant->formatMoney($m);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'event_id' => $q['event']->id,
+                'quantity' => $q['quantity'],
+                'ticket_type' => $q['ticket_type'],
+                'unit_price_minor' => $q['unit_price_minor'],
+                'unit_price' => $q['unit_price_minor'] === null ? null : $fmt($q['unit_price_minor']),
+                'lines' => self::linesPayload($q['lines'], $tenant),
+                'subtotal_minor' => $q['subtotal_minor'],
+                'subtotal' => $fmt($q['subtotal_minor']),
+                'points_to_redeem' => $q['points_to_redeem'],
+                'points_discount_minor' => $q['points_discount_minor'],
+                'points_discount' => $fmt($q['points_discount_minor']),
+                'deposit_minor' => $q['deposit_minor'],
+                'deposit' => $fmt($q['deposit_minor']),
+                'total_minor' => $q['total_minor'],
+                'total' => $fmt($q['total_minor']),
+                'currency' => $tenant->currency(),
+            ],
+        ]);
     }
 
     /**
-     * Initialize payment session with Bank Muscat
+     * POST /payments/initialize
+     * {event_id, booking_date, quantity, ticket_type?, method: gateway|wallet, points_to_redeem?, idempotency_key}
+     * Any client-sent `amount` is ignored.
      */
     public function initialize(Request $request)
     {
-        $request->validate([
-            'payment_type' => 'required|in:ticket',
-            'payable_id' => 'required|integer',
-            'quantity' => 'required|integer|min:1|max:10',
-            'ticket_type' => 'nullable|string',
-            'amount' => 'required|numeric|min:0.1',
-            'booking_date' => 'required|date|date_format:Y-m-d'
+        $data = $request->validate($this->checkoutRules() + [
+            'method' => 'nullable|in:gateway,wallet',
+            'idempotency_key' => 'required_if:method,wallet|nullable|string|max:100',
         ]);
+        $data['event_id'] = (int) ($data['event_id'] ?? $data['payable_id']);
+        $data['method'] = $data['method'] ?? Payment::METHOD_GATEWAY;
+        $data['items'] = $this->items($data);
 
-        $user = $request->user();
-        $quantity = $request->quantity ?? 1;
-        $ticketType = $request->ticket_type ?? 'standard';
-        $bookingDate = $request->booking_date;
+        $payment = $this->checkout->initialize($request->user(), $this->context->get(), $data);
 
-        // Guard against overselling before we ever send the user to the gateway.
-        // Availability is derived per-day from the events table (total_tickets
-        // minus tickets already booked for that date); there is no separate
-        // inventory table in the simplified schema.
-        $event = Event::find($request->payable_id);
-        if (!$event || !$event->is_active) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Event not found or not available',
-            ], 404);
-        }
-
-        if (!$event->canBookForDate($bookingDate, $quantity)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Not enough tickets available for the selected date',
-                'available' => max(0, $event->getAvailableTicketsForDate($bookingDate)),
-            ], 422);
-        }
-
-        $transactionId = 'TXN' . strtoupper(Str::random(10));
-
-        // Create payment record
-        $payment = Payment::create([
-            'user_id' => $user->id,
-            'transaction_id' => $transactionId,
-            'payment_type' => $request->payment_type,
-            'payable_id' => $request->payable_id,
-            'payable_type' => 'App\\Models\\Ticket',
-            'amount' => $request->amount,
-            'currency' => 'OMR',
-            'status' => 'pending',
-            'metadata' => [
-                'quantity' => $quantity,
-                'ticket_type' => $ticketType,
-                'booking_date' => $request->booking_date,
-                'user_phone' => $user->phone_number
-            ]
-        ]);
-
-        try {
-            // Prepare payment data for Bank Muscat
-            $paymentData = $this->bankMuscatService->preparePaymentData($payment);
-
-            // Generate encrypted request
-            $encryptedData = $this->bankMuscatService->generateEncryptedRequest($paymentData);
-
-            // Store Bank Muscat TID in payment record
-            $payment->update([
-                'bank_muscat_tid' => $paymentData['tid'],
-                'bank_muscat_order_id' => $paymentData['order_id']
-            ]);
-
-            // Generate a redirect URL for the payment form page
-            $redirectUrl = route('payment.redirect', ['transaction_id' => $payment->transaction_id]);
-
-            return response()->json([
-                'success' => true,
-                'payment_id' => $payment->id,
-                'transaction_id' => $payment->transaction_id,
-                'checkout_url' => $redirectUrl,
-                'encrypted_data' => $encryptedData,
-                'access_code' => $this->bankMuscatService->getAccessCode(),
-                'gateway_url' => $this->bankMuscatService->getGatewayUrl(),
-                'redirect_required' => true
-            ]);
-
-        } catch (\Exception $e) {
-            $payment->update(['status' => 'failed']);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment initialization failed',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json($this->checkoutResponse($payment), $payment->wasRecentlyCreated ? 201 : 200);
     }
 
-    /**
-     * Confirm payment after redirect from Bank Muscat
-     */
+    private function checkoutResponse(Payment $payment): array
+    {
+        $tenant = $this->context->get();
+        $base = [
+            'payment_id' => $payment->id,
+            'transaction_id' => $payment->transaction_id,
+            'status' => $payment->status,
+            'method' => $payment->method,
+            'amount_minor' => $payment->amount_minor,
+            'amount' => $tenant->formatMoney((int) $payment->amount_minor),
+            'currency' => $payment->currency,
+            'lines' => self::linesPayload((array) ($payment->metadata['lines'] ?? []), $tenant),
+        ];
+
+        if ($payment->status === 'completed') {
+            $tickets = Ticket::with('event')->where('transaction_id', $payment->transaction_id)->get();
+            $data = $base + ['tickets' => TicketResource::collection($tickets)->resolve()];
+
+            return ['success' => true, 'message' => 'Payment completed'] + $base + ['data' => $data];
+        }
+
+        $url = $this->checkout->paymentUrl($payment);
+        $data = $base + ['payment_url' => $url];
+
+        // Legacy top-level keys (checkout_url / redirect_required) for older app builds.
+        return ['success' => true, 'message' => 'Payment initialized'] + $base + [
+            'payment_url' => $url,
+            'checkout_url' => $url,
+            'redirect_required' => $url !== null,
+            'data' => $data,
+        ];
+    }
+
+    private function ownedPayment(Request $request, string $transactionId): Payment
+    {
+        return Payment::where('user_id', $request->user()->id)
+            ->where('transaction_id', $transactionId)
+            ->firstOrFail();
+    }
+
+    private function statusPayload(Payment $payment): array
+    {
+        $tenant = $this->context->get();
+
+        return [
+            'payment_id' => $payment->id,
+            'transaction_id' => $payment->transaction_id,
+            'payment_type' => $payment->payment_type,
+            'method' => $payment->method,
+            'status' => $payment->status,
+            'payment_status' => $payment->status,
+            'amount_minor' => $payment->amount_minor,
+            'amount' => $tenant->formatMoney((int) $payment->amount_minor),
+            'currency' => $payment->currency,
+            'paid_at' => \App\Support\TenantTime::iso($payment->paid_at),
+        ];
+    }
+
+    /** POST /payments/confirm {transaction_id} — owner only, read-only. */
     public function confirm(Request $request)
     {
-        $request->validate([
-            'transaction_id' => 'required|string'
-        ]);
+        $request->validate(['transaction_id' => 'required|string']);
+        $payment = $this->ownedPayment($request, $request->input('transaction_id'));
+        $completed = $payment->status === 'completed';
 
-        try {
-            // Find payment by transaction ID
-            $payment = Payment::where('transaction_id', $request->transaction_id)->firstOrFail();
+        return response()->json([
+            'success' => $completed,
+            'message' => $completed ? 'Payment successful' : 'Payment not completed',
+            'data' => $this->statusPayload($payment),
+        ] + $this->statusPayload($payment));
+    }
 
-            // Return current payment status
-            return response()->json([
-                'success' => $payment->status === 'completed',
-                'message' => $payment->status === 'completed' ? 'Payment successful' : 'Payment not completed',
-                'payment_id' => $payment->id,
-                'transaction_id' => $payment->transaction_id,
-                'status' => $payment->status,
-                'amount' => $payment->amount,
-                'currency' => $payment->currency
-            ]);
+    /** GET /payments/status/{transactionId} — owner only. */
+    public function checkStatus(Request $request, string $transactionId)
+    {
+        $payment = $this->ownedPayment($request, $transactionId);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment confirmation failed',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json(['success' => true, 'data' => $this->statusPayload($payment)] + $this->statusPayload($payment));
     }
 
     /**
-     * Handle payment cancellation
+     * POST /payments/cancel {transaction_id} — the owner abandons a pending
+     * checkout (e.g. closed the payment page). Gateway-side cancellations
+     * arrive encrypted via /payment/cancel instead.
      */
-    public function cancel(Request $request)
+    public function cancel(Request $request, PaymentFulfillmentService $fulfillment)
     {
-        // Bank Muscat / the app identify the payment by our transaction id
-        // (also accepted as order_id, which mirrors the transaction id).
-        $transactionId = $request->query('transaction_id')
-            ?? $request->input('transaction_id')
-            ?? $request->input('order_id');
+        $request->validate(['transaction_id' => 'required_without:order_id|string', 'order_id' => 'nullable|string']);
+        $payment = $this->ownedPayment($request, $request->input('transaction_id') ?? $request->input('order_id'));
 
-        if (!$transactionId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Transaction ID is required'
-            ], 400);
-        }
-
-        // Find payment by transaction id; only pending payments can be cancelled.
-        $payment = Payment::where('transaction_id', $transactionId)->first();
-
-        if ($payment && $payment->status === 'pending') {
-            $payment->update([
-                'status' => 'cancelled'
-            ]);
+        if ($payment->status === 'pending') {
+            $payment = $fulfillment->fail($payment, 'cancelled');
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Payment cancelled successfully'
+            'message' => $payment->status === 'cancelled' ? 'Payment cancelled successfully' : 'Payment can no longer be cancelled',
+            'data' => $this->statusPayload($payment),
         ]);
     }
 
     /**
-     * Check payment status
+     * POST /payments/webhook — Bank Muscat server-to-server callback. The
+     * encrypted payload (tenant working key) is the integrity check.
      */
-    public function checkStatus($transactionId)
+    public function webhook(Request $request, BankMuscatCallbackHandler $handler)
     {
-        try {
-            $payment = Payment::where('transaction_id', $transactionId)->first();
+        $allowedIps = config('services.bank_muscat.webhook_ips', []);
+        if (! empty($allowedIps) && ! in_array($request->ip(), $allowedIps, true)) {
+            Log::warning('Rejected payment webhook from unlisted IP', ['ip' => $request->ip()]);
 
-            if (!$payment) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Payment not found'
-                ], 404);
-            }
-
-            return response()->json([
-                'success' => true,
-                'payment_status' => $payment->status,
-                'transaction_id' => $payment->transaction_id,
-                'amount' => $payment->amount,
-                'currency' => $payment->currency,
-                'payment_data' => $payment->bank_muscat_response
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Status check failed',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
         }
-    }
 
-    /**
-     * Handle Bank Muscat webhook/callback
-     * This is called by Bank Muscat after payment processing
-     */
-    public function webhook(Request $request)
-    {
-        try {
-            // Defense-in-depth: if an IP allowlist is configured, reject callers
-            // that are not on it. The encrypted payload is still the primary
-            // integrity check, but this blocks casual probing of the endpoint.
-            $allowedIps = config('services.bank_muscat.webhook_ips', []);
-            if (!empty($allowedIps) && !in_array($request->ip(), $allowedIps, true)) {
-                Log::warning('Rejected payment webhook from unlisted IP', ['ip' => $request->ip()]);
-                return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
-            }
-
-            // Get encrypted response from Bank Muscat
-            $encResponse = $request->input('encResp');
-
-            if (!$encResponse) {
-                return response()->json(['success' => false, 'message' => 'No response data'], 400);
-            }
-
-            // Decrypt the response
-            $responseData = $this->bankMuscatService->decryptResponse($encResponse);
-
-            // Find payment by order_id (transaction_id)
-            $payment = Payment::where('transaction_id', $responseData['order_id'] ?? '')->first();
-
-            if (!$payment) {
-                return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
-            }
-
-            // Validate the response
-            if (!$this->bankMuscatService->validateResponse($responseData, $payment)) {
-                return response()->json(['success' => false, 'message' => 'Invalid payment response'], 400);
-            }
-
-            // Get payment status
-            $status = $this->bankMuscatService->getPaymentStatus($responseData);
-
-            // Capture whether this payment had already been completed BEFORE we
-            // overwrite the record, so we only fulfil tickets once (idempotency).
-            $wasCompleted = $payment->status === 'completed';
-
-            // Update payment record
-            $payment->update([
-                'status' => $status,
-                'bank_muscat_response' => $responseData,
-                'payment_method' => $responseData['payment_mode'] ?? 'card',
-                'paid_at' => $status === 'completed' ? now() : null
-            ]);
-
-            // Handle post-payment logic if successful (first completion only)
-            if ($status === 'completed' && !$wasCompleted && $payment->payment_type === 'ticket') {
-                $this->createTickets($payment);
-            }
-
-            return response()->json(['success' => true]);
-
-        } catch (\Exception $e) {
-            Log::error('Bank Muscat webhook error: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        $encResponse = (string) $request->input('encResp', '');
+        if ($encResponse === '') {
+            return response()->json(['success' => false, 'message' => 'No response data'], 400);
         }
+
+        $result = $handler->handle($encResponse, $request->query('transaction_id'));
+        if (! $result) {
+            return response()->json(['success' => false, 'message' => 'Invalid payment response'], 400);
+        }
+
+        return response()->json(['success' => true]);
     }
 
-    /**
-     * Get a single payment/transaction belonging to the authenticated user.
-     */
-    public function show(Request $request, $id)
+    /** GET /payments/{id} — owner only. */
+    public function show(Request $request, int $id)
     {
-        $payment = Payment::where('user_id', $request->user()->id)
-            ->findOrFail($id);
+        $payment = Payment::where('user_id', $request->user()->id)->findOrFail($id);
 
-        return response()->json([
-            'success' => true,
-            'data' => $payment,
-        ]);
+        return response()->json(['success' => true, 'data' => array_merge($this->statusPayload($payment), [
+            'metadata' => collect($payment->metadata ?? [])->except(['user_phone'])->all(),
+            'created_at' => \App\Support\TenantTime::iso($payment->created_at),
+        ])]);
     }
 
-    /**
-     * Get user's transaction history
-     */
+    /** GET /payments/history */
     public function myTransactions(Request $request)
     {
-        $user = $request->user();
-
-        $transactions = Payment::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $page = Payment::where('user_id', $request->user()->id)->orderByDesc('created_at')->paginate(20);
 
         return response()->json([
             'success' => true,
-            'data' => $transactions->items(),
+            'data' => collect($page->items())->map(fn (Payment $p) => array_merge($this->statusPayload($p), [
+                'created_at' => \App\Support\TenantTime::iso($p->created_at),
+                'metadata' => collect($p->metadata ?? [])->only(['event_id', 'quantity', 'ticket_type', 'booking_date'])->all(),
+            ]))->values(),
             'pagination' => [
-                'current_page' => $transactions->currentPage(),
-                'last_page' => $transactions->lastPage(),
-                'per_page' => $transactions->perPage(),
-                'total' => $transactions->total()
-            ]
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+            ],
         ]);
     }
-
-    /**
-     * Create tickets after successful payment.
-     *
-     * Runs in a transaction for atomicity + idempotency. Availability is
-     * derived from the tickets table (each active ticket carries quantity = 1
-     * for its booking_date), so creating the rows implicitly reduces
-     * availability — there is no separate inventory column to decrement.
-     */
-    private function createTickets($payment)
-    {
-        $metadata = $payment->metadata;
-        $quantity = $metadata['quantity'] ?? 1;
-        $ticketType = $metadata['ticket_type'] ?? 'standard';
-        $bookingDate = $metadata['booking_date'] ?? null;
-
-        DB::transaction(function () use ($payment, $quantity, $ticketType, $bookingDate) {
-            // Idempotency: never create tickets twice for the same payment.
-            $existingTickets = Ticket::where('transaction_id', $payment->transaction_id)->count();
-            if ($existingTickets > 0) {
-                return;
-            }
-
-            for ($i = 0; $i < $quantity; $i++) {
-                // qr_code is intentionally left empty so the Ticket model sets
-                // it to the human-readable ticket_number (TKT-YYYY-NNNNNN),
-                // which is the format the scanner/validator expects.
-                Ticket::create([
-                    'user_id' => $payment->user_id,
-                    'event_id' => $payment->payable_id,
-                    'transaction_id' => $payment->transaction_id,
-                    'booking_date' => $bookingDate,
-                    'quantity' => 1,
-                    'ticket_type' => $ticketType,
-                    'status' => 'active',
-                    'price' => $payment->amount / $quantity,
-                    'currency' => $payment->currency,
-                    'holder_name' => $payment->user->name,
-                    'purchase_date' => now()
-                ]);
-            }
-        });
-    }
-
 }

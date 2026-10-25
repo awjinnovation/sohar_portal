@@ -12,11 +12,11 @@ class MapLocationController extends Controller
     {
         $query = MapLocation::query();
 
-        if ($request->has('type')) {
+        if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', '%' . $search . '%')
@@ -56,7 +56,7 @@ class MapLocationController extends Controller
         MapLocation::create($validated);
 
         return redirect()->route('admin.map-locations.index')
-                        ->with('success', 'Map location created successfully');
+                        ->with('success', 'أُضيف الموقع');
     }
 
     public function show(MapLocation $mapLocation)
@@ -89,7 +89,7 @@ class MapLocationController extends Controller
         $mapLocation->update($validated);
 
         return redirect()->route('admin.map-locations.index')
-                        ->with('success', 'Map location updated successfully');
+                        ->with('success', 'حُدِّث الموقع');
     }
 
     public function destroy(MapLocation $mapLocation)
@@ -97,6 +97,6 @@ class MapLocationController extends Controller
         $mapLocation->delete();
 
         return redirect()->route('admin.map-locations.index')
-                        ->with('success', 'Map location deleted successfully');
+                        ->with('success', 'حُذف الموقع');
     }
 }

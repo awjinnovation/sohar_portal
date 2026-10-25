@@ -7,7 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
-use Spatie\Permission\Models\Role;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use PHPUnit\Framework\Attributes\Test;
 
 class CategoryCrudTest extends TestCase
@@ -20,8 +20,9 @@ class CategoryCrudTest extends TestCase
     {
         parent::setUp();
 
-        // Create admin role
-        $adminRole = Role::create(['name' => 'admin']);
+        // Global role definitions; the assignment below is made in the
+        // current tenant (north-batinah, set by the base TestCase).
+        $this->seed(RolesAndPermissionsSeeder::class);
 
         // Create admin user
         $this->admin = User::factory()->create([
@@ -57,7 +58,6 @@ class CategoryCrudTest extends TestCase
     #[Test]
     public function admin_can_create_new_category_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $categoryData = [
@@ -87,7 +87,6 @@ class CategoryCrudTest extends TestCase
     #[Test]
     public function category_creation_fails_with_invalid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $invalidData = [
@@ -152,7 +151,6 @@ class CategoryCrudTest extends TestCase
     #[Test]
     public function admin_can_update_category_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $category = Category::create([
@@ -186,7 +184,6 @@ class CategoryCrudTest extends TestCase
     #[Test]
     public function admin_can_delete_category_without_events()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $category = Category::create([
@@ -219,7 +216,6 @@ class CategoryCrudTest extends TestCase
     #[Test]
     public function category_icon_name_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
         $categoryData = [

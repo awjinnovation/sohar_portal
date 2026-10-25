@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Cache;
 
 class AppSetting extends Model
 {
+    use \App\Tenancy\BelongsToTenant;
+
     protected $fillable = [
         'setting_key',
         'setting_value',
@@ -40,10 +42,27 @@ class AppSetting extends Model
      */
     public static function get(string $key, mixed $default = null): mixed
     {
-        return Cache::remember("app_setting_{$key}", 3600, function () use ($key, $default) {
+        $value = Cache::remember(static::cacheKey("key_{$key}"), 3600, function () use ($key) {
             $setting = static::where('setting_key', $key)->first();
-            return $setting ? $setting->value : $default;
+            return $setting ? ['v' => $setting->value] : null;
         });
+
+        return $value === null ? $default : $value['v'];
+    }
+
+    /**
+     * Get a setting only if it is flagged public (safe for unauthenticated API).
+     */
+    public static function getPublic(string $key, mixed $default = null): mixed
+    {
+        $public = static::getPublicSettings();
+
+        return array_key_exists($key, $public) ? $public[$key] : $default;
+    }
+
+    protected static function cacheKey(string $suffix): string
+    {
+        return 'app_setting_t'.(app(\App\Tenancy\TenantContext::class)->id() ?? 0).'_'.$suffix;
     }
 
     /**
@@ -69,7 +88,8 @@ class AppSetting extends Model
         );
 
         // Clear cache
-        Cache::forget("app_setting_{$key}");
+        Cache::forget(static::cacheKey("key_{$key}"));
+        Cache::forget(static::cacheKey('public'));
 
         return $setting;
     }
@@ -79,7 +99,7 @@ class AppSetting extends Model
      */
     public static function getPublicSettings(): array
     {
-        return Cache::remember('app_settings_public', 3600, function () {
+        return Cache::remember(static::cacheKey('public'), 3600, function () {
             $settings = static::where('is_public', true)->get();
 
             $result = [];
@@ -94,9 +114,17 @@ class AppSetting extends Model
     /**
      * Clear all settings cache
      */
-    public static function clearCache(): void
+    public static function clearCache(?string $key = null): void
     {
-        Cache::forget('app_settings_public');
-        // You might want to clear individual caches too if needed
+        Cache::forget(static::cacheKey('public'));
+        if ($key) {
+            Cache::forget(static::cacheKey("key_{$key}"));
+        }
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn (AppSetting $s) => static::clearCache($s->setting_key));
+        static::deleted(fn (AppSetting $s) => static::clearCache($s->setting_key));
     }
 }

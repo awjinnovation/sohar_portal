@@ -31,18 +31,19 @@ class PrivacyPolicyController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'language' => 'required|string|max:10',
             'title' => 'required|string|max:255',
+            'title_ar' => 'required|string|max:255',
             'content' => 'required|string',
+            'content_ar' => 'required|string',
             'is_active' => 'boolean',
         ]);
 
-        $validated['is_active'] = $request->has('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         PrivacyPolicy::create($validated);
 
         return redirect()->route('admin.privacy-policies.index')
-            ->with('success', 'Privacy policy created successfully.');
+            ->with('success', 'أُضيفت سياسة الخصوصية');
     }
 
     /**
@@ -67,18 +68,19 @@ class PrivacyPolicyController extends Controller
     public function update(Request $request, PrivacyPolicy $privacyPolicy)
     {
         $validated = $request->validate([
-            'language' => 'required|string|max:10',
             'title' => 'required|string|max:255',
+            'title_ar' => 'required|string|max:255',
             'content' => 'required|string',
+            'content_ar' => 'required|string',
             'is_active' => 'boolean',
         ]);
 
-        $validated['is_active'] = $request->has('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         $privacyPolicy->update($validated);
 
         return redirect()->route('admin.privacy-policies.index')
-            ->with('success', 'Privacy policy updated successfully.');
+            ->with('success', 'حُدِّثت سياسة الخصوصية');
     }
 
     /**
@@ -89,6 +91,6 @@ class PrivacyPolicyController extends Controller
         $privacyPolicy->delete();
 
         return redirect()->route('admin.privacy-policies.index')
-            ->with('success', 'Privacy policy deleted successfully.');
+            ->with('success', 'حُذفت سياسة الخصوصية');
     }
 }

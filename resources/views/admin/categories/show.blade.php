@@ -2,100 +2,94 @@
 
 @section('title', 'عرض الفئة')
 @section('page-title', 'تفاصيل الفئة')
+@section('page-subtitle', $category->name_ar)
+@php
+    $pageIcon = 'grid';
+    $breadcrumbs = ['الفعاليات والتذاكر' => null, 'الفئات' => route('admin.categories.index'), 'التفاصيل' => null];
+    $iconMap = [
+        'celebration' => 'stars', 'music_note' => 'music-note-beamed', 'music-note' => 'music-note-beamed', 'sports' => 'trophy',
+        'trophy' => 'trophy', 'school' => 'mortarboard', 'book' => 'book', 'palette' => 'palette', 'groups' => 'people',
+        'business' => 'briefcase', 'child_care' => 'balloon', 'heart' => 'heart', 'theater_comedy' => 'mask',
+        'restaurant' => 'cup-hot', 'cup-hot' => 'cup-hot', 'shop' => 'shop', 'calendar' => 'calendar-event',
+    ];
+    $biIcon = $iconMap[$category->icon_name] ?? (str_starts_with((string) $category->icon_name, 'bi-') ? substr($category->icon_name, 3) : 'grid');
+    $hex = sprintf('#%06X', ((int) $category->color_value) & 0xFFFFFF);
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-primary"><i class="bi bi-pencil"></i> {{ __('تعديل') }}</a>
+    <a href="{{ route('admin.categories.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>
+@endsection
 
 @section('content')
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0 fw-bold">معلومات الفئة</h5>
-                        <div>
-                            <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-primary btn-sm">
-                                <i class="bi bi-pencil"></i>
-                                تعديل
-                            </a>
-                        </div>
+    @include('admin.partials.alerts')
+
+    <div class="row g-4">
+        <div class="col-xl-8">
+            <x-admin.card title="معلومات الفئة" icon="info-circle">
+                <x-slot:actions>
+                    <x-admin.status-pill domain="active" :status="$category->is_active" />
+                </x-slot:actions>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="cell-sub mb-1">{{ __('الاسم بالعربية') }}</div>
+                        <h3 class="h5 mb-2">{{ $category->name_ar }}</h3>
+                        <div class="cell-sub mb-1">{{ __('الوصف بالعربية') }}</div>
+                        <p class="mb-0" style="white-space: pre-line">{{ $category->description_ar }}</p>
+                    </div>
+                    <div class="col-md-6" dir="ltr">
+                        <div class="cell-sub mb-1">Name (English)</div>
+                        <h3 class="h5 mb-2">{{ $category->name }}</h3>
+                        <div class="cell-sub mb-1">Description (English)</div>
+                        <p class="mb-0" style="white-space: pre-line">{{ $category->description }}</p>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="text-muted small">الاسم بالعربية</label>
-                            <h5>{{ $category->name_ar }}</h5>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">الاسم بالإنجليزية</label>
-                            <h5>{{ $category->name }}</h5>
+            </x-admin.card>
+
+            <x-admin.card title="المظهر" icon="palette">
+                <div class="kv-grid">
+                    <div class="kv">
+                        <div class="k">{{ __('الأيقونة') }}</div>
+                        <div class="v d-flex align-items-center gap-2"><i class="bi bi-{{ $biIcon }}"></i><code dir="ltr">{{ $category->icon_name }}</code></div>
+                    </div>
+                    <div class="kv">
+                        <div class="k">{{ __('اللون') }}</div>
+                        <div class="v d-flex align-items-center gap-2">
+                            <span class="rounded border d-inline-block" style="width: 22px; height: 22px; background: {{ $hex }}" aria-hidden="true"></span>
+                            <span class="num" dir="ltr">{{ $hex }}</span>
                         </div>
                     </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="text-muted small">الوصف بالعربية</label>
-                            <p>{{ $category->description_ar }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="text-muted small">الوصف بالإنجليزية</label>
-                            <p>{{ $category->description }}</p>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    <div class="row">
-                        <div class="col-md-3">
-                            <label class="text-muted small">الأيقونة</label>
-                            <p><i class="bi bi-{{ $category->icon_name }}"></i> {{ $category->icon_name }}</p>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">اللون</label>
-                            <div style="width: 30px; height: 30px; background: #{!! sprintf('%06X', $category->color_value) !!}; border-radius: 4px;"></div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">الترتيب</label>
-                            <p>{{ $category->display_order }}</p>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="text-muted small">الحالة</label>
-                            <p>
-                                @if($category->is_active)
-                                <span class="badge bg-success">نشط</span>
-                                @else
-                                <span class="badge bg-secondary">غير نشط</span>
-                                @endif
-                            </p>
-                        </div>
+                    <div class="kv">
+                        <div class="k">{{ __('الترتيب') }}</div>
+                        <div class="v num">{{ $category->display_order }}</div>
                     </div>
                 </div>
-            </div>
+                @if($category->image_url)
+                    <div class="ratio ratio-21x9 rounded overflow-hidden border bg-light mt-3">
+                        <img src="{{ $category->image_url }}" alt="{{ $category->name_ar }}" class="object-fit-cover">
+                    </div>
+                @endif
+            </x-admin.card>
         </div>
 
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">الفعاليات المرتبطة</h5>
-                </div>
-                <div class="card-body">
-                    @if($category->events && $category->events->count() > 0)
-                    <div class="list-group">
+        <div class="col-xl-4">
+            <x-admin.card title="الفعاليات المرتبطة" icon="calendar-event" subtitle="آخر 10 فعاليات" :flush="true">
+                @if($category->events && $category->events->count() > 0)
+                    <ul class="tx-list">
                         @foreach($category->events as $event)
-                        <a href="{{ route('admin.events.show', $event) }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between">
-                                <h6 class="mb-1">{{ $event->title_ar }}</h6>
-                                <small>{{ $event->start_time->format('Y-m-d') }}</small>
-                            </div>
-                            <small class="text-muted">{{ $event->location_ar }}</small>
-                        </a>
+                            <li class="tx-item">
+                                <span class="tx-ico tone-neutral"><i class="bi bi-calendar-event"></i></span>
+                                <div class="tx-main">
+                                    <a href="{{ route('admin.events.show', $event) }}" class="tx-title d-block text-reset">{{ $event->title_ar }}</a>
+                                    <div class="tx-sub">{{ $event->location_ar }}</div>
+                                </div>
+                                <span class="tx-sub num">{{ $event->start_time->format('Y-m-d') }}</span>
+                            </li>
                         @endforeach
-                    </div>
-                    @else
-                    <p class="text-muted text-center">لا توجد فعاليات مرتبطة</p>
-                    @endif
-                </div>
-            </div>
+                    </ul>
+                @else
+                    <x-admin.empty-state icon="calendar-x" title="لا توجد فعاليات مرتبطة" />
+                @endif
+            </x-admin.card>
         </div>
     </div>
-</div>
 @endsection

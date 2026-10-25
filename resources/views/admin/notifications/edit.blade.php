@@ -1,23 +1,23 @@
 @extends('layouts.admin')
 
-@section('content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">تعديل الإشعار</h1>
-        <a href="{{ route('admin.notifications.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-right"></i> رجوع
-        </a>
-    </div>
+@section('title', 'تعديل الإشعار')
+@section('page-title', 'تعديل الإشعار')
+@section('page-subtitle', $notification->title_ar ?: $notification->title)
+@php
+    $pageIcon = 'bell';
+    $breadcrumbs = ['المحتوى' => null, 'الإشعارات' => route('admin.notifications.index'), 'تعديل' => null];
+@endphp
+@section('page-actions')
+    <a href="{{ route('admin.notifications.show', $notification) }}" class="btn"><i class="bi bi-eye"></i> {{ __('عرض') }}</a>
+    <a href="{{ route('admin.notifications.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>
+@endsection
 
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <form action="{{ route('admin.notifications.update', $item) }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                @method('PUT')
-                @include('admin.notifications._form')
-                <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
-            </form>
-        </div>
-    </div>
-</div>
+@section('content')
+    @include('admin.partials.alerts')
+
+    <form action="{{ route('admin.notifications.update', $notification) }}" method="POST">
+        @csrf
+        @method('PUT')
+        @include('admin.notifications._form', ['submitLabel' => 'حفظ التغييرات'])
+    </form>
 @endsection

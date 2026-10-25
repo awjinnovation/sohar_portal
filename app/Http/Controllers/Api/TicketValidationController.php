@@ -8,54 +8,56 @@ use App\Http\Requests\MarkTicketUsedRequest;
 use App\Http\Resources\TicketValidationResource;
 use App\Http\Resources\ValidationHistoryResource;
 use App\Models\Ticket;
+use App\Services\Gate\ScanInput;
+use App\Services\Gate\ScanOutcome;
+use App\Services\Gate\ScanResult;
+use App\Services\Gate\TicketScanService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TicketValidationController extends Controller
 {
     /**
-     * Validate a QR code and return ticket information
+     * Validate a QR code and return ticket information (check only — the
+     * ticket is marked used by mark-used). Decided by the gate module's
+     * TicketScanService; rejections are logged in gate_scans.
      * POST /api/v1/tickets/validate
      */
-    public function validateQrCode(ValidateQrCodeRequest $request): JsonResponse
+    public function validateQrCode(ValidateQrCodeRequest $request, TicketScanService $scanner): JsonResponse
     {
-        $qrCode = $request->input('qr_code');
+        $outcome = $scanner->scan(new ScanInput(
+            code: (string) $request->input('qr_code'),
+            staff: $request->user(),
+            source: 'camera',
+            commit: false,
+            record: ScanInput::RECORD_REJECTS,
+        ));
 
-        // Find ticket by QR code
-        $ticket = Ticket::with(['event', 'user', 'payment'])
-            ->where('qr_code', $qrCode)
-            ->first();
-
-        // Ticket not found
-        if (!$ticket) {
+        if ($outcome->result === ScanResult::INVALID) {
             return response()->json([
                 'success' => false,
                 'message' => 'رمز QR غير صالح / Invalid QR code',
                 'error_code' => 'INVALID_QR_CODE',
+                'result' => $outcome->result,
+                'messages' => $outcome->message(),
             ], 404);
         }
 
-        // Get validation status
-        $validationStatus = $ticket->getValidationStatus();
+        $ticket = $outcome->ticket->load(['event', 'user', 'payment']);
 
-        // If ticket is not valid, return error with appropriate status code
-        if (!$validationStatus['is_valid']) {
-            $statusCode = match ($validationStatus['reason']) {
-                'TICKET_CANCELLED', 'TICKET_EXPIRED', 'TICKET_ALREADY_USED', 'EVENT_ENDED' => 400,
-                default => 400,
-            };
+        if (! $outcome->admitted()) {
+            [$code, $message, $data] = $this->legacyError($outcome, $ticket);
 
             return response()->json([
                 'success' => false,
-                'message' => $validationStatus['message'],
-                'error_code' => $validationStatus['reason'],
-                'data' => $validationStatus['data'] ?? [
-                    'ticket_number' => $ticket->ticket_number,
-                ],
-            ], $statusCode);
+                'message' => $message,
+                'error_code' => $code,
+                'result' => $outcome->result,
+                'messages' => $outcome->message(),
+                'data' => $data,
+            ], 400);
         }
 
-        // Ticket is valid, return success with ticket details
         return response()->json([
             'success' => true,
             'message' => 'Ticket validated successfully',
@@ -64,14 +66,14 @@ class TicketValidationController extends Controller
     }
 
     /**
-     * Mark a ticket as used/checked-in
+     * Mark a ticket as used/checked-in (one entry, row-locked, logged, with
+     * the optional check-in points reward) via TicketScanService.
      * POST /api/v1/tickets/{ticket}/mark-used
      */
-    public function markAsUsed(MarkTicketUsedRequest $request, string $ticketId): JsonResponse
+    public function markAsUsed(MarkTicketUsedRequest $request, string $ticketId, TicketScanService $scanner): JsonResponse
     {
         // Find ticket by ID or ticket_number
-        $ticket = Ticket::where('id', $ticketId)
-            ->orWhere('ticket_number', $ticketId)
+        $ticket = Ticket::where(fn ($q) => $q->where('id', $ticketId)->orWhere('ticket_number', $ticketId))
             ->first();
 
         if (!$ticket) {
@@ -82,28 +84,31 @@ class TicketValidationController extends Controller
             ], 404);
         }
 
-        // Check if ticket is valid for marking as used
-        $validationStatus = $ticket->getValidationStatus();
-        if (!$validationStatus['is_valid']) {
+        // The validator is always the authenticated staff member (identified
+        // by name + id) — never free-text client input — so the audit trail
+        // cannot be spoofed.
+        $staff = $request->user();
+        $outcome = $scanner->scan(new ScanInput(
+            ticket: $ticket,
+            staff: $staff,
+            source: 'camera',
+            validatedBy: $staff ? sprintf('%s (#%d)', $staff->name, $staff->id) : 'unknown',
+            location: $request->input('location'),
+            notes: $request->input('validation_notes'),
+        ));
+
+        if ($outcome->result !== ScanResult::VALID) {
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot mark ticket as used',
                 'error_code' => 'INVALID_OPERATION',
-                'details' => $validationStatus['message'],
+                'details' => $this->legacyError($outcome, $ticket)[1],
+                'result' => $outcome->result,
+                'messages' => $outcome->message(),
             ], 400);
         }
 
-        // Mark ticket as used. The validator is always the authenticated staff
-        // member (identified by name + id) — never free-text client input — so
-        // the audit trail cannot be spoofed.
-        $staff = $request->user();
-        $validatedBy = $staff ? sprintf('%s (#%d)', $staff->name, $staff->id) : 'unknown';
-
-        $ticket->markAsUsed(
-            $validatedBy,
-            $request->input('location'),
-            $request->input('validation_notes')
-        );
+        $ticket = $outcome->ticket;
 
         return response()->json([
             'success' => true,
@@ -112,11 +117,38 @@ class TicketValidationController extends Controller
                 'ticket_id' => (string) $ticket->id,
                 'ticket_number' => $ticket->ticket_number,
                 'status' => $ticket->status,
-                'validated_at' => $ticket->used_at?->toIso8601String(),
+                'validated_at' => \App\Support\TenantTime::iso($ticket->used_at),
                 'validated_by' => $ticket->validated_by,
                 'check_in_count' => $ticket->check_in_count,
             ],
         ], 200);
+    }
+
+    /**
+     * Legacy error code / bilingual message / data for a rejected scan
+     * (codes kept from the original staff screen API).
+     *
+     * @return array{0: string, 1: string, 2: array}
+     */
+    private function legacyError(ScanOutcome $outcome, Ticket $ticket): array
+    {
+        $m = $outcome->message();
+        $both = fn (string $ar, string $en) => "$ar / $en";
+
+        return match (true) {
+            in_array($outcome->result, [ScanResult::CANCELLED, ScanResult::REFUNDED], true) => ['TICKET_CANCELLED', $outcome->result === ScanResult::REFUNDED ? $both($m['ar'], $m['en']) : 'التذكرة ملغاة / Ticket cancelled', ['ticket_number' => $ticket->ticket_number]],
+            $outcome->result === ScanResult::ALREADY_USED => ['TICKET_ALREADY_USED', 'التذكرة مستخدمة من قبل / Ticket already used', [
+                'validated_at' => \App\Support\TenantTime::iso($ticket->used_at),
+                'validated_by' => $ticket->validated_by,
+            ]],
+            $outcome->result === ScanResult::WRONG_DATE && $outcome->detail === 'event_ended' => ['EVENT_ENDED', 'انتهت الفعالية / Event has ended', ['ticket_number' => $ticket->ticket_number]],
+            $outcome->result === ScanResult::WRONG_DATE && (($outcome->params['when'] ?? null) === 'past' || $outcome->detail === 'expired') => ['TICKET_EXPIRED', 'انتهت صلاحية التذكرة / Ticket expired', [
+                'expiry_date' => \App\Support\TenantTime::isoDate($ticket->booking_date),
+            ]],
+            $outcome->result === ScanResult::WRONG_DATE => ['WRONG_DATE', $both($m['ar'], $m['en']), ['ticket_number' => $ticket->ticket_number, 'valid_date' => $ticket->booking_date?->toDateString()]],
+            $outcome->result === ScanResult::NOT_YET_OPEN => ['NOT_YET_OPEN', $both($m['ar'], $m['en']), ['ticket_number' => $ticket->ticket_number]],
+            default => [strtoupper($outcome->result), $both($m['ar'], $m['en']), ['ticket_number' => $ticket->ticket_number]],
+        };
     }
 
     /**

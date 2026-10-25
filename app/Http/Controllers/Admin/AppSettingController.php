@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\TenantValidation;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use Illuminate\Http\Request;
 
 class AppSettingController extends Controller
 {
+    use TenantValidation;
+
     public function index(Request $request)
     {
         $search = $request->get('search');
@@ -15,8 +18,10 @@ class AppSettingController extends Controller
 
         $settings = AppSetting::query()
             ->when($search, function($query, $search) {
-                $query->where('setting_key', 'like', "%{$search}%")
+                $query->where(function ($q) use ($search) {
+                    $q->where('setting_key', 'like', "%{$search}%")
                       ->orWhere('description', 'like', "%{$search}%");
+                });
             })
             ->when($type, function($query, $type) {
                 $query->where('setting_type', $type);
@@ -35,7 +40,7 @@ class AppSettingController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'setting_key' => 'required|string|max:100|unique:app_settings,setting_key',
+            'setting_key' => ['required', 'string', 'max:100', $this->tenantUnique('app_settings', 'setting_key')],
             'setting_value' => 'required|string',
             'setting_type' => 'required|in:string,integer,boolean,json,decimal',
             'description' => 'nullable|string',
@@ -48,7 +53,7 @@ class AppSettingController extends Controller
         AppSetting::clearCache();
 
         return redirect()->route('admin.app-settings.index')
-            ->with('success', 'تم إضافة الإعداد بنجاح');
+            ->with('success', 'أُضيف الإعداد');
     }
 
     public function show(AppSetting $appSetting)
@@ -64,7 +69,7 @@ class AppSettingController extends Controller
     public function update(Request $request, AppSetting $appSetting)
     {
         $validated = $request->validate([
-            'setting_key' => 'required|string|max:100|unique:app_settings,setting_key,' . $appSetting->id,
+            'setting_key' => ['required', 'string', 'max:100', $this->tenantUnique('app_settings', 'setting_key')->ignore($appSetting->id)],
             'setting_value' => 'required|string',
             'setting_type' => 'required|in:string,integer,boolean,json,decimal',
             'description' => 'nullable|string',
@@ -77,7 +82,7 @@ class AppSettingController extends Controller
         AppSetting::clearCache();
 
         return redirect()->route('admin.app-settings.index')
-            ->with('success', 'تم تحديث الإعداد بنجاح');
+            ->with('success', 'حُدِّث الإعداد');
     }
 
     public function destroy(AppSetting $appSetting)
@@ -88,6 +93,6 @@ class AppSettingController extends Controller
         AppSetting::clearCache();
 
         return redirect()->route('admin.app-settings.index')
-            ->with('success', 'تم حذف الإعداد بنجاح');
+            ->with('success', 'حُذف الإعداد');
     }
 }

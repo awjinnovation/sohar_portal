@@ -2,26 +2,36 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\Category;
+use App\Models\Event;
 use App\Models\EventTag;
+use App\Models\Tenant;
 use App\Models\User;
+use App\Tenancy\TenantContext;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Tests\TestCase;
-use Spatie\Permission\Models\Role;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
+/**
+ * Event tags belong to one event (event_tags: event_id, tag, tag_ar).
+ */
 class EventTagCrudTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
     protected $admin;
 
+    protected Event $event;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Create admin role
-        $adminRole = Role::create(['name' => 'admin']);
+        // Global role definitions; the assignment below is made in the
+        // current tenant (north-batinah, set by the base TestCase).
+        $this->seed(RolesAndPermissionsSeeder::class);
 
         // Create admin user
         $this->admin = User::factory()->create([
@@ -30,11 +40,38 @@ class EventTagCrudTest extends TestCase
             'password' => bcrypt('password'),
         ]);
         $this->admin->assignRole('admin');
+
+        $this->event = $this->makeEvent('Tagged Event', 'فعالية موسومة');
+    }
+
+    private function makeEvent(string $title, string $titleAr): Event
+    {
+        $category = Category::create([
+            'name' => 'Music', 'name_ar' => 'موسيقى', 'description' => 'd', 'description_ar' => 'd',
+            'icon_name' => 'music', 'color_value' => 4283215696, 'is_active' => true,
+        ]);
+
+        return Event::create([
+            'title' => $title, 'title_ar' => $titleAr, 'description' => 'd', 'description_ar' => 'd',
+            'category_id' => $category->id,
+            'start_time' => now()->addDay(), 'end_time' => now()->addDays(2),
+            'location' => 'Hall', 'location_ar' => 'قاعة', 'price' => 0, 'is_active' => true,
+        ]);
+    }
+
+    private function makeTag(array $attributes = []): EventTag
+    {
+        return EventTag::create(array_merge([
+            'event_id' => $this->event->id,
+            'tag' => 'Music',
+            'tag_ar' => 'موسيقى',
+        ], $attributes));
     }
 
     #[Test]
     public function admin_can_view_event_tags_index_page()
     {
+        $this->makeTag(['tag' => 'Listed', 'tag_ar' => 'مدرج']);
         $this->actingAs($this->admin);
 
         $response = $this->get(route('admin.event-tags.index'));
@@ -42,6 +79,8 @@ class EventTagCrudTest extends TestCase
         $response->assertStatus(200);
         $response->assertViewIs('admin.event-tags.index');
         $response->assertSee('إدارة وسوم الفعاليات');
+        $response->assertSee('مدرج');
+        $response->assertSee('فعالية موسومة');
     }
 
     #[Test]
@@ -54,52 +93,43 @@ class EventTagCrudTest extends TestCase
         $response->assertStatus(200);
         $response->assertViewIs('admin.event-tags.create');
         $response->assertSee('إضافة وسم جديد');
+        $response->assertSee('فعالية موسومة');
     }
 
     #[Test]
     public function admin_can_create_new_event_tag_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $tagData = [
-            'tag_name' => 'Technology',
-            'tag_name_ar' => 'تكنولوجيا',
-            'color_hex' => '#4A90E2',
-            'is_active' => 1,
-        ];
-
-        $response = $this->post(route('admin.event-tags.store'), $tagData);
+        $response = $this->post(route('admin.event-tags.store'), [
+            'event_id' => $this->event->id,
+            'tag' => 'Technology',
+            'tag_ar' => 'تكنولوجيا',
+        ]);
 
         $response->assertRedirect(route('admin.event-tags.index'));
-        $response->assertSessionHas('success', 'تم إضافة الوسم بنجاح');
+        $response->assertSessionHas('success', 'أُضيف الوسم');
 
         $this->assertDatabaseHas('event_tags', [
-            'tag_name' => 'Technology',
-            'tag_name_ar' => 'تكنولوجيا',
-            'color_hex' => '#4A90E2',
-            'is_active' => true,
+            'event_id' => $this->event->id,
+            'tag' => 'Technology',
+            'tag_ar' => 'تكنولوجيا',
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
     #[Test]
     public function event_tag_creation_fails_with_invalid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $invalidData = [
-            'tag_name' => '', // Required field is empty
-            'tag_name_ar' => '', // Required field is empty
-            'color_hex' => '#INVALID_COLOR_CODE_TOO_LONG',
-        ];
-
-        $response = $this->post(route('admin.event-tags.store'), $invalidData);
-
-        $response->assertSessionHasErrors([
-            'tag_name',
-            'tag_name_ar',
+        $response = $this->post(route('admin.event-tags.store'), [
+            'event_id' => '',
+            'tag' => '',
+            'tag_ar' => '',
         ]);
+
+        $response->assertSessionHasErrors(['event_id', 'tag', 'tag_ar']);
 
         $this->assertDatabaseCount('event_tags', 0);
     }
@@ -109,12 +139,7 @@ class EventTagCrudTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $tag = EventTag::create([
-            'tag_name' => 'Music',
-            'tag_name_ar' => 'موسيقى',
-            'color_hex' => '#FF5733',
-            'is_active' => true,
-        ]);
+        $tag = $this->makeTag(['tag' => 'Music', 'tag_ar' => 'موسيقى']);
 
         $response = $this->get(route('admin.event-tags.show', $tag));
 
@@ -122,6 +147,7 @@ class EventTagCrudTest extends TestCase
         $response->assertViewIs('admin.event-tags.show');
         $response->assertSee('Music');
         $response->assertSee('موسيقى');
+        $response->assertSee('فعالية موسومة');
     }
 
     #[Test]
@@ -129,12 +155,7 @@ class EventTagCrudTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $tag = EventTag::create([
-            'tag_name' => 'Sports',
-            'tag_name_ar' => 'رياضة',
-            'color_hex' => '#FFA726',
-            'is_active' => true,
-        ]);
+        $tag = $this->makeTag(['tag' => 'Sports', 'tag_ar' => 'رياضة']);
 
         $response = $this->get(route('admin.event-tags.edit', $tag));
 
@@ -147,53 +168,39 @@ class EventTagCrudTest extends TestCase
     #[Test]
     public function admin_can_update_event_tag_with_valid_data()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $tag = EventTag::create([
-            'tag_name' => 'Original Tag',
-            'tag_name_ar' => 'الوسم الأصلي',
-            'color_hex' => '#000000',
-            'is_active' => true,
+        $tag = $this->makeTag(['tag' => 'Original Tag', 'tag_ar' => 'الوسم الأصلي']);
+        $otherEvent = $this->makeEvent('Other Event', 'فعالية أخرى');
+
+        $response = $this->put(route('admin.event-tags.update', $tag), [
+            'event_id' => $otherEvent->id,
+            'tag' => 'Updated Tag',
+            'tag_ar' => 'الوسم المحدث',
         ]);
 
-        $updatedData = [
-            'tag_name' => 'Updated Tag',
-            'tag_name_ar' => 'الوسم المحدث',
-            'color_hex' => '#FFFFFF',
-            'is_active' => 1,
-        ];
-
-        $response = $this->put(route('admin.event-tags.update', $tag), $updatedData);
-
         $response->assertRedirect(route('admin.event-tags.index'));
-        $response->assertSessionHas('success', 'تم تحديث الوسم بنجاح');
+        $response->assertSessionHas('success', 'حُدِّث الوسم');
 
         $this->assertDatabaseHas('event_tags', [
             'id' => $tag->id,
-            'tag_name' => 'Updated Tag',
-            'tag_name_ar' => 'الوسم المحدث',
-            'color_hex' => '#FFFFFF',
+            'event_id' => $otherEvent->id,
+            'tag' => 'Updated Tag',
+            'tag_ar' => 'الوسم المحدث',
         ]);
     }
 
     #[Test]
     public function admin_can_delete_event_tag()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $tag = EventTag::create([
-            'tag_name' => 'To Be Deleted',
-            'tag_name_ar' => 'سيتم الحذف',
-            'color_hex' => '#FF0000',
-            'is_active' => true,
-        ]);
+        $tag = $this->makeTag(['tag' => 'To Be Deleted']);
 
         $response = $this->delete(route('admin.event-tags.destroy', $tag));
 
         $response->assertRedirect(route('admin.event-tags.index'));
-        $response->assertSessionHas('success', 'تم حذف الوسم بنجاح');
+        $response->assertSessionHas('success', 'حُذف الوسم');
 
         $this->assertDatabaseMissing('event_tags', [
             'id' => $tag->id,
@@ -211,126 +218,85 @@ class EventTagCrudTest extends TestCase
     }
 
     #[Test]
-    public function tag_name_is_required()
+    public function tag_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $tagData = [
-            'tag_name' => '', // Missing required field
-            'tag_name_ar' => 'اختبار',
-            'color_hex' => '#4A90E2',
-        ];
-
-        $response = $this->post(route('admin.event-tags.store'), $tagData);
-
-        $response->assertSessionHasErrors('tag_name');
-    }
-
-    #[Test]
-    public function tag_name_ar_is_required()
-    {
-        $this->withoutMiddleware();
-        $this->actingAs($this->admin);
-
-        $tagData = [
-            'tag_name' => 'Test',
-            'tag_name_ar' => '', // Missing required field
-            'color_hex' => '#4A90E2',
-        ];
-
-        $response = $this->post(route('admin.event-tags.store'), $tagData);
-
-        $response->assertSessionHasErrors('tag_name_ar');
-    }
-
-    #[Test]
-    public function tag_name_must_be_unique()
-    {
-        $this->withoutMiddleware();
-        $this->actingAs($this->admin);
-
-        // Create first tag
-        EventTag::create([
-            'tag_name' => 'Unique Tag',
-            'tag_name_ar' => 'وسم فريد',
-            'color_hex' => '#4A90E2',
-            'is_active' => true,
+        $response = $this->post(route('admin.event-tags.store'), [
+            'event_id' => $this->event->id,
+            'tag' => '',
+            'tag_ar' => 'اختبار',
         ]);
 
-        // Try to create another tag with same name
-        $duplicateData = [
-            'tag_name' => 'Unique Tag',
-            'tag_name_ar' => 'وسم آخر',
-            'color_hex' => '#FF5733',
-        ];
-
-        $response = $this->post(route('admin.event-tags.store'), $duplicateData);
-
-        $response->assertSessionHasErrors('tag_name');
+        $response->assertSessionHasErrors('tag');
     }
 
     #[Test]
-    public function tag_name_must_not_exceed_max_length()
+    public function tag_ar_is_required()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $tagData = [
-            'tag_name' => str_repeat('a', 51), // Exceeds max length of 50
-            'tag_name_ar' => 'اختبار',
-            'color_hex' => '#4A90E2',
-        ];
-
-        $response = $this->post(route('admin.event-tags.store'), $tagData);
-
-        $response->assertSessionHasErrors('tag_name');
-    }
-
-    #[Test]
-    public function color_hex_is_optional()
-    {
-        $this->withoutMiddleware();
-        $this->actingAs($this->admin);
-
-        $tagData = [
-            'tag_name' => 'No Color Tag',
-            'tag_name_ar' => 'وسم بدون لون',
-            // color_hex not provided
-            'is_active' => 1,
-        ];
-
-        $response = $this->post(route('admin.event-tags.store'), $tagData);
-
-        $response->assertRedirect(route('admin.event-tags.index'));
-        $response->assertSessionHas('success');
-
-        $this->assertDatabaseHas('event_tags', [
-            'tag_name' => 'No Color Tag',
-            'tag_name_ar' => 'وسم بدون لون',
+        $response = $this->post(route('admin.event-tags.store'), [
+            'event_id' => $this->event->id,
+            'tag' => 'Test',
+            'tag_ar' => '',
         ]);
+
+        $response->assertSessionHasErrors('tag_ar');
     }
 
     #[Test]
-    public function is_active_defaults_to_false_when_not_provided()
+    public function tag_must_be_unique_per_event()
     {
-        $this->withoutMiddleware();
         $this->actingAs($this->admin);
 
-        $tagData = [
-            'tag_name' => 'Inactive Tag',
-            'tag_name_ar' => 'وسم غير نشط',
-            'color_hex' => '#4A90E2',
-            // is_active not provided
-        ];
+        $this->makeTag(['tag' => 'Unique Tag']);
 
-        $response = $this->post(route('admin.event-tags.store'), $tagData);
-
-        $response->assertRedirect(route('admin.event-tags.index'));
-
-        $this->assertDatabaseHas('event_tags', [
-            'tag_name' => 'Inactive Tag',
-            'is_active' => false,
+        $duplicate = $this->post(route('admin.event-tags.store'), [
+            'event_id' => $this->event->id,
+            'tag' => 'Unique Tag',
+            'tag_ar' => 'وسم آخر',
         ]);
+        $duplicate->assertSessionHasErrors('tag');
+
+        // The same tag on another event is fine.
+        $otherEvent = $this->makeEvent('Other Event', 'فعالية أخرى');
+        $this->post(route('admin.event-tags.store'), [
+            'event_id' => $otherEvent->id,
+            'tag' => 'Unique Tag',
+            'tag_ar' => 'وسم آخر',
+        ])->assertSessionHasNoErrors();
+    }
+
+    #[Test]
+    public function tag_must_not_exceed_max_length()
+    {
+        $this->actingAs($this->admin);
+
+        $response = $this->post(route('admin.event-tags.store'), [
+            'event_id' => $this->event->id,
+            'tag' => str_repeat('a', 51),
+            'tag_ar' => 'اختبار',
+        ]);
+
+        $response->assertSessionHasErrors('tag');
+    }
+
+    #[Test]
+    public function event_of_another_tenant_is_rejected()
+    {
+        $this->actingAs($this->admin);
+
+        $other = Tenant::create(['slug' => 'b', 'name' => ['en' => 'B', 'ar' => 'B'], 'status' => 'active']);
+        $foreignEvent = app(TenantContext::class)->run($other, fn () => $this->makeEvent('Foreign', 'أجنبية'));
+
+        $response = $this->post(route('admin.event-tags.store'), [
+            'event_id' => $foreignEvent->id,
+            'tag' => 'Leak',
+            'tag_ar' => 'تسريب',
+        ]);
+
+        $response->assertSessionHasErrors('event_id');
+        $this->assertDatabaseCount('event_tags', 0);
     }
 }

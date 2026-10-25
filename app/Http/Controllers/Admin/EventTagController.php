@@ -2,70 +2,93 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\TenantValidation;
 use App\Http\Controllers\Controller;
+use App\Models\Event;
 use App\Models\EventTag;
 use Illuminate\Http\Request;
 
+/**
+ * Tags attached to an event (event_tags: event_id, tag, tag_ar).
+ */
 class EventTagController extends Controller
 {
-    public function index()
+    use TenantValidation;
+
+    public function index(Request $request)
     {
-        $tags = EventTag::withCount('events')->latest()->paginate(20);
+        $tags = EventTag::with('event')
+            ->when($request->filled('event_id'), fn ($q) => $q->where('event_id', $request->integer('event_id')))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
         return view('admin.event-tags.index', compact('tags'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return view('admin.event-tags.create');
+        $events = $this->events();
+        $selectedEventId = $request->integer('event_id') ?: null;
+
+        return view('admin.event-tags.create', compact('events', 'selectedEventId'));
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'tag_name' => 'required|string|max:50|unique:event_tags',
-            'tag_name_ar' => 'required|string|max:50',
-            'color_hex' => 'nullable|string|max:7',
-            'is_active' => 'nullable|boolean'
-        ]);
-
-        $validated['is_active'] = $request->has('is_active');
-        EventTag::create($validated);
+        EventTag::create($this->validated($request));
 
         return redirect()->route('admin.event-tags.index')
-            ->with('success', 'تم إضافة الوسم بنجاح');
+            ->with('success', 'أُضيف الوسم');
     }
 
     public function show(EventTag $eventTag)
     {
-        $eventTag->load('events');
+        $eventTag->load('event');
+
         return view('admin.event-tags.show', compact('eventTag'));
     }
 
     public function edit(EventTag $eventTag)
     {
-        return view('admin.event-tags.edit', compact('eventTag'));
+        $events = $this->events();
+
+        return view('admin.event-tags.edit', compact('eventTag', 'events'));
     }
 
     public function update(Request $request, EventTag $eventTag)
     {
-        $validated = $request->validate([
-            'tag_name' => 'required|string|max:50|unique:event_tags,tag_name,' . $eventTag->id,
-            'tag_name_ar' => 'required|string|max:50',
-            'color_hex' => 'nullable|string|max:7',
-            'is_active' => 'nullable|boolean'
-        ]);
-
-        $validated['is_active'] = $request->has('is_active');
-        $eventTag->update($validated);
+        $eventTag->update($this->validated($request, $eventTag));
 
         return redirect()->route('admin.event-tags.index')
-            ->with('success', 'تم تحديث الوسم بنجاح');
+            ->with('success', 'حُدِّث الوسم');
     }
 
     public function destroy(EventTag $eventTag)
     {
         $eventTag->delete();
+
         return redirect()->route('admin.event-tags.index')
-            ->with('success', 'تم حذف الوسم بنجاح');
+            ->with('success', 'حُذف الوسم');
+    }
+
+    private function events()
+    {
+        return Event::orderByDesc('start_time')->get(['id', 'title', 'title_ar', 'start_time']);
+    }
+
+    private function validated(Request $request, ?EventTag $ignore = null): array
+    {
+        $unique = $this->tenantUnique('event_tags', 'tag')
+            ->where('event_id', (int) $request->input('event_id'));
+        if ($ignore) {
+            $unique->ignore($ignore->id);
+        }
+
+        return $request->validate([
+            'event_id' => ['required', 'integer', $this->tenantExists('events')],
+            'tag' => ['required', 'string', 'max:50', $unique],
+            'tag_ar' => ['required', 'string', 'max:50'],
+        ]);
     }
 }

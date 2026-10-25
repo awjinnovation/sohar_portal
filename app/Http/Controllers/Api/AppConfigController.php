@@ -4,191 +4,154 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
+use App\Models\Tenant;
+use App\Tenancy\LegacySettingsMapper;
+use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * Legacy /api/v1/config/* endpoints (pre-platform app builds). Values are
+ * now derived from the current tenant's settings (see /tenant/config for the
+ * structured document), plus the tenant's *public* app_settings rows.
+ */
 class AppConfigController extends Controller
 {
-    /**
-     * Get all public app configuration settings for Flutter app
-     */
+    public function __construct(private TenantContext $context) {}
+
+    private function tenant(): Tenant
+    {
+        return $this->context->get();
+    }
+
+    /** Flat legacy map: tenant-derived keys + public app_settings. */
+    private function flat(): array
+    {
+        return array_merge(
+            LegacySettingsMapper::toLegacy($this->tenant()),
+            AppSetting::getPublicSettings()
+        );
+    }
+
     public function index(): JsonResponse
     {
-        try {
-            $config = AppSetting::getPublicSettings();
-
-            return response()->json([
-                'success' => true,
-                'data' => $config,
-                'timestamp' => now()->toIso8601String(),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch app configuration',
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => $this->flat(),
+            'timestamp' => \App\Support\TenantTime::iso(now()),
+        ]);
     }
 
     /**
-     * Get specific configuration value by key
+     * Single *public* configuration value. Non-public app_settings are never
+     * exposed here.
      */
     public function show(string $key): JsonResponse
     {
-        try {
-            $value = AppSetting::get($key);
+        $flat = $this->flat();
 
-            if ($value === null) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Configuration key not found',
-                ], 404);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'key' => $key,
-                    'value' => $value,
-                ],
-            ]);
-        } catch (\Exception $e) {
+        if (! array_key_exists($key, $flat) || $flat[$key] === null) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch configuration',
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
+                'message' => 'Configuration key not found',
+            ], 404);
         }
+
+        return response()->json([
+            'success' => true,
+            'data' => ['key' => $key, 'value' => $flat[$key]],
+        ]);
     }
 
-    /**
-     * Get theme configuration
-     */
     public function theme(): JsonResponse
     {
-        try {
-            $themeConfig = [
-                'primary_color' => AppSetting::get('primary_color', '#4A90E2'),
-                'primary_dark_color' => AppSetting::get('primary_dark_color', '#3A7BC8'),
-                'primary_light_color' => AppSetting::get('primary_light_color', '#6BA3E8'),
-                'accent_color' => AppSetting::get('accent_color', '#FFA726'),
-                'accent_dark_color' => AppSetting::get('accent_dark_color', '#FF9800'),
-                'accent_light_color' => AppSetting::get('accent_light_color', '#FFB74D'),
-                'background_color' => AppSetting::get('background_color', '#F8F9FA'),
-                'surface_color' => AppSetting::get('surface_color', '#FFFFFF'),
-                'error_color' => AppSetting::get('error_color', '#F44336'),
-                'success_color' => AppSetting::get('success_color', '#4CAF50'),
-                'warning_color' => AppSetting::get('warning_color', '#FF9800'),
-                'text_primary_color' => AppSetting::get('text_primary_color', '#1E293B'),
-                'text_secondary_color' => AppSetting::get('text_secondary_color', '#64748B'),
-                'text_disabled_color' => AppSetting::get('text_disabled_color', '#CBD5E1'),
-                'default_theme_mode' => AppSetting::get('default_theme_mode', 'light'),
-                'enable_dark_mode' => AppSetting::get('enable_dark_mode', true),
-            ];
+        $t = $this->tenant();
+        $c = fn (string $k) => $t->setting("theme.colors.$k");
 
-            return response()->json([
-                'success' => true,
-                'data' => $themeConfig,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch theme configuration',
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'primary_color' => $c('primary'),
+                'primary_dark_color' => $c('wallet_card_end') ?? $c('primary'),
+                'primary_light_color' => $c('primary'),
+                'accent_color' => $c('secondary'),
+                'accent_dark_color' => $c('secondary'),
+                'accent_light_color' => $c('secondary'),
+                'background_color' => $c('background'),
+                'surface_color' => $c('surface'),
+                'error_color' => $c('error'),
+                'success_color' => $c('success'),
+                'warning_color' => $c('warning'),
+                'text_primary_color' => $c('on_surface'),
+                'text_secondary_color' => $c('muted'),
+                'text_disabled_color' => $c('outline'),
+                'default_theme_mode' => $t->setting('theme.mode'),
+                'enable_dark_mode' => $t->setting('theme.mode') !== 'light',
+                'font_family_ar' => $t->setting('theme.font_family_ar'),
+                'font_family_en' => $t->setting('theme.font_family_en'),
+            ],
+        ]);
     }
 
-    /**
-     * Get branding configuration
-     */
     public function branding(): JsonResponse
     {
-        try {
-            $brandingConfig = [
-                'app_name' => AppSetting::get('app_name', 'مهرجان صحار'),
-                'app_name_en' => AppSetting::get('app_name_en', 'Sohar Festival'),
-                'app_tagline' => AppSetting::get('app_tagline'),
-                'app_tagline_en' => AppSetting::get('app_tagline_en'),
-                'app_logo_url' => AppSetting::get('app_logo_url'),
-                'app_icon_url' => AppSetting::get('app_icon_url'),
-                'splash_image_url' => AppSetting::get('splash_image_url'),
-                'loading_text' => AppSetting::get('loading_text', 'جاري التحميل...'),
-                'loading_text_en' => AppSetting::get('loading_text_en', 'Loading...'),
-                'splash_duration_ms' => AppSetting::get('splash_duration_ms', 2000),
-            ];
+        $t = $this->tenant();
 
-            return response()->json([
-                'success' => true,
-                'data' => $brandingConfig,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch branding configuration',
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'app_name' => $t->localizedName('ar'),
+                'app_name_en' => $t->localizedName('en'),
+                'app_tagline' => $t->setting('tenant.tagline.ar'),
+                'app_tagline_en' => $t->setting('tenant.tagline.en'),
+                'app_logo_url' => Tenant::assetUrl($t->setting('branding.logo_url')),
+                'app_icon_url' => Tenant::assetUrl($t->setting('branding.icon_url')),
+                'splash_image_url' => Tenant::assetUrl($t->setting('branding.splash_url')),
+                'loading_text' => $t->setting('legacy.loading_text', 'جارٍ التحميل'),
+                'loading_text_en' => $t->setting('legacy.loading_text_en', 'Loading...'),
+                'splash_duration_ms' => $t->setting('legacy.splash_duration_ms', 2000),
+            ],
+        ]);
     }
 
-    /**
-     * Get features configuration
-     */
     public function features(): JsonResponse
     {
-        try {
-            $featuresConfig = [
-                'enable_notifications' => AppSetting::get('enable_notifications', true),
-                'enable_favorites' => AppSetting::get('enable_favorites', true),
-                'enable_sharing' => AppSetting::get('enable_sharing', true),
-                'enable_tickets' => AppSetting::get('enable_tickets', true),
-                'enable_maps' => AppSetting::get('enable_maps', true),
-                'enable_search' => AppSetting::get('enable_search', true),
-                'enable_filters' => AppSetting::get('enable_filters', true),
-                'show_bottom_nav' => AppSetting::get('show_bottom_nav', true),
-                'enable_drawer_menu' => AppSetting::get('enable_drawer_menu', true),
-                'enable_animations' => AppSetting::get('enable_animations', true),
-                'enable_haptic_feedback' => AppSetting::get('enable_haptic_feedback', true),
-            ];
+        $t = $this->tenant();
+        $legacy = fn (string $k, $d = true) => $t->setting("legacy.$k", $d);
 
-            return response()->json([
-                'success' => true,
-                'data' => $featuresConfig,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch features configuration',
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'enable_notifications' => $t->moduleEnabled('notifications'),
+                'enable_favorites' => $t->moduleEnabled('favorites'),
+                'enable_sharing' => $legacy('enable_sharing'),
+                'enable_tickets' => $t->moduleEnabled('tickets'),
+                'enable_maps' => $t->moduleEnabled('map'),
+                'enable_search' => $legacy('enable_search'),
+                'enable_filters' => $legacy('enable_filters'),
+                'show_bottom_nav' => $legacy('show_bottom_nav'),
+                'enable_drawer_menu' => $legacy('enable_drawer_menu'),
+                'enable_animations' => $legacy('enable_animations'),
+                'enable_haptic_feedback' => $legacy('enable_haptic_feedback'),
+                'enable_wallet' => $t->moduleEnabled('wallet'),
+                'enable_points' => $t->moduleEnabled('points'),
+            ],
+        ]);
     }
 
-    /**
-     * Check app version and maintenance mode
-     */
     public function status(): JsonResponse
     {
-        try {
-            $statusConfig = [
-                'maintenance_mode' => AppSetting::get('maintenance_mode', false),
-                'maintenance_message' => AppSetting::get('maintenance_message'),
-                'maintenance_message_en' => AppSetting::get('maintenance_message_en'),
-                'app_version' => AppSetting::get('app_version', '1.0.0'),
-                'min_supported_version' => AppSetting::get('min_supported_version', '1.0.0'),
-                'force_update' => AppSetting::get('force_update', false),
-            ];
+        $t = $this->tenant();
 
-            return response()->json([
-                'success' => true,
-                'data' => $statusConfig,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch app status',
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'maintenance_mode' => (bool) $t->setting('app.maintenance_mode'),
+                'maintenance_message' => $t->setting('app.maintenance_message.ar'),
+                'maintenance_message_en' => $t->setting('app.maintenance_message.en'),
+                'app_version' => $t->setting('app.latest_version'),
+                'min_supported_version' => $t->setting('app.min_version'),
+                'force_update' => (bool) $t->setting('app.force_update'),
+            ],
+        ]);
     }
 }
