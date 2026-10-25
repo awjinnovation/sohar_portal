@@ -77,6 +77,34 @@
                 </div>
             </x-admin.card>
 
+            {{-- Per-type sales summary (docs/ticket_types_contract.md §3) --}}
+            <x-admin.card id="type-sales" title="مبيعات أنواع التذاكر" icon="ticket-perforated" :flush="true"
+                :subtitle="($d = collect($ticketTypes ?? [])->first()['remaining_date'] ?? null) ? __('المتبقي ليوم :date', ['date' => $d]) : null">
+                <x-slot:actions>
+                    @can('manage events')<a href="{{ route('admin.events.edit', $event) }}#ticket-types" class="btn btn-sm btn-tonal"><i class="bi bi-pencil"></i> {{ __('تعديل الأنواع') }}</a>@endcan
+                </x-slot:actions>
+                <div class="x-table-wrap table-responsive">
+                    <table class="table align-middle mb-0" data-type-sales>
+                        <thead><tr><th>{{ __('النوع') }}</th><th class="text-end">{{ __('السعر') }}</th><th class="text-end">{{ __('المبيع') }}</th><th class="text-end">{{ __('المتبقي') }}</th><th class="text-end">{{ __('الإيرادات') }}</th></tr></thead>
+                        <tbody>
+                        @foreach($ticketTypes ?? [] as $tt)
+                            <tr data-type="{{ $tt['key'] }}" @unless($tt['is_active']) class="text-muted" @endunless>
+                                <td><span class="d-inline-block rounded-circle me-1" style="width:10px;height:10px;background:{{ $tt['color'] }}"></span>
+                                    <span class="cell-title">{{ app()->getLocale() === 'ar' ? ($tt['name']['ar'] ?: $tt['name']['en']) : ($tt['name']['en'] ?: $tt['name']['ar']) }}</span>
+                                    @if($tt['admits'] > 1)<span class="pill pill-brand pill-sm">{{ __('يدخل بها :count', ['count' => $tt['admits']]) }}</span>@endif
+                                    @if($tt['visibility'] === 'box_office')<span class="pill pill-info pill-sm">{{ __('عند البوابة فقط') }}</span>@endif
+                                    @unless($tt['is_active'])<span class="pill pill-neutral pill-sm">{{ __('موقوف') }}</span>@endunless</td>
+                                <td class="text-end">@if($tt['price_minor'] === 0){{ __('مجانية') }}@else<x-admin.money :minor="$tt['price_minor']" :currency="$event->currency" />@endif</td>
+                                <td class="num text-end">{{ number_format($tt['sold']) }}</td>
+                                <td class="num text-end">{{ $tt['available'] === null ? __('غير محدود') : number_format($tt['available']) }}</td>
+                                <td class="text-end"><x-admin.money :minor="$tt['revenue_minor']" :currency="$event->currency" class="fw-bold" /></td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </x-admin.card>
+
             <x-admin.card title="التفاصيل" icon="list-ul">
                 <dl class="dl">
                     <dt>{{ __('الفئة') }}</dt>

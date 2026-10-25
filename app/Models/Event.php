@@ -51,6 +51,114 @@ class Event extends Model implements HasMedia
         return $this->hasMany(Ticket::class);
     }
 
+    /** Ticket types (docs/ticket_types_contract.md), in display order. */
+    public function ticketTypes()
+    {
+        return $this->hasMany(EventTicketType::class)->orderBy('sort')->orderBy('id');
+    }
+
+    protected static function booted(): void
+    {
+        // Every event has at least one type: `general` at the event price
+        // (plus one per legacy `pricing` tier), like the migration backfill.
+        static::created(fn (Event $event) => $event->ensureDefaultTicketTypes());
+    }
+
+    public function ensureDefaultTicketTypes(): void
+    {
+        if (EventTicketType::withoutTenantScope()->where('event_id', $this->id)->exists()) {
+            return;
+        }
+        $decimals = Tenant::find($this->tenant_id)?->currencyDecimals() ?? 3;
+        $pricing = is_array($this->pricing) ? $this->pricing : [];
+        $standard = collect($pricing)->first(fn ($p) => in_array($p['type'] ?? null, ['standard', 'general'], true));
+        $rows = [['general', ['en' => 'General admission', 'ar' => 'تذكرة عامة'], 'general',
+            \App\Support\Money::toMinor((string) ($standard['price'] ?? $this->getRawOriginal('price') ?? $this->price ?? 0), $decimals)]];
+        $labels = ['vip' => ['VIP', 'كبار الشخصيات', 'vip'], 'premium' => ['Premium', 'مميزة', 'other'], 'early_bird' => ['Early bird', 'حجز مبكر', 'other']];
+        foreach ($pricing as $tier) {
+            $key = (string) ($tier['type'] ?? '');
+            if ($key === '' || in_array($key, ['standard', 'general'], true) || collect($rows)->contains(0, $key)) {
+                continue;
+            }
+            [$en, $ar, $cat] = $labels[$key] ?? [\Illuminate\Support\Str::headline($key), $key, 'other'];
+            $rows[] = [$key, ['en' => $en, 'ar' => $ar], $cat, \App\Support\Money::toMinor((string) ($tier['price'] ?? 0), $decimals)];
+        }
+        foreach ($rows as $i => [$key, $name, $category, $price]) {
+            $type = new EventTicketType([
+                'event_id' => $this->id, 'key' => $key, 'name' => $name, 'category' => $category, 'price_minor' => $price,
+                'admits' => 1, 'per_order_max' => (int) config('payments.max_tickets_per_order', 10), 'sort' => $i,
+                'visibility' => EventTicketType::VISIBILITY_PUBLIC, 'is_active' => true,
+            ]);
+            $type->tenant_id = $this->tenant_id;
+            $type->saveQuietly();
+        }
+    }
+
+    /** Active types sold in a channel (app = public only, box_office = public + box_office). */
+    public function sellableTicketTypes(string $channel = EventTicketType::CHANNEL_APP)
+    {
+        return EventTicketType::withoutTenantScope()->where('event_id', $this->id)->active()
+            ->forChannel($channel)->ordered()->get()->each->setRelation('event', $this);
+    }
+
+    /** The type a legacy single-`quantity` order maps to: `general`, else the first active type of the channel. */
+    public function defaultTicketType(string $channel = EventTicketType::CHANNEL_APP): ?EventTicketType
+    {
+        $types = $this->sellableTicketTypes($channel);
+
+        return $types->firstWhere('key', 'general') ?? $types->first();
+    }
+
+    /** Type by key for legacy callers (`standard` = the default type). */
+    public function ticketTypeByKey(?string $key, string $channel = EventTicketType::CHANNEL_APP): ?EventTicketType
+    {
+        if ($key === null || $key === '' || $key === 'standard') {
+            return $this->defaultTicketType($channel);
+        }
+
+        return $this->sellableTicketTypes($channel)->firstWhere('key', $key);
+    }
+
+    /** Date shown with type availability: today while the event runs, else its first day (null without dates). */
+    public function nextSaleDate(): ?string
+    {
+        if (! $this->start_time || ! $this->end_time) {
+            return null;
+        }
+        $today = \Carbon\Carbon::now(\App\Support\TenantTime::zone(Tenant::find($this->tenant_id)))->toDateString();
+        $first = $this->start_time->toDateString();
+        $last = $this->end_time->toDateString();
+
+        return $today < $first ? $first : ($today > $last ? $last : $today);
+    }
+
+    /** Cheapest active public type, or null when the event has none. */
+    public function priceFromMinor(): ?int
+    {
+        $min = EventTicketType::withoutTenantScope()->where('event_id', $this->id)->active()
+            ->where('visibility', EventTicketType::VISIBILITY_PUBLIC)->min('price_minor');
+
+        return $min === null ? null : (int) $min;
+    }
+
+    /**
+     * Keep the legacy `price` column equal to the default type's price
+     * (General; older clients and the AI tools read `price`). The cheapest
+     * type is price_from.
+     */
+    public function syncPriceFromTypes(): void
+    {
+        $from = $this->defaultTicketType()?->price_minor;
+        if ($from === null) {
+            return;
+        }
+        $decimals = Tenant::find($this->tenant_id)?->currencyDecimals() ?? 3;
+        $price = \App\Support\Money::format($from, $decimals);
+        if (\App\Support\Money::toMinor((string) $this->getRawOriginal('price'), $decimals) !== $from) {
+            $this->forceFill(['price' => $price])->saveQuietly();
+        }
+    }
+
     /** Places to visit where this event is held (docs/places_content_contract.md §2). */
     public function places()
     {
@@ -63,6 +171,10 @@ class Event extends Model implements HasMedia
      */
     public function unitPriceMinor(?string $ticketType = null, int $decimals = 3): int
     {
+        // Ticket types are authoritative (docs/ticket_types_contract.md).
+        if ($ticketType && ($type = $this->ticketTypeByKey($ticketType, EventTicketType::CHANNEL_BOX_OFFICE))) {
+            return (int) $type->price_minor;
+        }
         if ($ticketType && is_array($this->pricing)) {
             foreach ($this->pricing as $tier) {
                 if (($tier['type'] ?? null) === $ticketType && isset($tier['price'])) {
@@ -100,25 +212,30 @@ class Event extends Model implements HasMedia
     }
 
     /**
-     * Get available tickets for a specific date
+     * Seats left for a date (-1 = unlimited): the daily capacity minus the
+     * tickets issued for that date (active or already used) and the seats
+     * held by pending, unexpired gate box office orders
+     * (docs/gate_sales_contract.md §2).
      */
     public function getAvailableTicketsForDate(string $date): int
     {
-        // Unlimited tickets
         if ($this->hasUnlimitedTickets()) {
-            return -1; // Return -1 to indicate unlimited
+            return -1;
         }
 
-        // Get total per day
-        $dailyCapacity = $this->total_tickets;
-
-        // Calculate booked tickets for this date
-        $bookedCount = $this->tickets()
-            ->where('booking_date', $date)
-            ->where('status', 'active')
+        $date = substr($date, 0, 10);
+        $issued = (int) Ticket::withoutTenantScope()
+            ->where('event_id', $this->id)
+            ->whereDate('booking_date', $date)
+            ->whereIn('status', ['active', 'used'])
+            ->sum('quantity');
+        $held = (int) BoxOfficeOrder::withoutTenantScope()
+            ->where('event_id', $this->id)
+            ->whereDate('booking_date', $date)
+            ->holding()
             ->sum('quantity');
 
-        return max(0, $dailyCapacity - $bookedCount);
+        return max(0, (int) $this->total_tickets - $issued - $held);
     }
 
     /**

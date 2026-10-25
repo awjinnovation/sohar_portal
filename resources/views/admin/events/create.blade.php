@@ -120,7 +120,7 @@
                         <x-admin.form-field col="col-6" name="total_tickets" label="إجمالي التذاكر" type="number" min="0" dir="ltr"
                             :value="old('total_tickets', $model?->total_tickets)" />
                     </div>
-                    <div class="form-text mt-n2">{{ __('السعر 0 يجعل الفعالية مجانية.') }}</div>
+                    <div class="form-text mt-n2">{{ __('السعر 0 يجعل الفعالية مجانية. يصبح هذا السعر سعر التذكرة العامة، وتُضاف الأنواع الأخرى بعد الحفظ.') }}</div>
                 </x-admin.card>
 
                 <x-admin.card title="النشر" icon="broadcast">

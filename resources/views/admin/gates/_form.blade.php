@@ -29,6 +29,7 @@
     <div class="col-xl-4">
         <x-admin.card title="الحالة" icon="sliders">
             <x-admin.toggle name="active" id="active" label="البوابة مفتوحة" description="البوابة المغلقة ترفض المسح من أجهزتها" :checked="old('active', $gate->active ?? true)" />
+            <x-admin.toggle name="can_sell" id="can_sell" label="بيع التذاكر" description="يبيع موظفو هذه البوابة التذاكر ويرسلون رابط الدفع إلى الزائر" :checked="old('can_sell', $gate->can_sell)" />
             <x-slot:footer>
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary flex-grow-1" data-busy><i class="bi bi-check-lg"></i> {{ __('حفظ') }}</button>

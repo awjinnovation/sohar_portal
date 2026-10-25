@@ -30,12 +30,13 @@ class PaymentGatewayManager
         return $driver;
     }
 
-    public function paymentUrl(Payment $payment): string
+    /** @param  array  $query  extra signed query parameters (e.g. lang) */
+    public function paymentUrl(Payment $payment, array $query = []): string
     {
         return URL::temporarySignedRoute(
             'payment.redirect',
             now()->addMinutes((int) config('payments.link_ttl_minutes', 60)),
-            ['transaction_id' => $payment->transaction_id]
+            ['transaction_id' => $payment->transaction_id] + $query
         );
     }
 }

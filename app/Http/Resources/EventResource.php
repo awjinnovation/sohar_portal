@@ -51,6 +51,11 @@ class EventResource extends JsonResource
             })->toArray(),
             'price' => $this->price ? (float) $this->price : null,
             'price_minor' => $this->unitPriceMinor(null, app(\App\Tenancy\TenantContext::class)->get()?->currencyDecimals() ?? 3),
+            // Ticket types (docs/ticket_types_contract.md §2): public, active,
+            // `available` for the next day the event runs (today when running).
+            'ticket_types' => $this->ticketTypesPayload(),
+            'price_from_minor' => $priceFrom = $this->priceFromMinor(),
+            'price_from' => $priceFrom === null ? null : \App\Support\Money::format($priceFrom, app(\App\Tenancy\TenantContext::class)->get()?->currencyDecimals() ?? 3),
             'deposit_minor' => (int) ($this->deposit_minor ?? 0),
             'deposit_type' => $this->deposit_type,
             'currency' => $this->currency,
@@ -62,5 +67,14 @@ class EventResource extends JsonResource
             'created_at' => \App\Support\TenantTime::iso($this->created_at),
             'updated_at' => \App\Support\TenantTime::iso($this->updated_at),
         ];
+    }
+
+    private function ticketTypesPayload(): array
+    {
+        $date = $this->resource->nextSaleDate();
+        $eventAvailable = $date ? $this->resource->getAvailableTicketsForDate($date) : null;
+
+        return $this->resource->sellableTicketTypes(\App\Models\EventTicketType::CHANNEL_APP)
+            ->map(fn ($t) => $t->toApi($date, null, $eventAvailable))->values()->all();
     }
 }

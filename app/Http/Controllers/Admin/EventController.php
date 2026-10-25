@@ -85,7 +85,10 @@ class EventController extends Controller
             $query->latest()->limit(10);
         }]);
         
-        return view('admin.events.show', compact('event'));
+        // Per-type sales summary (docs/ticket_types_contract.md §3).
+        $ticketTypes = app(EventTicketTypeController::class)->list($event);
+
+        return view('admin.events.show', compact('event', 'ticketTypes'));
     }
 
     public function edit(Event $event)
@@ -97,7 +100,14 @@ class EventController extends Controller
 
     public function update(Request $request, Event $event)
     {
-        $validated = $request->validate($this->rules());
+        // Prices live on the ticket types; a posted price updates the default (General) type.
+        $validated = $request->validate(['price' => 'nullable|numeric|min:0'] + $this->rules());
+        if (array_key_exists('price', $validated) && $validated['price'] === null) {
+            unset($validated['price']);
+        }
+        if (isset($validated['price']) && ($default = $event->defaultTicketType())) {
+            $default->update(['price_minor' => $this->currentTenant()?->toMinor((string) $validated['price']) ?? 0]);
+        }
         $validated['currency'] = $validated['currency'] ?? $this->currentTenant()?->currency() ?? 'OMR';
 
         // Parse images JSON if provided

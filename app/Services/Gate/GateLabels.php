@@ -38,6 +38,7 @@ class GateLabels
         'hardware' => 'ماسح مدمج',
         'wedge' => 'ماسح USB/بلوتوث',
         'manual' => 'إدخال يدوي',
+        'box_office' => 'بيع البوابة',
     ];
 
     public const DEVICE_TYPES = [

@@ -100,6 +100,9 @@ class GateManifestService
                         't' => $row->ticket_type,
                         'e' => (int) $row->event_id,
                         'd' => $row->booking_date ? substr((string) $row->booking_date, 0, 10) : $date,
+                        // Multi-entry (docs/ticket_types_contract.md): people admitted / entries used.
+                        'a' => max(1, (int) $row->max_check_ins),
+                        'u' => (int) $row->check_in_count,
                     ];
                 }
             });

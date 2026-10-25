@@ -33,7 +33,7 @@ class GateScanController extends Controller
             ->when(in_array($request->input('result'), ScanResult::ALL, true), fn ($query) => $query->where('result', $request->input('result')))
             ->when($request->input('result') === 'rejects', fn ($query) => $query->whereIn('result', ScanResult::REJECTS))
             ->when(in_array($request->input('direction'), ['in', 'out'], true), fn ($query) => $query->where('direction', $request->input('direction')))
-            ->when(in_array($request->input('source'), ['camera', 'hardware', 'wedge', 'manual'], true), fn ($query) => $query->where('source', $request->input('source')))
+            ->when(array_key_exists((string) $request->input('source'), \App\Services\Gate\GateLabels::SOURCES), fn ($query) => $query->where('source', $request->input('source')))
             ->when($request->input('flag') === 'offline', fn ($query) => $query->where('offline', true))
             ->when($request->input('flag') === 'conflict', fn ($query) => $query->where('conflict', true))
             ->when($q !== '', fn ($query) => $query->whereHas('ticket', fn ($t) => $t->where('ticket_number', 'like', '%'.strtoupper($q).'%')))

@@ -27,6 +27,8 @@ backend's implementation notes). Endpoint reference with examples:
 | Admin | `app/Http/Controllers/Admin/*`, `resources/views/admin/*` | Bootstrap 5, branded from the current tenant; Arabic (RTL) by default with an EN/AR switch (session `admin_locale`, `SetAdminLocale` middleware). Strings are Arabic source text translated via `lang/en.json` (`__('…')`; admin components translate their props). Tenants (super-admin), branding & settings, wallets (ledger, adjustments, freeze; opening a user without a wallet never creates one — POST does), points (accounts, tiers, history, audited adjustments, rules), refund requests, vendors + staff, deposits, payments (refunds), plus the event/content CRUDs. Dashboard figures: `App\Services\Admin\DashboardMetrics`. Routes are guarded with `can:<permission>`. |
 | Time | `App\Support\TenantTime`, `App\Casts\TenantLocalDateTime` | Instants are stored in UTC; event / announcement schedule times are stored as tenant wall-clock. All API datetimes are ISO 8601 with the tenant offset. |
 | Audit | `audit_logs` (`App\Models\AuditLog::record`) | Manual adjustments, freezes, refunds, refund decisions. |
+| Ticket types | `App\Models\EventTicketType`, `CheckoutService::quoteItems`, `TicketIssuer`, `Admin/EventTicketTypeController` | Per-event types (General, Family admitting 4, VIP, Child, Senior…) with price, people per ticket, own capacity, per-order limit, ages, ID check, sales window, app or gate-only visibility, colour, sort. See *Ticket types* below. |
+| Box office | `BoxOfficeService`, `Api/GateSalesController`, `Web/BoxOfficePayController`, `Admin/GateSalesController` | Gate staff sell tickets; the visitor pays through `/pay/{token}`. See *Gate box office* below. |
 | Gates | `app/Services/Gate/*`, `Api/GateController`, `Admin/Gate*Controller`, `AuthenticateGateDevice` | Gate scanner: paired devices (Sanctum token of `GateDevice`, ability `gate`), `TicketScanService` = the only ticket-validation logic (gate app, offline sync, legacy staff screen), salted offline manifest, live gate dashboard. See *Gate scanner* below. |
 
 ### Request flow example — wallet ticket checkout
@@ -166,6 +168,47 @@ Or *Admin → Gates → Scanner devices → Pair new device* and scan the QR wit
 
 **Settings** (tenant `settings.gate.*`, all optional): `day_rollover_hour` 4, `early_entry_minutes` 60, `reentry_requires_exit` false, `require_staff_login` false, `offline_allowed` true, `beep` true.
 
+## Ticket types
+
+Contract: [`../docs/ticket_types_contract.md`](../docs/ticket_types_contract.md) (§6 = implementation notes). Every event has at least one type: creating an event (or the migration, for existing ones) adds `general` («تذكرة عامة» / General admission) at the event price, and existing tickets were linked to it (their `ticket_type` key `standard` became `general`).
+
+| Piece | How |
+|---|---|
+| Data | `event_ticket_types` (key unique per event, name / description {en, ar}, category `general\|family\|vip\|child\|senior\|student\|group\|other`, `price_minor`, `admits`, `capacity` per day (null = shares the event capacity), `per_order_max`, `min_age` / `max_age`, `requires_id`, `sales_start` / `sales_end` (tenant wall-clock), `visibility` `public\|box_office`, `color`, `sort`, `is_active`). Tickets: `ticket_type_id` + `ticket_type` (key); `admits` / `entries_used` are `max_check_ins` / `check_in_count`. |
+| Pricing | `CheckoutService::quoteItems()` — `items: [{ticket_type_id, quantity}]` or the legacy `quantity` + `ticket_type`; lines, per-type limits, sales windows, type and event capacity (pending gate orders hold seats), points and deposits on the total. `TicketIssuer` creates one ticket per unit with its type and admits. The legacy event `price` follows the General type; `price_from` is the cheapest public type. |
+| Gate | A family ticket admitting 4 is accepted 4 times ("2 of 4" in `entry`), scan results carry the type badge, age and ID note; gates restrict by type keys (`ticket_types`, e.g. VIP Gate C = `vip`); the offline manifest carries `a` / `u`. |
+| Admin | Event edit page → *Ticket types* card: add from templates (General, Family, VIP, Child, Senior, Student) or blank, edit in a modal (all fields, AR/EN, colour, active), drag to sort; a type with sales can be deactivated but not deleted. Event page → *Sales by ticket type* (sold, left for the next day, revenue). JS: `public/js/admin-ticket-types.js` (SortableJS 1.15.2 from cdnjs). |
+| Seed | `TicketTypesSeeder` (idempotent by event + key). |
+
+**Seeded prices.** north-batinah *Sohar Festival 2026–27*: only **General OMR 0.500** is a verified price. **Family (admits 4, OMR 1.500), Child (under 12, OMR 0.250), Senior (60+, ID, OMR 0.250) and VIP (OMR 2.000, VIP Gate C) are SAMPLE types with PLACEHOLDER prices** for the organizer to edit or switch off before sales open. The demo tenant has a full fictional example set (VIP with its own capacity, student ID check, group of 5, gate-only door ticket, free child ticket, family ticket, a closed early-bird window).
+
+## Gate box office
+
+Contract: [`../docs/gate_sales_contract.md`](../docs/gate_sales_contract.md) (§8 = implementation notes); endpoints in `business-data/PLATFORM_API.md` (*Gate box office*).
+
+| Piece | How |
+|---|---|
+| Flow | Gate staff (paired device + `/gate/staff/login`, permission `sell tickets`: role `staff` and tenant admins) pick an event, quantities per ticket type and the visitor's phone → `POST /api/v1/gate/sales/orders` → a `pending` `box_office_orders` row (+ `box_office_order_lines`) priced on the server, holding its seats → `payment_url` shown as a QR, sent by SMS (`SendOtpSms`, purpose `box_office`) or shared → the visitor opens `/pay/{token}`, presses «Pay» → the normal gateway flow (`/payment/redirect/{tx}`; `PAYMENT_DRIVER=fake` locally) → `PaymentFulfillmentService` (webhook / return, idempotent) issues the tickets to the buyer through `TicketIssuer`, earns their points and marks the order `paid` (`BoxOfficeService::markPaid`) → the visitor's page shows the tickets with QR codes; the gate polls the order and admits it (`/admit` → `TicketScanService`, source `box_office`). |
+| Buyer | Found or created by phone (`968XXXXXXXX`, name from `buyer_name`); they sign in to the app later with the same phone + OTP and see the tickets. |
+| Expiry | Orders not paid within `gate_sales.link_ttl_minutes` expire (`php artisan box-office:expire`, scheduled every minute, and lazily on every read) and release their seats; a pending gateway checkout of an expired / cancelled order is cancelled too and the hand-off refuses it. Staff (or the admin) can cancel pending orders. |
+| Late capture | A payment captured after the order expired / was cancelled gets its tickets only if seats are still free (re-checked per type inside the fulfillment transaction). Otherwise the order becomes `paid_unfulfilled` (no tickets, deposits or points; red alert and sidebar badge in *Gate sales*), the visitor sees a refund page, and an admin with `refund payments` refunds it from the order (existing payment refund, then the gateway) → `refunded`. Wallet refund requests are not used: these are card payments. |
+| Settings | Tenant `gate_sales.*`: `enabled` (false by default; on for both seeded tenants), `link_ttl_minutes` 30, `send_sms` true, `max_quantity` 10, `allow_future_dates` false; SMS text `messages.box_office_sms.{ar,en}` (*Admin → Branding & settings → Gate sales*). Per gate: `can_sell` (*Gates → edit → Sell tickets*; seeded on north-batinah Main Gate A, Family Gate B and the demo Hall Entrance). |
+| Admin | *Gates → Gate sales*: orders with filters (date, gate, staff, status, reference / phone), totals per gate and per staff, order detail (lines, link + QR, SMS count, payment, tickets) and cancel. |
+
+**Payment link host.** `payment_url` = `PAY_LINK_BASE_URL` (optional) or `APP_URL` + `/pay/<token>`. Phones must reach it: set `APP_URL` (or `PAY_LINK_BASE_URL`) to the server's LAN address when testing with real phones, e.g. `APP_URL=http://192.168.1.20:8002`. Outside production, while `APP_URL` is the framework default `http://localhost`, the host the gate device called is used (so a simulator using `http://127.0.0.1:8002` gets `http://127.0.0.1:8002/pay/…`).
+
+**SMS locally.** Without iSmartSMS credentials the SMS job logs `SMS not sent` with the full box office message (never the OTP codes) to `storage/logs/laravel.log`; with `QUEUE_CONNECTION=database` run `php artisan queue:work` for the job to execute.
+
+**Try it locally.**
+```bash
+php artisan gate:pair-code north-batinah A     # pair the gate app (or curl /gate/pair)
+# staff login 96890000001 with the OTP, then:
+curl -X POST http://127.0.0.1:8002/api/v1/gate/sales/orders -H "Authorization: Bearer <device_token>" -H 'Content-Type: application/json' -H 'Accept: application/json' \
+     -d '{"event_id":1,"items":[{"ticket_type_id":1,"quantity":2}],"buyer_phone":"99112233","locale":"ar","idempotency_key":"'$(uuidgen)'"}'
+# open data.order.payment_url → Pay → Simulate success
+```
+Only events running on the gate day are sold (the seeded Sohar Festival starts on 2026-12-22); to test earlier, switch on *Sell for later days* and pass `booking_date` / `?date=`.
+
 ## Adding a tenant
 1. **Admin panel** (super-admin) → *Tenants* → *New*: slug, names, status; branding (logo upload, colours, fonts), modules, wallet/points/refund rules, billing address, OTP text and (optionally) Bank Muscat credentials. Optionally create the tenant's first admin user.
    Or in code: `App\Models\Tenant::create(['slug' => 'acme', 'name' => ['en' => 'Acme', 'ar' => 'أكمي'], 'status' => 'active', 'settings' => [...]])` (only store values that differ from `config('tenancy.defaults')`).
@@ -180,6 +223,7 @@ Or *Admin → Gates → Scanner devices → Pair new device* and scan the QR wit
 | `TENANCY_CONFIG_CACHE_TTL` | `300` | Seconds `/tenant/config` is cached (busted on tenant save). |
 | `PAYMENT_DRIVER` | `bankmuscat` | `bankmuscat` or `fake`. |
 | `PAYMENT_LINK_TTL_MINUTES` | `60` | Lifetime of the signed `payment_url`. |
+| `PAY_LINK_BASE_URL` | `APP_URL` | Base of the public gate box office links `/pay/{token}` (QR / SMS). |
 | `PAY_TOKEN_TTL_SECONDS` | `60` | Wallet pay-QR lifetime. |
 | `BANK_MUSCAT_GATEWAY_URL`, `BANK_MUSCAT_ACCESS_CODE`, `BANK_MUSCAT_WORKING_KEY`, `BANK_MUSCAT_MERCHANT_ID` | – | Platform fallback credentials (tenants can override, encrypted in DB). |
 | `BANK_MUSCAT_WEBHOOK_IPS` | empty | Optional comma-separated webhook IP allowlist. |
@@ -191,7 +235,7 @@ Or *Admin → Gates → Scanner devices → Pair new device* and scan the QR wit
 | `DEMO_REQUEST_CC` | empty | Optional comma-separated CC list. |
 | `DEMO_REQUEST_CONFIRMATION` | `true` | Send the requester a thank-you email when they gave an email address. |
 
-Scheduler (`php artisan schedule:work` / cron `schedule:run`): `points:expire` daily 02:00, `wallet:expire-promo` daily 02:15 (promo credit older than `wallet.promo_expiry_days`, FIFO lots in `wallet_promo_lots`; no-op while the setting is null), `payments:expire-pending` hourly (cancels abandoned gateway checkouts and returns reserved points).
+Scheduler (`php artisan schedule:work` / cron `schedule:run`): `points:expire` daily 02:00, `wallet:expire-promo` daily 02:15 (promo credit older than `wallet.promo_expiry_days`, FIFO lots in `wallet_promo_lots`; no-op while the setting is null), `payments:expire-pending` hourly (cancels abandoned gateway checkouts and returns reserved points), `box-office:expire` every minute (unpaid gate box office orders expire and release their seats).
 
 Seeding is idempotent: `php artisan db:seed` can be re-run on an already-seeded database (natural-key `updateOrCreate` / `firstOrCreate`; content edited in the admin is not overwritten). The generic terms / privacy texts are filled from the tenant's settings (name, `tenant.organization`, `tenant.support.email|phone`).
 
@@ -214,7 +258,7 @@ php artisan test                         # whole suite (in-memory sqlite, PAYMEN
 php artisan test tests/Feature/Platform  # tenancy, wallet, points, merchant, payments, OTP
 ```
 
-`tests/Feature/Platform` covers tenant isolation, the tenant config/ETag, server-side pricing, fake-gateway top-ups credited once, Bank Muscat callback verification, wallet checkout + `INSUFFICIENT_BALANCE`, idempotent debits, deposits, refund requests (refundable cash only), points earn/redeem/expire/reversal, merchant charges with expired/reused/forged pay tokens, OTP throttling and owner-scoped payment endpoints. `tests/Feature/Admin*` cover the admin panel. `tests/Feature/Gate` covers pairing (expired/used/foreign codes, rate limit, artisan command), device auth and revocation, every scan result, concurrency/idempotency, re-entry rules, manifest hashing/ETag, offline sync conflicts, tenant isolation, stats/heartbeat, staff OTP login, the legacy staff endpoints and the permission-gated admin pages. `tests/Feature/Discover` covers the places/content API (shapes, drafts, scheduling, tenant isolation, `MODULE_DISABLED`, near-sort, ETag, sanitizer), the admin CRUD with uploads and permissions and the seeder; `tests/Feature/Ai/ConciergePlacesTest` the concierge tools/cards. `tests/Feature/Landing` covers the homepage (language/dir) and the demo form (storage, mails, validation, honeypot, timing, rate limit, non-JS flow).
+`tests/Feature/Platform` covers tenant isolation, the tenant config/ETag, server-side pricing, fake-gateway top-ups credited once, Bank Muscat callback verification, wallet checkout + `INSUFFICIENT_BALANCE`, idempotent debits, deposits, refund requests (refundable cash only), points earn/redeem/expire/reversal, merchant charges with expired/reused/forged pay tokens, OTP throttling and owner-scoped payment endpoints. `tests/Feature/Admin*` cover the admin panel. `tests/Feature/Gate` covers pairing (expired/used/foreign codes, rate limit, artisan command), device auth and revocation, every scan result, concurrency/idempotency, re-entry rules, manifest hashing/ETag, offline sync conflicts, tenant isolation, stats/heartbeat, staff OTP login, the legacy staff endpoints and the permission-gated admin pages. `tests/Feature/Gate/BoxOffice*` cover the box office (access rules, catalog, server pricing with items, error codes, seat holds released on expiry / cancel, idempotency, the full pay-by-link flow with a replayed callback, failed / expired / cancelled links, the SMS limit, admit, tenant isolation, admin pages and settings); `tests/Feature/Platform/TicketTypesTest` and `tests/Feature/Admin/TicketTypesAdminTest` the ticket types (resources, quotes with lines, per-type rules, issuance, multi-entry scans, manifest, admin editor). `tests/Feature/Discover` covers the places/content API (shapes, drafts, scheduling, tenant isolation, `MODULE_DISABLED`, near-sort, ETag, sanitizer), the admin CRUD with uploads and permissions and the seeder; `tests/Feature/Ai/ConciergePlacesTest` the concierge tools/cards. `tests/Feature/Landing` covers the homepage (language/dir) and the demo form (storage, mails, validation, honeypot, timing, rate limit, non-JS flow).
 
 ## Security notes
 - The client never sends prices; amounts are computed server-side and gateway responses are verified (decryption with the tenant key + order id + currency + exact amount).

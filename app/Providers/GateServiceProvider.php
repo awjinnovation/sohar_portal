@@ -45,6 +45,12 @@ class GateServiceProvider extends ServiceProvider
         RateLimiter::for('gate-scan', fn (Request $r) => Limit::perMinute(240)->by('gate-scan:'.$device($r)));
         RateLimiter::for('gate-api', fn (Request $r) => Limit::perMinute(120)->by('gate-api:'.$device($r)));
         RateLimiter::for('gate-sync', fn (Request $r) => Limit::perMinute(30)->by('gate-sync:'.$device($r)));
+        // Box office: reads include polling an order every 3 s and live quotes.
+        RateLimiter::for('gate-sales', fn (Request $r) => Limit::perMinute(180)->by('gate-sales:'.$device($r)));
+        RateLimiter::for('gate-sales-write', fn (Request $r) => Limit::perMinute(30)->by('gate-sales-w:'.$device($r)));
+        // Public payment pages (/pay/{token}): per IP.
+        RateLimiter::for('pay-page', fn (Request $r) => Limit::perMinute(60)->by('pay-page:'.$r->ip()));
+        RateLimiter::for('pay-checkout', fn (Request $r) => Limit::perMinute(10)->by('pay-checkout:'.$r->ip()));
         RateLimiter::for('gate-staff-login', fn (Request $r) => [
             Limit::perMinutes(10, 10)->by('gate-staff:'.$device($r)),
             Limit::perMinutes(10, 10)->by('gate-staff-phone:'.preg_replace('/\D/', '', (string) $r->input('phone'))),

@@ -14,6 +14,12 @@
             $pendingRefunds = \App\Models\RefundRequest::where('status', 'pending')->count();
         }
     } catch (\Throwable $e) { $pendingRefunds = 0; }
+    $boxOfficeRefunds = 0;
+    try {
+        if ($user?->can('manage gates')) {
+            $boxOfficeRefunds = \App\Models\BoxOfficeOrder::where('status', 'paid_unfulfilled')->count();
+        }
+    } catch (\Throwable $e) { $boxOfficeRefunds = 0; }
     $newDemoRequests = 0;
     try {
         if ($isSuper && \Illuminate\Support\Facades\Route::has('admin.demo-requests.index')) {
@@ -37,6 +43,7 @@
             ['admin.gates.index', ['admin.gates.index', 'admin.gates.create', 'admin.gates.edit'], 'door-open', 'البوابات', 'manage gates'],
             ['admin.gates.devices.index', 'admin.gates.devices.*', 'upc-scan', 'أجهزة المسح', 'manage gates'],
             ['admin.gates.scans.index', 'admin.gates.scans.*', 'list-check', 'سجل المسح', 'manage gates'],
+            ['admin.gates.sales.index', 'admin.gates.sales.*', 'cart-check', 'مبيعات البوابات', 'manage gates', $boxOfficeRefunds],
         ]],
         ['title' => 'المحفظة والمدفوعات', 'items' => [
             ['admin.wallets.index', 'admin.wallets.*', 'wallet2', 'المحافظ', 'manage wallets'],

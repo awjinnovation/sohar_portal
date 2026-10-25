@@ -42,7 +42,7 @@ class GateOfflineTest extends GateTestCase
 
         $byHash = collect($data['tickets'])->keyBy('h');
         $h = fn ($t) => hash('sha256', $data['salt'].$t->qr_code);
-        $this->assertSame(['h' => $h($active), 's' => 'active', 't' => 'vip', 'e' => $event->id, 'd' => GateDay::today()], $byHash[$h($active)]);
+        $this->assertSame(['h' => $h($active), 's' => 'active', 't' => 'vip', 'e' => $event->id, 'd' => GateDay::today(), 'a' => 1, 'u' => 0], $byHash[$h($active)]);
         $this->assertSame('used', $byHash[$h($used)]['s']);
         $this->assertSame('cancelled', $byHash[$h($cancelled)]['s']);
         $this->assertSame(GateDay::today(), $byHash[$h($open)]['d']);

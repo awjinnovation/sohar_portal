@@ -106,7 +106,19 @@ class PaymentFulfillmentService
         $meta = $payment->metadata ?? [];
         $user = User::findOrFail($payment->user_id);
 
+        // Gate box office order paid through its public link. A capture that
+        // arrives after the order expired / was cancelled only gets tickets
+        // when seats are still free (checked here, under locks); otherwise
+        // the order becomes paid_unfulfilled and the payment is refunded.
+        $boxOffice = ! empty($meta['box_office_order_id']) ? app(\App\Services\Gate\BoxOfficeService::class) : null;
+        if ($boxOffice && ! $boxOffice->reserveForPayment($payment)) {
+            return;
+        }
+
         $tickets = $this->issuer->issue($payment);
+
+        // Same transaction, so it happens exactly once with the tickets.
+        $boxOffice?->markPaid($payment, $tickets);
 
         // Refundable per-ticket deposits are kept in the wallet as holds.
         $depositPer = (int) ($meta['deposit_per_ticket_minor'] ?? 0);

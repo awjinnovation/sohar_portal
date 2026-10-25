@@ -90,7 +90,8 @@ class GateController extends Controller
         return $this->ok([
             'device' => $device->toApi() + ['scanner_source' => $device->scanner_source],
             'gate' => $gate?->toApi(),
-            'staff' => $device->staff ? ['id' => $device->staff->id, 'name' => $device->staff->name] : null,
+            'staff' => $device->staff ? ['id' => $device->staff->id, 'name' => $device->staff->name,
+                'can_sell' => \App\Services\Gate\BoxOfficeService::canSell($device->staff)] : null,
             'tenant' => ['slug' => $tenant->slug, 'name' => $tenant->name, 'timezone' => TenantTime::zone($tenant)],
             'date' => $date,
             'events_today' => $events,
@@ -100,6 +101,8 @@ class GateController extends Controller
                 'beep' => (bool) $tenant->setting('gate.beep', true),
                 'require_staff_login' => (bool) $tenant->setting('gate.require_staff_login', false),
                 'direction' => $gate?->direction ?? 'entry',
+                // Box office (docs/gate_sales_contract.md §1), read-only.
+                'sales' => app(\App\Services\Gate\BoxOfficeService::class)->sessionSettings($tenant, $device),
             ],
             'manifest_version' => $this->manifest->version($tenant, $date, $gate),
             'server_time' => TenantTime::iso(Carbon::now(), $tenant),
@@ -115,7 +118,7 @@ class GateController extends Controller
         ]);
         $user = $auth->login($this->device($request), $data['phone'], $data['otp']);
 
-        return $this->ok(['staff' => ['id' => $user->id, 'name' => $user->name]]);
+        return $this->ok(['staff' => ['id' => $user->id, 'name' => $user->name, 'can_sell' => \App\Services\Gate\BoxOfficeService::canSell($user)]]);
     }
 
     /** POST /gate/staff/logout */
@@ -275,33 +278,7 @@ class GateController extends Controller
 
     private function scanPayload(ScanOutcome $o, GateDevice $device): array
     {
-        $tenant = $this->context->get();
-        $t = $o->ticket;
-        $locale = app()->getLocale();
-        $event = $t?->event;
-
-        return [
-            'result' => $o->result,
-            'admit' => $o->admitted(),
-            'direction' => $o->direction,
-            'message' => $o->message(),
-            'ticket' => $t ? [
-                'number' => $t->ticket_number,
-                'holder_name' => $t->holder_name ?? $t->user?->name,
-                'type' => $t->ticket_type,
-                'event_id' => $t->event_id,
-                'event_title' => $event ? ($locale === 'ar' ? ($event->title_ar ?: $event->title) : $event->title) : null,
-                'valid_date' => $t->booking_date?->toDateString(),
-                'used_at' => TenantTime::iso($t->used_at, $tenant),
-                'quantity' => (int) ($t->quantity ?: 1),
-                'quantity_label' => trans_choice('gate.people', (int) ($t->quantity ?: 1), ['count' => (int) ($t->quantity ?: 1)]),
-                'check_in_count' => (int) $t->check_in_count,
-                'max_check_ins' => (int) ($t->max_check_ins ?: 1),
-            ] : null,
-            'scan_id' => $o->scan?->id,
-            'replay' => $o->replay,
-            'counts' => $this->stats->counts($tenant, $device->gate, $device),
-        ];
+        return app(\App\Services\Gate\ScanPresenter::class)->present($o, $device);
     }
 
     private function device(Request $request): GateDevice

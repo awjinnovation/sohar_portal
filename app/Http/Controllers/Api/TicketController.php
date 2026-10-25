@@ -119,7 +119,7 @@ class TicketController extends Controller
 
     public function myTickets(Request $request)
     {
-        $tickets = Ticket::with('event')
+        $tickets = Ticket::with(['event', 'ticketType'])
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
@@ -135,6 +135,11 @@ class TicketController extends Controller
                 'status' => $t->status,
                 'purchase_date' => $t->purchase_date,
                 'used_at' => $t->used_at,
+                // docs/ticket_types_contract.md §2
+                'booking_date' => $t->booking_date?->format('Y-m-d'),
+                'ticket_type' => $t->ticketTypeApi(),
+                'admits' => $t->admits(),
+                'entries_used' => (int) $t->check_in_count,
                 'ticket' => [
                     'id' => $t->event_id,
                     'event_id' => $t->event_id,
@@ -168,7 +173,13 @@ class TicketController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $ticket
+            // ticket_type is the type object (docs/ticket_types_contract.md §2); the key stays in ticket_type_key.
+            'data' => array_merge($ticket->toArray(), [
+                'ticket_type' => $ticket->ticketTypeApi(),
+                'ticket_type_key' => $ticket->ticket_type,
+                'admits' => $ticket->admits(),
+                'entries_used' => (int) $ticket->check_in_count,
+            ]),
         ]);
     }
 

@@ -68,3 +68,12 @@ Artisan::command('ai:prune', function () {
 })->purpose('Delete expired AI concierge conversations and old visit plans');
 
 Schedule::command('ai:prune')->dailyAt('03:10')->withoutOverlapping();
+
+// Gate box office (docs/gate_sales_contract.md §2): unpaid orders expire
+// after gate_sales.link_ttl_minutes and give their seats back.
+Artisan::command('box-office:expire', function (\App\Services\Gate\BoxOfficeService $boxOffice) {
+    $count = $boxOffice->expireDue();
+    $this->info("Expired {$count} box office orders.");
+})->purpose('Expire unpaid gate box office orders and release their seats');
+
+Schedule::command('box-office:expire')->everyMinute()->withoutOverlapping();

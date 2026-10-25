@@ -42,7 +42,8 @@
                 <td class="small">
                     @if($gate->allow_reentry)<span class="pill pill-info pill-sm">{{ __('إعادة الدخول مسموحة') }}</span>@endif
                     @if($gate->ticket_types)<span class="pill pill-brand pill-sm ltr">{{ implode(', ', $gate->ticket_types) }}</span>@endif
-                    @if(! $gate->allow_reentry && ! $gate->ticket_types)<span class="text-muted">—</span>@endif
+                    @if($gate->can_sell)<span class="pill pill-success pill-sm"><i class="bi bi-cart-check"></i>{{ __('تبيع التذاكر') }}</span>@endif
+                    @if(! $gate->allow_reentry && ! $gate->ticket_types && ! $gate->can_sell)<span class="text-muted">—</span>@endif
                 </td>
                 <td class="num">
                     <a href="{{ route('admin.gates.devices.index', ['gate' => $gate->id]) }}" class="d-inline-flex align-items-center gap-1"><i class="bi bi-upc-scan text-muted"></i> {{ $gate->active_devices_count }}</a>

@@ -36,6 +36,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'manage gates',         // gates, scanner devices, live gate dashboard, scan log
         'manage places',        // places to visit, place categories, places map
         'manage content',       // content collections + items, pages
+        'sell tickets',         // gate box office (docs/gate_sales_contract.md)
     ];
 
     public const ROLES = [
@@ -47,7 +48,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'finance-manager' => ['view dashboard', 'view payments', 'refund payments', 'manage wallets', 'manage refunds', 'manage deposits', 'manage vendors'],
         'viewer' => ['view dashboard', 'view payments'],
         // App-side roles
-        'staff' => ['validate tickets', 'manage deposits'],
+        'staff' => ['validate tickets', 'manage deposits', 'sell tickets'],
         'vendor-staff' => ['charge wallets', 'manage deposits'],
         'user' => [],
     ];

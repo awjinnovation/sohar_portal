@@ -93,6 +93,8 @@
                         @error('images')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                 </x-admin.card>
+
+                @include('admin.events._ticket-types')
             </div>
 
             <div class="col-xl-4">
@@ -111,9 +113,13 @@
                 </x-admin.card>
 
                 <x-admin.card title="التذاكر والسعر" icon="ticket-perforated">
+                    @php $priceFrom = $event->priceFromMinor(); @endphp
                     <div class="row">
-                        <x-admin.form-field col="col-7" name="price" label="السعر" type="number" step="0.001" min="0" dir="ltr" required
-                            :value="old('price', $model ? $model->price : 0)" />
+                        <div class="col-7 field">
+                            <span class="form-label d-block">{{ __('السعر') }}</span>
+                            <div class="fw-bold">@if($priceFrom === null)—@elseif($priceFrom === 0){{ __('مجانية') }}@else{{ __('يبدأ من') }} <x-admin.money :minor="$priceFrom" :currency="$event->currency" />@endif</div>
+                            <div class="form-text"><a href="#ticket-types">{{ __('تُحدَّد الأسعار في أنواع التذاكر') }}</a></div>
+                        </div>
                         <x-admin.form-field col="col-5" name="currency" label="العملة" type="select"
                             :value="old('currency', $model?->currency)" :options="['OMR' => 'OMR', 'USD' => 'USD', 'EUR' => 'EUR']" />
                     </div>
@@ -123,7 +129,7 @@
                         <x-admin.form-field col="col-6" name="total_tickets" label="إجمالي التذاكر" type="number" min="0" dir="ltr"
                             :value="old('total_tickets', $model?->total_tickets)" />
                     </div>
-                    <div class="form-text mt-n2">{{ __('السعر 0 يجعل الفعالية مجانية.') }}</div>
+                    <div class="form-text mt-n2">{{ __('إجمالي التذاكر سعة يومية تتشاركها كل الأنواع.') }}</div>
                 </x-admin.card>
 
                 <x-admin.card title="النشر" icon="broadcast">

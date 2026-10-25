@@ -31,10 +31,38 @@ class PaymentController extends Controller
             'event_id' => 'required_without:payable_id|integer',
             'payable_id' => 'required_without:event_id|integer', // legacy alias of event_id
             'booking_date' => 'required|date_format:Y-m-d',
-            'quantity' => 'required|integer|min:1|max:'.config('payments.max_tickets_per_order', 10),
-            'ticket_type' => 'nullable|string|in:standard,vip,premium,early_bird',
+            // Legacy single type (key; empty / `standard` = the event's default type)…
+            'quantity' => 'required_without:items|nullable|integer|min:1|max:'.config('payments.max_tickets_per_order', 10),
+            'ticket_type' => 'nullable|string|max:40',
+            // …or several types (docs/ticket_types_contract.md §2).
+            'items' => 'nullable|array|min:1|max:20',
+            'items.*.ticket_type_id' => 'required|integer',
+            'items.*.quantity' => 'required|integer|min:0|max:100',
             'points_to_redeem' => 'nullable|integer|min:0',
         ];
+    }
+
+    /** items[] when sent, else the legacy single quantity + ticket_type. */
+    private function items(array $data): array
+    {
+        return ! empty($data['items'])
+            ? array_values($data['items'])
+            : [['ticket_type' => $data['ticket_type'] ?? null, 'quantity' => (int) ($data['quantity'] ?? 0)]];
+    }
+
+    public static function linesPayload(array $lines, \App\Models\Tenant $tenant): array
+    {
+        return array_values(array_map(fn ($l) => [
+            'ticket_type_id' => $l['ticket_type_id'],
+            'key' => $l['key'],
+            'name_text' => \App\Models\EventTicketType::pickLocale($l['name'] ?? []) ?: ($l['name_text'] ?? $l['key']),
+            'quantity' => (int) $l['quantity'],
+            'unit_price_minor' => (int) $l['unit_price_minor'],
+            'unit_price' => $tenant->formatMoney((int) $l['unit_price_minor']),
+            'line_total_minor' => (int) $l['line_total_minor'],
+            'line_total' => $tenant->formatMoney((int) $l['line_total_minor']),
+            'admits' => max(1, (int) ($l['admits'] ?? 1)),
+        ], $lines));
     }
 
     /** GET /payments/quote?event_id=&booking_date=&quantity=&ticket_type=&points_to_redeem= */
@@ -43,8 +71,8 @@ class PaymentController extends Controller
         $data = $request->validate($this->checkoutRules());
         $tenant = $this->context->get();
 
-        $q = $this->checkout->quote($tenant, (int) ($data['event_id'] ?? $data['payable_id']), $data['booking_date'],
-            (int) $data['quantity'], $data['ticket_type'] ?? null, (int) ($data['points_to_redeem'] ?? 0), $request->user('sanctum'));
+        $q = $this->checkout->quoteItems($tenant, (int) ($data['event_id'] ?? $data['payable_id']), $data['booking_date'],
+            $this->items($data), (int) ($data['points_to_redeem'] ?? 0), $request->user('sanctum'));
 
         $fmt = fn (int $m) => $tenant->formatMoney($m);
 
@@ -55,7 +83,8 @@ class PaymentController extends Controller
                 'quantity' => $q['quantity'],
                 'ticket_type' => $q['ticket_type'],
                 'unit_price_minor' => $q['unit_price_minor'],
-                'unit_price' => $fmt($q['unit_price_minor']),
+                'unit_price' => $q['unit_price_minor'] === null ? null : $fmt($q['unit_price_minor']),
+                'lines' => self::linesPayload($q['lines'], $tenant),
                 'subtotal_minor' => $q['subtotal_minor'],
                 'subtotal' => $fmt($q['subtotal_minor']),
                 'points_to_redeem' => $q['points_to_redeem'],
@@ -83,6 +112,7 @@ class PaymentController extends Controller
         ]);
         $data['event_id'] = (int) ($data['event_id'] ?? $data['payable_id']);
         $data['method'] = $data['method'] ?? Payment::METHOD_GATEWAY;
+        $data['items'] = $this->items($data);
 
         $payment = $this->checkout->initialize($request->user(), $this->context->get(), $data);
 
@@ -100,6 +130,7 @@ class PaymentController extends Controller
             'amount_minor' => $payment->amount_minor,
             'amount' => $tenant->formatMoney((int) $payment->amount_minor),
             'currency' => $payment->currency,
+            'lines' => self::linesPayload((array) ($payment->metadata['lines'] ?? []), $tenant),
         ];
 
         if ($payment->status === 'completed') {

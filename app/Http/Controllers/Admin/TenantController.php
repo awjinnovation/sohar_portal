@@ -407,6 +407,16 @@ class TenantController extends Controller
         $f['ai.monthly_token_budget'] = ['int', 'required|integer|min:0|max:1000000000'];
         $f['ai.copilot_enabled'] = ['bool', 'boolean'];
 
+        // Gate box office (docs/gate_sales_contract.md §1; admin/gates/_sales-settings).
+        $f['gate_sales.enabled'] = ['bool', 'boolean'];
+        $f['gate_sales.link_ttl_minutes'] = ['int', 'required|integer|between:5,1440'];
+        $f['gate_sales.send_sms'] = ['bool', 'boolean'];
+        $f['gate_sales.max_quantity'] = ['int', 'required|integer|between:1,50'];
+        $f['gate_sales.allow_future_dates'] = ['bool', 'boolean'];
+        foreach (['en', 'ar'] as $l) {
+            $f["messages.box_office_sms.$l"] = ['string', 'nullable|string|max:500'];
+        }
+
         return $f;
     }
 

@@ -115,6 +115,11 @@ class WalletAdminService
             $locked->refunded_at = now();
             $locked->save();
 
+            // A gate box office order follows its payment.
+            if (! empty($meta['box_office_order_id'])) {
+                app(\App\Services\Gate\BoxOfficeService::class)->markRefunded($locked);
+            }
+
             AuditLog::record('payment.refund', $locked, ['reason' => $reason, 'method' => $locked->method]);
 
             return $locked;

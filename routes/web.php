@@ -26,6 +26,12 @@ Route::match(['get', 'post'], '/payment/cancel', [PaymentController::class, 'can
 Route::get('/payment/download/{transactionId}', [PaymentController::class, 'downloadTicket'])->middleware('signed')->name('payment.download');
 Route::get('/ticket/{qrCode}', [PaymentController::class, 'downloadSingleTicket'])->name('payment.ticket.single');
 
+// Gate box office payment link (docs/gate_sales_contract.md §4) — public, the token is the secret.
+Route::get('/pay/{token}', [\App\Http\Controllers\Web\BoxOfficePayController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{32,64}')->middleware('throttle:pay-page')->name('box-office.pay');
+Route::post('/pay/{token}/checkout', [\App\Http\Controllers\Web\BoxOfficePayController::class, 'checkout'])
+    ->where('token', '[A-Za-z0-9]{32,64}')->middleware('throttle:pay-checkout')->name('box-office.pay.checkout');
+
 // Fallback login route for Laravel's default auth middleware
 Route::get('/login', fn () => redirect('/admin/login'))->name('login');
 
@@ -66,6 +72,14 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         Route::middleware('can:manage events')->group(function () {
             Route::resource('categories', Admin\CategoryController::class, ['as' => 'admin']);
             Route::resource('events', Admin\EventController::class, ['as' => 'admin']);
+            // Ticket types of an event (docs/ticket_types_contract.md §3) — JSON for the event form.
+            Route::prefix('events/{event}/ticket-types')->name('admin.events.ticket-types.')->group(function () {
+                Route::get('/', [Admin\EventTicketTypeController::class, 'index'])->name('index');
+                Route::post('/', [Admin\EventTicketTypeController::class, 'store'])->name('store');
+                Route::post('reorder', [Admin\EventTicketTypeController::class, 'reorder'])->name('reorder');
+                Route::put('{ticketType}', [Admin\EventTicketTypeController::class, 'update'])->whereNumber('ticketType')->name('update');
+                Route::delete('{ticketType}', [Admin\EventTicketTypeController::class, 'destroy'])->whereNumber('ticketType')->name('destroy');
+            });
             Route::resource('event-tags', Admin\EventTagController::class, ['as' => 'admin']);
         });
         Route::resource('tickets', Admin\TicketController::class, ['as' => 'admin'])->only(['index', 'show', 'update'])->middleware('can:manage tickets');
@@ -79,6 +93,11 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
             Route::put('devices/{device}', [Admin\GateDeviceController::class, 'update'])->name('devices.update');
             Route::post('devices/{device}/revoke', [Admin\GateDeviceController::class, 'revoke'])->name('devices.revoke');
             Route::get('scans', [Admin\GateScanController::class, 'index'])->name('scans.index');
+            // Box office orders (docs/gate_sales_contract.md §7)
+            Route::get('sales', [Admin\GateSalesController::class, 'index'])->name('sales.index');
+            Route::get('sales/{order}', [Admin\GateSalesController::class, 'show'])->whereNumber('order')->name('sales.show');
+            Route::post('sales/{order}/cancel', [Admin\GateSalesController::class, 'cancel'])->whereNumber('order')->name('sales.cancel');
+            Route::post('sales/{order}/refund', [Admin\GateSalesController::class, 'refund'])->whereNumber('order')->name('sales.refund');
         });
         Route::resource('gates', Admin\GateController::class, ['as' => 'admin'])->except(['show'])->middleware('can:manage gates');
 

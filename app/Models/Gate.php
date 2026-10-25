@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property array $name {en, ar}
  * @property string $direction entry|exit|both
  * @property array|null $ticket_types null = every type
+ * @property bool $can_sell staff may sell tickets here (box office, docs/gate_sales_contract.md)
  */
 class Gate extends Model
 {
@@ -17,12 +18,13 @@ class Gate extends Model
 
     public const DIRECTIONS = ['entry', 'exit', 'both'];
 
-    protected $fillable = ['name', 'code', 'event_id', 'direction', 'allow_reentry', 'ticket_types', 'active', 'sort_order'];
+    protected $fillable = ['name', 'code', 'event_id', 'direction', 'allow_reentry', 'can_sell', 'ticket_types', 'active', 'sort_order'];
 
     protected $casts = [
         'name' => 'array',
         'ticket_types' => 'array',
         'allow_reentry' => 'boolean',
+        'can_sell' => 'boolean',
         'active' => 'boolean',
         'sort_order' => 'integer',
     ];
@@ -76,6 +78,7 @@ class Gate extends Model
             'event_id' => $this->event_id,
             'direction' => $this->direction,
             'allow_reentry' => (bool) $this->allow_reentry,
+            'can_sell' => (bool) $this->can_sell,
             'ticket_types' => $this->ticket_types ?: null,
             'active' => (bool) $this->active,
         ];

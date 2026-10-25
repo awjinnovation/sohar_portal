@@ -9,7 +9,7 @@ class Ticket extends Model
     use \App\Tenancy\BelongsToTenant;
 
     protected $fillable = [
-        'ticket_number', 'event_id', 'user_id', 'transaction_id', 'booking_date', 'quantity', 'ticket_type', 'status', 'price', 'currency',
+        'ticket_number', 'event_id', 'user_id', 'transaction_id', 'booking_date', 'quantity', 'ticket_type', 'ticket_type_id', 'status', 'price', 'currency',
         'holder_name', 'seat_number', 'qr_code', 'purchase_date', 'used_at', 'validated_by', 'check_in_count',
         'max_check_ins', 'validation_location', 'validation_notes'
     ];
@@ -32,6 +32,31 @@ class Ticket extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** docs/ticket_types_contract.md — `ticket_type` keeps the type key. */
+    public function ticketType()
+    {
+        return $this->belongsTo(EventTicketType::class, 'ticket_type_id')->withoutGlobalScopes();
+    }
+
+    /** People admitted by this ticket (multi-entry, stored as max_check_ins). */
+    public function admits(): int
+    {
+        return max(1, (int) ($this->max_check_ins ?: 1));
+    }
+
+    /** {id, key, name_text, category, color, admits} for ticket resources. */
+    public function ticketTypeApi(): ?array
+    {
+        $type = $this->ticketType;
+        if (! $type) {
+            return $this->ticket_type ? ['id' => null, 'key' => $this->ticket_type, 'name_text' => $this->ticket_type,
+                'category' => 'general', 'color' => EventTicketType::CATEGORY_COLORS['general'], 'admits' => $this->admits()] : null;
+        }
+
+        return ['id' => $type->id, 'key' => $type->key, 'name_text' => $type->nameText(), 'category' => $type->category,
+            'color' => $type->colorValue(), 'admits' => $this->admits()];
     }
 
     public function payment()

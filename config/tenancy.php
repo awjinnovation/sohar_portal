@@ -174,11 +174,30 @@ return [
             ],
         ],
 
+        // Gate box office (docs/gate_sales_contract.md §1): gate staff sell
+        // tickets and send the visitor a payment link. Read-only for the
+        // gate app in GET /gate/session → settings.sales.
+        'gate_sales' => [
+            'enabled' => false,
+            'link_ttl_minutes' => 30,     // lifetime of the payment link; the order holds its seats meanwhile
+            'send_sms' => true,           // default of POST /gate/sales/orders send_sms
+            'max_quantity' => 10,         // tickets per order
+            'allow_future_dates' => false, // true = staff may sell for a later day of the event
+        ],
+
         'messages' => [
             // Placeholders: :app (tenant name), :code (OTP), :minutes.
             'otp_sms' => [
                 'en' => 'Your :app verification code is :code. Valid for :minutes minutes.',
                 'ar' => 'رمز التحقق في :app هو :code، وصلاحيته :minutes دقائق.',
+            ],
+            // Gate box office payment link. Placeholders: :app, :tickets
+            // (counted noun in the genitive, e.g. «تذكرتين» / "2 tickets"),
+            // :event, :amount (OMR 1.000), :minutes (counted, e.g. «30 دقيقة»),
+            // :url, :reference.
+            'box_office_sms' => [
+                'en' => ':app: order of :tickets for :event, total :amount. Pay within :minutes: :url',
+                'ar' => ':app. طلب :tickets لفعالية «:event» بقيمة :amount. ادفع عبر الرابط خلال :minutes: :url',
             ],
         ],
 

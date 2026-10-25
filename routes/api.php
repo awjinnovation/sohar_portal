@@ -229,6 +229,25 @@ Route::prefix('v1/gate')->group(function () {
             Route::get('/stats', [\App\Http\Controllers\Api\GateController::class, 'stats']);
             Route::post('/heartbeat', [\App\Http\Controllers\Api\GateController::class, 'heartbeat']);
         });
+
+        // Box office (docs/gate_sales_contract.md §3): staff sell tickets and
+        // send the visitor a payment link. Needs gate_sales.enabled, a gate
+        // with can_sell and a signed-in staff member with `sell tickets`.
+        Route::prefix('sales')->middleware(\App\Http\Middleware\EnsureGateSales::class)->group(function () {
+            $c = \App\Http\Controllers\Api\GateSalesController::class;
+            Route::middleware('throttle:gate-sales')->group(function () use ($c) {
+                Route::get('/catalog', [$c, 'catalog']);
+                Route::post('/quote', [$c, 'quote']);
+                Route::get('/orders', [$c, 'index']);
+                Route::get('/orders/{id}', [$c, 'show'])->whereNumber('id');
+            });
+            Route::middleware('throttle:gate-sales-write')->group(function () use ($c) {
+                Route::post('/orders', [$c, 'store']);
+                Route::post('/orders/{id}/sms', [$c, 'sms'])->whereNumber('id');
+                Route::post('/orders/{id}/cancel', [$c, 'cancel'])->whereNumber('id');
+                Route::post('/orders/{id}/admit', [$c, 'admit'])->whereNumber('id');
+            });
+        });
     });
 });
 

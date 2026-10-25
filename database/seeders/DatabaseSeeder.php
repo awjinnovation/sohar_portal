@@ -36,5 +36,8 @@ class DatabaseSeeder extends Seeder
         $context->run(Tenant::where('slug', 'demo')->firstOrFail(), function () {
             $this->call([DemoTenantSeeder::class, GateSeeder::class, PlacesContentSeeder::class]);
         });
+
+        // Ticket types per event (both tenants; sample types, see README).
+        $this->call(TicketTypesSeeder::class);
     }
 }

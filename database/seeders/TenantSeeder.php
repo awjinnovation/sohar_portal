@@ -259,6 +259,8 @@ class TenantSeeder extends Seeder
         $settings['merchant'] = ['confirm_threshold_minor' => 20000];
         // AI Experience (docs/ai_and_gate_contract.md §A2) — Arabic-first.
         $settings['modules'] += ['ai_assistant' => true, 'ai_plan' => true];
+        // Gate box office (docs/gate_sales_contract.md §1).
+        $settings['gate_sales'] = ['enabled' => true];
         // Places to visit + content (docs/places_content_contract.md §1).
         $settings['modules'] += ['places' => true, 'content' => true];
         $settings['ai'] = [
@@ -528,6 +530,8 @@ class TenantSeeder extends Seeder
         $settings['merchant'] = ['confirm_threshold_minor' => 10000];
         // AI Experience (§A2) — English-first demo.
         $settings['modules'] += ['ai_assistant' => true, 'ai_plan' => true];
+        // Gate box office (docs/gate_sales_contract.md §1).
+        $settings['gate_sales'] = ['enabled' => true];
         // Places + content on (docs/places_content_contract.md §1).
         $settings['modules'] += ['places' => true, 'content' => true];
         $settings['ai'] = [

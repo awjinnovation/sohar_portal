@@ -97,6 +97,7 @@ class GateController extends Controller
             'event_id' => $data['event_id'] ?? null,
             'direction' => $data['direction'],
             'allow_reentry' => $request->boolean('allow_reentry'),
+            'can_sell' => $request->boolean('can_sell'),
             'ticket_types' => $types ?: null,
             'active' => $request->boolean('active'),
             'sort_order' => (int) ($data['sort_order'] ?? 0),

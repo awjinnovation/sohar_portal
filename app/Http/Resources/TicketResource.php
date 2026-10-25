@@ -27,6 +27,10 @@ class TicketResource extends JsonResource
             'purchase_date' => \App\Support\TenantTime::iso($this->purchase_date),
             'used_at' => \App\Support\TenantTime::iso($this->used_at),
             'transaction_id' => $this->transaction_id,
+            // docs/ticket_types_contract.md §2
+            'ticket_type' => $this->resource->ticketTypeApi(),
+            'admits' => $this->resource->admits(),
+            'entries_used' => (int) $this->check_in_count,
             'ticket' => [
                 'id' => $this->event_id,
                 'event_id' => $this->event_id,

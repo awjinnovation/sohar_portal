@@ -239,6 +239,13 @@ class EventController extends Controller
                 'is_sold_out' => $availableTickets === 0,
                 'can_book' => $canBook,
                 'total_capacity_per_day' => $event->total_tickets,
+                // Per type (docs/ticket_types_contract.md §2); null = unlimited.
+                'ticket_types' => $event->sellableTicketTypes()->map(fn ($t) => [
+                    'id' => $t->id,
+                    'key' => $t->key,
+                    'available' => $t->availableOn($date, $availableTickets),
+                    'sales_open' => $t->salesOpen(),
+                ])->values(),
             ]
         ]);
     }

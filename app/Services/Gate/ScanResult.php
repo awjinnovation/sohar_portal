@@ -54,7 +54,8 @@ final class ScanResult
                 $local = array_map(fn ($v) => is_array($v) ? (string) ($v[$locale] ?? reset($v)) : $v, $params);
                 $line = trans("gate.details.$detail", $local, $locale);
                 if ($line !== "gate.details.$detail") {
-                    $text .= ' — '.$line;
+                    // Arabic joins with the Arabic comma (style rules forbid the em dash).
+                    $text .= ($locale === 'ar' ? '، ' : ' — ').$line;
                 }
             }
             $out[$locale] = $text;

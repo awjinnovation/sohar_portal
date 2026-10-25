@@ -14,6 +14,13 @@ return [
         'tenant_not_found' => 'المنظمة غير موجودة أو غير مفعّلة.',
         'not_found' => 'لم يُعثر على المحتوى المطلوب.',
         'server_error' => 'حدث خطأ. حاول مرة أخرى.',
+        // Ticket types (docs/ticket_types_contract.md §2).
+        'type_not_available' => 'نوع التذكرة هذا غير متاح للشراء.',
+        'type_sold_out' => 'نفدت تذاكر «:type» لهذا اليوم.',
+        'sales_closed' => 'بيع تذاكر «:type» غير متاح في هذا الوقت.',
+        'per_order_limit' => 'الحد الأقصى لتذاكر «:type» في الطلب الواحد :max.',
+        'per_order_limit_total' => 'الحد الأقصى لعدد التذاكر في الطلب الواحد :max.',
+        'items_required' => 'اختر تذكرة واحدة على الأقل.',
     ],
     'tx' => [
         'topup' => ['title' => 'شحن المحفظة', 'description' => 'تمت الإضافة إلى محفظتك'],

@@ -328,9 +328,14 @@ class TicketScanService
         return $code;
     }
 
+    /** Scanner sources a device may report; `box_office` is set by the server only (gate sales admit). */
+    public const DEVICE_SOURCES = ['camera', 'hardware', 'wedge', 'manual'];
+
+    public const SOURCE_BOX_OFFICE = 'box_office';
+
     public static function normalizeSource(?string $source): string
     {
-        return in_array($source, ['camera', 'hardware', 'wedge', 'manual'], true) ? $source : 'camera';
+        return in_array($source, [...self::DEVICE_SOURCES, self::SOURCE_BOX_OFFICE], true) ? $source : 'camera';
     }
 
     /** @return array{0: Carbon, 1: Carbon} [evaluation time, recorded scanned_at] */

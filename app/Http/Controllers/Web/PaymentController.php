@@ -54,6 +54,15 @@ class PaymentController extends Controller
     {
         $payment = $this->paymentByTransaction($transactionId);
 
+        // Gate box office: never hand an expired / cancelled order to the
+        // gateway, even from a signed link opened before it expired.
+        if ($orderId = (int) ($payment->metadata['box_office_order_id'] ?? 0)) {
+            $order = \App\Models\BoxOfficeOrder::withoutTenantScope()->find($orderId);
+            if ($order && ! app(\App\Services\Gate\BoxOfficeService::class)->expireIfDue($order)->isPending()) {
+                return $this->boxOfficeRedirect($payment->fresh());
+            }
+        }
+
         if ($payment->status !== 'pending') {
             return $payment->status === 'completed'
                 ? redirect()->route('payment.success', ['transaction_id' => $payment->transaction_id])
@@ -146,8 +155,9 @@ class PaymentController extends Controller
 
             return match ($result['status']) {
                 'completed' => $this->successView($payment),
-                'cancelled' => view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
-                default => $this->errorView(self::ERR_PAYMENT_FAILED, $payment, ['status' => $result['response']['order_status'] ?? 'unknown']),
+                'cancelled' => $this->boxOfficeRedirect($payment, ['payment' => 'cancelled']) ?? view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
+                default => $this->boxOfficeRedirect($payment, ['payment' => 'failed'])
+                    ?? $this->errorView(self::ERR_PAYMENT_FAILED, $payment, ['status' => $result['response']['order_status'] ?? 'unknown']),
             };
         } catch (\Throwable $e) {
             Log::error('Payment success page error: '.$e->getMessage());
@@ -167,8 +177,24 @@ class PaymentController extends Controller
         return view('payment.error', array_merge(['code' => $code, 'payment' => $payment], $extra));
     }
 
+    /** A payment made from a gate box office link returns to its /pay/{token} page. */
+    private function boxOfficeRedirect(?Payment $payment, array $query = [])
+    {
+        $orderId = (int) ($payment?->metadata['box_office_order_id'] ?? 0);
+        $order = $orderId ? \App\Models\BoxOfficeOrder::withoutTenantScope()->find($orderId) : null;
+        if (! $order) {
+            return null;
+        }
+        $lang = $payment->metadata['box_office_lang'] ?? $order->locale;
+
+        return redirect()->route('box-office.pay', array_filter(['token' => $order->public_token, 'lang' => $lang] + $query));
+    }
+
     private function successView(Payment $payment)
     {
+        if ($redirect = $this->boxOfficeRedirect($payment)) {
+            return $redirect;
+        }
         $isTicket = $payment->payment_type === Payment::TYPE_TICKET;
         $tickets = $isTicket
             ? Ticket::with('event')->where('transaction_id', $payment->transaction_id)->orderBy('id')->get()
@@ -208,6 +234,9 @@ class PaymentController extends Controller
 
         if ($payment) {
             $this->context->set(Tenant::find($payment->tenant_id));
+            if ($redirect = $this->boxOfficeRedirect($payment, ['payment' => $payment->status === 'failed' ? 'failed' : 'cancelled'])) {
+                return $redirect;
+            }
         }
 
         return view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']);

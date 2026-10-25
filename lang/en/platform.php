@@ -14,6 +14,13 @@ return [
         'tenant_not_found' => 'Unknown or inactive tenant.',
         'not_found' => 'Not found.',
         'server_error' => 'Something went wrong. Please try again.',
+        // Ticket types (docs/ticket_types_contract.md §2).
+        'type_not_available' => 'This ticket type is not available.',
+        'type_sold_out' => 'No :type tickets are left for this day.',
+        'sales_closed' => ':type tickets are not on sale right now.',
+        'per_order_limit' => 'At most :max :type tickets per order.',
+        'per_order_limit_total' => 'At most :max tickets per order.',
+        'items_required' => 'Choose at least one ticket.',
     ],
     'tx' => [
         'topup' => ['title' => 'Wallet top-up', 'description' => 'Added to your wallet'],

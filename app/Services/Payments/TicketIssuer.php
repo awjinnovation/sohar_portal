@@ -30,35 +30,78 @@ class TicketIssuer
         }
 
         $meta = $payment->metadata ?? [];
-        $quantity = max(1, (int) ($meta['quantity'] ?? 1));
         $eventId = (int) ($meta['event_id'] ?? $payment->payable_id);
         $event = Event::withoutTenantScope()->find($eventId);
         $decimals = (int) ($meta['currency_decimals'] ?? 3);
+        $lines = $this->lines($meta, $event);
+        $quantity = max(1, array_sum(array_column($lines, 'quantity')));
 
-        // Price actually paid for the tickets (excludes refundable deposits).
+        // Price actually paid for the tickets (excludes refundable deposits),
+        // spread over the tickets in proportion to their type's price.
         $ticketsMinor = (int) ($meta['tickets_minor'] ?? $payment->amount_minor ?? Money::toMinor((string) $payment->amount, $decimals));
-        $per = intdiv($ticketsMinor, $quantity);
-        $remainder = $ticketsMinor - $per * $quantity;
+        $subtotal = array_sum(array_map(fn ($l) => $l['unit_price_minor'] * $l['quantity'], $lines));
+        $prices = [];
+        foreach ($lines as $l) {
+            for ($i = 0; $i < $l['quantity']; $i++) {
+                $prices[] = $subtotal > 0 ? intdiv($l['unit_price_minor'] * $ticketsMinor, $subtotal) : intdiv($ticketsMinor, $quantity);
+            }
+        }
+        if ($prices) {
+            $prices[0] += $ticketsMinor - array_sum($prices);
+        }
 
         $tickets = collect();
-        for ($i = 0; $i < $quantity; $i++) {
-            $priceMinor = $per + ($i === 0 ? $remainder : 0);
-            $tickets->push($this->createWithRetry([
-                'user_id' => $payment->user_id,
-                'event_id' => $eventId,
-                'transaction_id' => $payment->transaction_id,
-                'booking_date' => $meta['booking_date'] ?? null,
-                'quantity' => 1,
-                'ticket_type' => $meta['ticket_type'] ?? 'standard',
-                'status' => 'active',
-                'price' => Money::format($priceMinor, $decimals),
-                'currency' => $payment->currency,
-                'holder_name' => $payment->user?->name ?? 'Guest',
-                'purchase_date' => now(),
-            ], $payment->tenant_id));
+        $n = 0;
+        foreach ($lines as $l) {
+            for ($i = 0; $i < $l['quantity']; $i++) {
+                $tickets->push($this->createWithRetry([
+                    'user_id' => $payment->user_id,
+                    'event_id' => $eventId,
+                    'transaction_id' => $payment->transaction_id,
+                    'booking_date' => $meta['booking_date'] ?? null,
+                    'quantity' => 1,
+                    'ticket_type' => $l['key'],
+                    'ticket_type_id' => $l['ticket_type_id'],
+                    // A family ticket admitting 4 is scanned up to 4 times.
+                    'max_check_ins' => max(1, (int) $l['admits']),
+                    'status' => 'active',
+                    'price' => Money::format($prices[$n++] ?? 0, $decimals),
+                    'currency' => $payment->currency,
+                    'holder_name' => $payment->user?->name ?? 'Guest',
+                    'purchase_date' => now(),
+                ], $payment->tenant_id));
+            }
         }
 
         return $tickets;
+    }
+
+    /**
+     * Lines of the order (metadata.lines). Payments made before ticket types
+     * carry only quantity + ticket_type: they map to the type of that key.
+     *
+     * @return list<array{ticket_type_id: ?int, key: string, quantity: int, unit_price_minor: int, admits: int}>
+     */
+    private function lines(array $meta, ?Event $event): array
+    {
+        if (! empty($meta['lines'])) {
+            return array_values(array_map(fn ($l) => [
+                'ticket_type_id' => isset($l['ticket_type_id']) ? (int) $l['ticket_type_id'] : null,
+                'key' => (string) ($l['key'] ?? 'general'),
+                'quantity' => max(0, (int) ($l['quantity'] ?? 0)),
+                'unit_price_minor' => (int) ($l['unit_price_minor'] ?? 0),
+                'admits' => max(1, (int) ($l['admits'] ?? 1)),
+            ], $meta['lines']));
+        }
+        $type = $event?->ticketTypeByKey($meta['ticket_type'] ?? null, \App\Models\EventTicketType::CHANNEL_BOX_OFFICE);
+
+        return [[
+            'ticket_type_id' => $type?->id,
+            'key' => $type?->key ?? (string) ($meta['ticket_type'] ?? 'general'),
+            'quantity' => max(1, (int) ($meta['quantity'] ?? 1)),
+            'unit_price_minor' => (int) ($meta['unit_price_minor'] ?? 0),
+            'admits' => max(1, (int) ($type?->admits ?? 1)),
+        ]];
     }
 
     private function createWithRetry(array $attributes, int $tenantId, int $attempts = 5): Ticket
