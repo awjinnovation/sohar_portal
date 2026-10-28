@@ -68,10 +68,13 @@ create, get and cancel session (cancel is `checkout/{id}/cancel`;
 `checkout/session/{id}/cancel` answers 404), an unknown session answers 400
 `session not found` (so *Test connection* treats 400 as "keys accepted"),
 sessions expire 24 hours after creation, and the card page asks for a 3-D
-Secure OTP. Still to confirm with a paid UAT session: `GET payments` and
-`POST refunds`; with a webhook: the unit of `thawani-timestamp` (seconds or
-milliseconds; both are accepted) and the refund event names (refund webhooks
-are recorded but not needed).
+Secure OTP (UAT test card 4242 4242 4242 4242, any future expiry, OTP 1234).
+Paid sessions (top-up and ticket) completed through the return page, `GET
+payments` returned the payment (`status: successful`, masked card), and `POST
+refunds` refunded a ticket (`status: successful`; a same-day refund is a void,
+"Void added successfully"). Still to confirm with a webhook: the unit of
+`thawani-timestamp` (seconds or milliseconds; both are accepted) and the
+refund event names (refund webhooks are recorded but not needed).
 
 ## 3. Retries
 

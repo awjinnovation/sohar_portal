@@ -44,8 +44,8 @@ class AppServiceProvider extends ServiceProvider
         // Behind a TLS-terminating proxy (Coolify's Traefik / Caddy) the
         // proxy's X-Forwarded-Proto is trusted (config/trustedproxy.php);
         // this is the safety net so generated URLs, redirects and signed
-        // links never fall back to http:// in production.
-        if ($this->app->isProduction() && str_starts_with((string) config('app.url'), 'https://')) {
+        // links never fall back to http:// on a server (staging included).
+        if (! $this->app->environment('local', 'testing') && str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
 

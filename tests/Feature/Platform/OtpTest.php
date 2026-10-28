@@ -108,6 +108,20 @@ class OtpTest extends TestCase
     }
 
     #[Test]
+    public function test_code_on_a_staging_server_logs_in_any_number_without_sms(): void
+    {
+        $this->app['env'] = 'staging';
+        config(['auth.otp.test_code' => '123456']);
+
+        foreach (['96890000001', '96890000002'] as $phone) {
+            $this->postJson('/api/v1/auth/send-otp', ['phone_number' => $phone])->assertOk()->assertJsonMissingPath('otp');
+            $res = $this->postJson('/api/v1/auth/verify-otp', ['phone_number' => $phone, 'otp' => '123456'])->assertOk();
+            $this->assertNotEmpty($res->json('token'));
+        }
+        Queue::assertNotPushed(SendOtpSms::class);
+    }
+
+    #[Test]
     public function review_code_that_is_not_six_digits_is_ignored(): void
     {
         config(['auth.otp.review_phone' => '96890000099', 'auth.otp.review_code' => '1234']);

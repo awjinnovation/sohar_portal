@@ -115,7 +115,8 @@ return [
     /*
     | Phone OTP login (Api\AuthController).
     | OTP_DEBUG=true returns the code in the send-otp response (never in
-    | production). OTP_TEST_CODE forces a fixed code outside production.
+    | production). OTP_TEST_CODE gives every number that fixed code outside
+    | production (staging / test servers) and sends no SMS.
     | OTP_REVIEW_PHONE + OTP_REVIEW_CODE (6 digits) give one store-review
     | account a fixed code, production included; no SMS is sent to it.
     */

@@ -21,7 +21,8 @@ class AuthController extends Controller
      * Throttled (route middleware throttle:otp-send). The code is stored as
      * an HMAC, never returned to the client unless OTP_DEBUG=true outside
      * production. The store-review number (auth.otp.review_phone) gets the
-     * fixed auth.otp.review_code in every environment and no SMS.
+     * fixed auth.otp.review_code in every environment and no SMS. Outside
+     * production, OTP_TEST_CODE gives every number that code and no SMS.
      */
     public function sendOtp(Request $request, TenantContext $context)
     {
@@ -33,7 +34,8 @@ class AuthController extends Controller
         $ttl = (int) config('auth.otp.ttl_minutes', 5);
 
         $otp = (string) random_int(100000, 999999);
-        if (!app()->environment('production') && config('auth.otp.test_code')) {
+        $isTestCode = !app()->environment('production') && config('auth.otp.test_code');
+        if ($isTestCode) {
             $otp = (string) config('auth.otp.test_code');
         }
         $isReviewer = self::isReviewPhone($phoneNumber);
@@ -63,7 +65,7 @@ class AuthController extends Controller
             ':code' => $otp,
             ':minutes' => (string) $ttl,
         ]);
-        if (!$isReviewer) {
+        if (!$isReviewer && !$isTestCode) {
             SendOtpSms::dispatch($phoneNumber, $message);
         }
 

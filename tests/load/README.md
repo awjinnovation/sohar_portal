@@ -29,3 +29,28 @@ BASE=http://127.0.0.1:18080/api/v1 PEAK=30 k6 run peak.js
 
 Compare `API_CACHE_ENABLED=false` and `true`; watch `X-Cache` and MySQL's
 `SHOW GLOBAL STATUS LIKE "Questions"`. Delete the load users afterwards.
+
+## Visitors at the same time (`visitors.js`)
+
+Signed-out visitors browsing like the app: home screen API batch, the
+server's own images (each visitor downloads an image once), an event page,
+the events and places lists, 15–25 s of reading between screens. Ramps to
+`USERS` in three steps over 6 minutes, then holds for `HOLD` (default 14m).
+Needs no extra files: event ids and image URLs are read from the API.
+
+```bash
+# Through Cloudflare (what visitors get):
+k6 run -e BASE=https://v2-mawsim.awj.om -e USERS=300 visitors.js
+
+# On the server itself (no Cloudflare, tunnel or internet line in the way):
+docker run --rm --network host -v "$PWD":/t -w /t grafana/k6:0.57.0 run \
+  -e BASE=http://v2-mawsim.awj.om -e HOST_IP=127.0.0.1 -e USERS=1000 visitors.js
+
+# Smoke test: one visitor, no reading time
+k6 run --vus 1 --iterations 2 -e THINK=0 visitors.js
+```
+
+`HOST_IP` sends the requests for `BASE`'s host name to that address (the
+server's reverse proxy). Use `https://` in `BASE` if the proxy only answers
+HTTPS (certificate checks are skipped with `HOST_IP`). The run stops early
+only if more than half of the requests fail.
