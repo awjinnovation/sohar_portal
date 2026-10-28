@@ -8,6 +8,9 @@
     $pageIcon = 'credit-card-2-front';
     $breadcrumbs = ['المحفظة والمدفوعات' => null, 'المدفوعات' => null];
 @endphp
+@section('page-actions')
+    <a href="{{ route('admin.payments.gateway-log') }}" class="btn"><i class="bi bi-hdd-network"></i> {{ __('سجل بوابة الدفع') }}</a>
+@endsection
 
 @section('content')
     @include('admin.partials.alerts')
@@ -17,6 +20,8 @@
         <x-admin.stat-tile label="عدد المدفوعات المكتملة" :value="$summary['completed_count']" icon="receipt" tone="brand" />
         <x-admin.stat-tile label="إجمالي المسترد" :money="$summary['refunded_sum']" icon="arrow-counterclockwise" tone="neutral"
             :href="route('admin.payments.index', ['status' => 'refunded'])" hint="عرض المدفوعات المستردة" />
+        <x-admin.stat-tile label="تحتاج إلى مراجعة" :value="$summary['needs_review']" icon="exclamation-triangle" :tone="$summary['needs_review'] ? 'warning' : 'neutral'"
+            :href="route('admin.payments.index', ['review' => 1])" hint="عرض المدفوعات التي تحتاج إلى مراجعة" />
     </div>
 
     <x-admin.data-table title="سجل المدفوعات" icon="credit-card-2-front" :count="$payments->total()" search="q"
@@ -33,6 +38,10 @@
                 @foreach(AdminLabels::PAYMENT_TYPES as $tv => $tl)
                     <option value="{{ $tv }}" @selected($filters['type'] === $tv)>{{ __($tl) }}</option>
                 @endforeach
+            </select>
+            <select name="review" class="form-select" aria-label="{{ __('المراجعة') }}">
+                <option value="">{{ __('كل المدفوعات') }}</option>
+                <option value="1" @selected($filters['review'])>{{ __('تحتاج إلى مراجعة') }}</option>
             </select>
             <select name="method" class="form-select" aria-label="{{ __('الطريقة') }}">
                 <option value="">{{ __('كل الطرق') }}</option>
@@ -69,7 +78,10 @@
                 </td>
                 <td>{{ AdminLabels::label(AdminLabels::PAYMENT_METHODS, $payment->method) }}</td>
                 <td><x-admin.money :minor="(int) $payment->amount_minor" class="fw-bold" /></td>
-                <td><x-admin.status-pill domain="payment" :status="$payment->status" /></td>
+                <td>
+                    <x-admin.status-pill domain="payment" :status="$payment->status" />
+                    @if($payment->needs_review)<span class="pill pill-sm pill-warning" title="{{ AdminLabels::label(AdminLabels::PAYMENT_REVIEW_REASONS, $payment->review_reason) }}"><i class="bi bi-exclamation-triangle-fill"></i>{{ __('مراجعة') }}</span>@endif
+                </td>
                 <td class="num text-muted"><span class="ltr">{{ ($payment->paid_at ?? $payment->created_at)?->format('Y-m-d H:i') }}</span></td>
                 <td class="text-end">
                     <div class="row-actions">

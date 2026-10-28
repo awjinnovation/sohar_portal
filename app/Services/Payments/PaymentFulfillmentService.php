@@ -28,13 +28,18 @@ class PaymentFulfillmentService
         private WalletService $wallets,
         private PointsService $points,
         private DepositService $deposits,
+        private PaymentRecorder $recorder,
     ) {}
 
-    public function complete(Payment $payment, array $gatewayResponse = [], ?string $paymentMode = null): Payment
+    /**
+     * @param  string  $source  where the confirmation came from (payment_events.source)
+     */
+    public function complete(Payment $payment, array $gatewayResponse = [], ?string $paymentMode = null, string $source = 'system'): Payment
     {
         $tenant = Tenant::findOrFail($payment->tenant_id);
 
-        return $this->tenants->run($tenant, fn () => DB::transaction(function () use ($payment, $tenant, $gatewayResponse, $paymentMode) {
+        // attempts: a deadlock under load rolls back and runs again.
+        return $this->tenants->run($tenant, fn () => DB::transaction(function () use ($payment, $tenant, $gatewayResponse, $paymentMode, $source) {
             /** @var Payment $locked */
             $locked = Payment::withoutTenantScope()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
@@ -42,9 +47,12 @@ class PaymentFulfillmentService
                 return $locked;
             }
 
+            $from = $locked->status;
             if (in_array($locked->status, ['failed', 'cancelled'], true)) {
                 // Money was captured after we gave up on it (late webhook).
                 Log::warning('Completing a payment previously marked '.$locked->status, ['transaction_id' => $locked->transaction_id]);
+                $this->recorder->record($locked, 'late_capture', $source, ['previous_status' => $locked->status]);
+                $this->retakeRestoredPoints($locked, $tenant, $source);
             }
 
             $locked->status = 'completed';
@@ -61,35 +69,45 @@ class PaymentFulfillmentService
             };
 
             $locked->fulfilled_at = now();
+            $locked->next_check_at = null;
             $locked->save();
 
+            $this->recorder->transition($locked, $from, 'completed', $source, array_filter([
+                'payment_method' => $locked->payment_method,
+                'gateway_payment_id' => $locked->gateway_payment_id,
+            ]));
+
             return $locked;
-        }));
+        }, 3));
     }
 
     /**
      * Mark a pending payment failed/cancelled (verified gateway response or
      * our own expiry job). Gives back points reserved for the checkout.
      */
-    public function fail(Payment $payment, string $status = 'failed', array $gatewayResponse = []): Payment
+    public function fail(Payment $payment, string $status = 'failed', array $gatewayResponse = [], string $source = 'system', array $eventData = []): Payment
     {
         $tenant = Tenant::findOrFail($payment->tenant_id);
 
-        return $this->tenants->run($tenant, fn () => DB::transaction(function () use ($payment, $tenant, $status, $gatewayResponse) {
+        return $this->tenants->run($tenant, fn () => DB::transaction(function () use ($payment, $tenant, $status, $gatewayResponse, $source, $eventData) {
             $locked = Payment::withoutTenantScope()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
             if ($locked->fulfilled_at || ! in_array($locked->status, ['pending', 'processing'], true)) {
                 return $locked;
             }
 
+            $from = $locked->status;
             $locked->status = $status;
+            $locked->next_check_at = null;
             if ($gatewayResponse) {
                 $locked->bank_muscat_response = $gatewayResponse;
             }
             $locked->save();
 
             $meta = $locked->metadata ?? [];
-            if (($meta['points_used'] ?? 0) > 0 && $locked->user) {
+            if (($meta['points_used'] ?? 0) > 0 && $locked->user && empty($meta['points_restored'])) {
                 $this->points->restore($locked->user, $tenant, (int) $meta['points_used'], $locked, "pay:{$locked->id}:points_restore");
+                $locked->metadata = array_merge($meta, ['points_restored' => true]);
+                $locked->save();
             }
 
             if ($locked->payment_type === Payment::TYPE_TOPUP) {
@@ -97,8 +115,34 @@ class PaymentFulfillmentService
                     ->update(['status' => $status === 'cancelled' ? 'cancelled' : 'failed']);
             }
 
+            $this->recorder->transition($locked, $from, $status, $source, $eventData);
+
             return $locked;
-        }));
+        }, 3));
+    }
+
+    /**
+     * A late capture of a payment whose redeemed points were given back on
+     * cancel: take them again (they paid the discounted price). If the
+     * balance no longer covers them, a person decides (needs review).
+     */
+    private function retakeRestoredPoints(Payment $payment, Tenant $tenant, string $source): void
+    {
+        $meta = $payment->metadata ?? [];
+        $points = (int) ($meta['points_used'] ?? 0);
+        if ($points <= 0 || empty($meta['points_restored']) || ! $payment->user) {
+            return;
+        }
+
+        try {
+            DB::transaction(fn () => $this->points->spend($payment->user, $tenant, $points, $payment, "pay:{$payment->id}:points_retake"));
+            $payment->metadata = array_merge($meta, ['points_restored' => false]);
+            $this->recorder->record($payment, 'points_retaken', $source, ['points' => $points]);
+        } catch (\App\Exceptions\ApiException $e) {
+            $payment->needs_review = true;
+            $payment->review_reason = 'late_capture_points';
+            $this->recorder->record($payment, 'points_retake_failed', $source, ['points' => $points, 'error' => $e->getMessage()]);
+        }
     }
 
     protected function fulfillTicket(Payment $payment, Tenant $tenant): void

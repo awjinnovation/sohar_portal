@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
 class EventTicketType extends Model
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
 
     public const CATEGORIES = ['general', 'family', 'vip', 'child', 'senior', 'student', 'group', 'other'];
 

@@ -62,8 +62,9 @@ class WalletAdminService
      * Refund a completed ticket payment: tickets cancelled, wallet-paid
      * amounts credited back in the buckets they came from, deposits
      * released, points spent restored and points earned reversed (§6a).
-     * Card payments are marked refunded; the money goes back through the
-     * bank's merchant portal.
+     * Thawani card payments are refunded to the card through the Thawani
+     * API (payment_refunds + ProcessGatewayRefund, retried); other card
+     * payments are marked refunded and repaid through the bank's portal.
      */
     public function refundPayment(Payment $payment, User $admin, ?string $reason = null): Payment
     {
@@ -106,14 +107,32 @@ class WalletAdminService
                 ->where('status', 'active')->update(['status' => 'cancelled']);
 
             $meta = $locked->metadata ?? [];
-            if (($meta['points_used'] ?? 0) > 0 && $locked->user) {
+            // Not when they were already given back (cancelled, then captured
+            // late without enough points left to take them again).
+            if (($meta['points_used'] ?? 0) > 0 && $locked->user && empty($meta['points_restored'])) {
                 $this->points->restore($locked->user, $tenant, (int) $meta['points_used'], $locked, "pay:{$locked->id}:points_refund");
             }
             $this->points->reverseEarned($locked, "reverse:payment:{$locked->id}");
 
+            $from = $locked->status;
             $locked->status = 'refunded';
             $locked->refunded_at = now();
             $locked->save();
+
+            app(\App\Services\Payments\PaymentRecorder::class)->transition($locked, $from, 'refunded', 'admin', array_filter(['reason' => $reason]));
+
+            if ($locked->method === Payment::METHOD_GATEWAY && $locked->gateway === \App\Services\Payments\Gateway\ThawaniGateway::NAME) {
+                $refund = \App\Models\PaymentRefund::firstOrCreate(['payment_id' => $locked->id], [
+                    'tenant_id' => $locked->tenant_id,
+                    'gateway' => $locked->gateway,
+                    'gateway_payment_id' => $locked->gateway_payment_id,
+                    'amount_minor' => (int) $locked->amount_minor,
+                    'reason' => $reason ? mb_substr($reason, 0, 500) : null,
+                    'status' => \App\Models\PaymentRefund::PENDING,
+                    'requested_by' => $admin->id,
+                ]);
+                \App\Jobs\ProcessGatewayRefund::dispatch($refund->id)->afterCommit();
+            }
 
             // A gate box office order follows its payment.
             if (! empty($meta['box_office_order_id'])) {

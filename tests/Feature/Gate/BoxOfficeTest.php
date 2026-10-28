@@ -272,6 +272,9 @@ class BoxOfficeTest extends GateTestCase
     #[Test]
     public function pending_orders_hold_seats_until_they_expire_or_are_cancelled(): void
     {
+        // Reads the public availability endpoint after every change; its
+        // shared cache (up to 20 s, docs/caching.md) is not under test here.
+        config(['api_cache.enabled' => false]);
         $event = $this->todayEvent(['total_tickets' => 3]);
         [, $token] = $this->sellingDevice();
         $available = fn () => $this->getJson("/api/v1/events/{$event->id}/availability?date=".\App\Services\Gate\GateDay::today(), $this->tenantHeaders())->json('data.available_tickets');

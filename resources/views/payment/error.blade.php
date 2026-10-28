@@ -11,13 +11,15 @@
         'verification_failed' => ['تعذر التحقق من رد بوابة الدفع.', 'The payment gateway response could not be verified.'],
         'payment_failed' => ['لم تنجح عملية الدفع. حاول مرة أخرى.', 'The payment failed. Please try again.'],
         'server_error' => ['حدث خطأ في معالجة الدفع.', 'An error occurred while processing your payment.'],
+        'gateway_unavailable' => ['تعذّر الاتصال ببوابة الدفع الآن. أعد المحاولة بعد لحظات.', 'The payment gateway can’t be reached right now. Please try again in a moment.'],
+        'gateway_not_configured' => ['الدفع بالبطاقة غير متاح حاليًا. تواصل مع المنظّم.', 'Card payment isn’t available right now. Please contact the organizer.'],
     ];
     $code = $code ?? 'server_error';
     [$msgAr, $msgEn] = $messages[$code] ?? $messages['server_error'];
     $shown = $t($msgAr, $msgEn);
     $pending = $code === 'not_completed';
 @endphp
-@section('title', $t('تعذر إتمام الدفع', 'Payment problem'))
+@section('title', $pending ? $t('الدفع قيد المعالجة', 'Payment processing') : $t('تعذر إتمام الدفع', 'Payment problem'))
 @section('band-sub', $t('حالة الدفع', 'Payment status'))
 
 @section('content')
@@ -28,6 +30,9 @@
             <p data-error-code="{{ $code }}">{{ $shown }}</p>
             @if(! empty($status))
                 <p style="margin-top: 12px"><span class="pill pill-neutral ltr">{{ $status }}</span></p>
+            @endif
+            @if(! empty($retryUrl))
+                <p style="margin-top: 16px"><a class="btn btn-primary" href="{{ $retryUrl }}">{{ $pending ? $t('تحقّق مرة أخرى', 'Check again') : $t('أعد المحاولة', 'Try again') }}</a></p>
             @endif
         </div>
     </section>

@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 class PlaceCategory extends Model
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
     use LocalizedContent;
 
     protected $fillable = ['key', 'name', 'icon', 'color', 'sort', 'is_active'];

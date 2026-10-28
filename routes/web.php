@@ -107,10 +107,19 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         // Payments
         Route::middleware('can:view payments')->group(function () {
             Route::get('payments', [Admin\PaymentController::class, 'index'])->name('admin.payments.index');
+            Route::get('payments/gateway-log', [Admin\PaymentController::class, 'gatewayLog'])->name('admin.payments.gateway-log');
             Route::get('payments/{payment}', [Admin\PaymentController::class, 'show'])->name('admin.payments.show');
+            Route::post('payments/{payment}/reconcile', [Admin\PaymentController::class, 'reconcile'])
+                ->middleware('throttle:20,1')->name('admin.payments.reconcile');
         });
         Route::post('payments/{payment}/refund', [Admin\PaymentController::class, 'refund'])
             ->middleware('can:refund payments')->name('admin.payments.refund');
+        Route::post('payments/{payment}/refund/retry', [Admin\PaymentController::class, 'retryRefund'])
+            ->middleware('can:refund payments')->name('admin.payments.refund.retry');
+        Route::post('payments/{payment}/review', [Admin\PaymentController::class, 'resolveReview'])
+            ->middleware('can:refund payments')->name('admin.payments.review');
+        Route::post('payments/webhooks/{webhookEvent}/replay', [Admin\PaymentController::class, 'replayWebhook'])
+            ->middleware('can:refund payments')->name('admin.payments.webhooks.replay');
 
         // Wallets & money
         Route::middleware('can:manage wallets')->group(function () {
@@ -190,6 +199,8 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         // Platform: tenants (super-admin only)
         Route::resource('tenants', Admin\TenantController::class, ['as' => 'admin'])
             ->except(['show', 'destroy'])->middleware('can:manage tenants');
+        Route::post('tenants/{tenant}/gateway-check', [Admin\TenantController::class, 'gatewayCheck'])
+            ->middleware(['can:manage tenants', 'throttle:10,1'])->name('admin.tenants.gateway-check');
 
         // Platform: demo requests from the landing page (super-admin only)
         Route::middleware('can:manage demo requests')->group(function () {

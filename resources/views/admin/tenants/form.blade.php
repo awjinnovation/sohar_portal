@@ -42,7 +42,10 @@
         'places' => 'pin-map', 'content' => 'collection',
     ];
     $socialLabels = ['instagram' => 'إنستغرام', 'x' => 'X (تويتر)', 'tiktok' => 'تيك توك', 'youtube' => 'يوتيوب', 'facebook' => 'فيسبوك'];
-    $gatewayLabels = ['merchant_id' => 'Merchant ID', 'access_code' => 'Access Code', 'working_key' => 'Working Key', 'gateway_url' => 'Gateway URL'];
+    $gatewayLabels = ['merchant_id' => 'Merchant ID', 'access_code' => 'Access Code', 'working_key' => 'Working Key', 'gateway_url' => 'Gateway URL',
+        'secret_key' => 'Secret key', 'publishable_key' => 'Publishable key', 'webhook_secret' => 'Webhook secret'];
+    $gatewayTitles = ['thawani' => ['ثواني', 'Thawani Pay'], 'bank_muscat' => ['بنك مسقط', 'Bank Muscat']];
+    $driverLabels = ['thawani' => 'ثواني', 'bankmuscat' => 'بنك مسقط', 'fake' => 'بوابة محلية للتجربة'];
     $selectedMethods = array_filter((array) old('s.wallet.refunds.methods', $tenant->setting('wallet.refunds.methods', [])));
     $logoPreview = \App\Models\Tenant::assetUrl($tenant->setting('branding.logo_url'));
     $theme = $tenant->exists ? \App\View\TenantTheme::for($tenant) : \App\View\TenantTheme::for(null);
@@ -412,9 +415,49 @@
                 </x-admin.card>
 
                 @if($platform)
-                    <x-admin.card id="sec-gateway" title="بيانات بوابة الدفع" icon="shield-lock" subtitle="تُحفظ القيم مشفّرة ولا تُعرض. اترك الحقل فارغًا لتبقى القيمة الحالية.">
+                    <x-admin.card id="sec-gateway" title="بيانات بوابة الدفع" icon="shield-lock" subtitle="تُحفظ المفاتيح مشفّرة ولا تُعرض. اترك الحقل فارغًا لتبقى القيمة الحالية.">
+                        @php
+                            $currentDriver = old('payments_driver', data_get($tenant->settings ?? [], 'payments.driver'));
+                            $currentMode = old('thawani_mode', data_get($tenant->settings ?? [], 'payments.thawani.mode'));
+                            $platformDriver = config('payments.driver');
+                        @endphp
+                        <div class="row">
+                            <div class="col-md-6 field">
+                                <label class="form-label" for="payments_driver">{{ __('بوابة الدفع المستخدمة') }}</label>
+                                <select name="payments_driver" id="payments_driver" class="form-select @error('payments_driver') is-invalid @enderror">
+                                    <option value="">{{ __('افتراضي المنصة (:driver)', ['driver' => $driverLabels[$platformDriver] ?? $platformDriver]) }}</option>
+                                    @foreach(\App\Services\Payments\PaymentGatewayManager::DRIVERS as $d)
+                                        @continue($d === 'fake' && app()->environment('production'))
+                                        <option value="{{ $d }}" @selected($currentDriver === $d)>{{ $driverLabels[$d] ?? $d }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">{{ __('تبقى كل دفعة على البوابة التي أُنشئت بها.') }}</div>
+                                @error('payments_driver')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6 field">
+                                <label class="form-label" for="thawani_mode">{{ __('بيئة ثواني') }}</label>
+                                <select name="thawani_mode" id="thawani_mode" class="form-select @error('thawani_mode') is-invalid @enderror">
+                                    <option value="">{{ __('افتراضي المنصة (:mode)', ['mode' => config('services.thawani.mode', 'uat')]) }}</option>
+                                    <option value="uat" @selected($currentMode === 'uat')>{{ __('تجريبية') }} · UAT</option>
+                                    <option value="production" @selected($currentMode === 'production')>{{ __('التشغيل الفعلي') }} · Production</option>
+                                </select>
+                                <div class="form-text ltr text-start">uatcheckout.thawani.om · checkout.thawani.om</div>
+                                @error('thawani_mode')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                        </div>
+                        @if($tenant->exists)
+                            <div class="kv mb-3">
+                                <div class="k">{{ __('رابط الإشعارات لإضافته في بوابة تجار ثواني') }} <span class="ltr">· Webhook URL</span></div>
+                                <div class="v font-monospace small ltr text-start" style="word-break: break-all">{{ route('payments.webhooks.thawani', ['tenant' => $tenant->slug]) }}</div>
+                            </div>
+                        @endif
                         @foreach($gatewayFields as $provider => $gFields)
-                            <h3 class="h6 fw-bold ltr text-start">{{ $provider }}</h3>
+                            <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
+                                <h3 class="h6 fw-bold mb-0">{{ $gatewayTitles[$provider][0] ?? $provider }} <span class="text-muted fw-normal small ltr">{{ $gatewayTitles[$provider][1] ?? '' }}</span></h3>
+                                @if($provider === 'thawani' && $tenant->exists)
+                                    <button type="submit" form="gwCheckForm" class="btn btn-sm" data-busy><i class="bi bi-plug"></i> {{ __('اختبر الاتصال') }}</button>
+                                @endif
+                            </div>
                             <div class="row">
                                 @foreach($gFields as $gf)
                                     @php $gSet = filled(data_get($tenant->gateway_credentials ?? [], $provider.'.'.$gf)); @endphp
@@ -513,6 +556,11 @@
             </div>
         </div>
     </form>
+
+    @if($platform && $tenant->exists)
+        {{-- Outside the main form (which sends _method=PUT). --}}
+        <form id="gwCheckForm" action="{{ route('admin.tenants.gateway-check', $tenant) }}" method="POST" class="d-none">@csrf</form>
+    @endif
 @endsection
 
 @push('scripts')

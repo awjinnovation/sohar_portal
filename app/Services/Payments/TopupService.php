@@ -64,7 +64,7 @@ class TopupService
                     'transaction_id' => 'TOP'.strtoupper(Str::random(12)),
                     'payment_type' => Payment::TYPE_TOPUP,
                     'method' => Payment::METHOD_GATEWAY,
-                    'gateway' => $this->gateways->driver(),
+                    'gateway' => $this->gateways->driver($tenant),
                     'payable_id' => $topup->id,
                     'payable_type' => WalletTopup::class,
                     'amount' => Money::format($amountMinor, $tenant->currencyDecimals()),
@@ -83,6 +83,10 @@ class TopupService
 
                 $topup->payment_id = $payment->id;
                 $topup->save();
+
+                app(PaymentRecorder::class)->record($payment, 'created', 'api', [
+                    'type' => $payment->payment_type, 'gateway' => $payment->gateway, 'amount_minor' => $amountMinor,
+                ], null, 'pending');
 
                 return $topup;
             });

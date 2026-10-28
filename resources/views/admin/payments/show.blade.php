@@ -68,7 +68,11 @@
                         <p class="text-muted small">
                             {{ __('ستُلغى التذاكر، ويعود إلى المحفظة ما دُفع منها إن وُجد، وتُرجَع التأمينات وتُستعاد النقاط.') }}
                         </p>
-                        @if($payment->method === 'gateway')
+                        @if($payment->method === 'gateway' && $payment->gateway === 'thawani')
+                            <div class="alert alert-info small d-flex gap-2 align-items-start">
+                                <i class="bi bi-info-circle-fill"></i><span>{{ __('يُعاد المبلغ إلى البطاقة تلقائيًا عبر ثواني، وتُعاد المحاولة إذا تعذّر الاتصال.') }}</span>
+                            </div>
+                        @elseif($payment->method === 'gateway')
                             <div class="alert alert-warning small d-flex gap-2 align-items-start">
                                 <i class="bi bi-info-circle-fill"></i><span>{{ __('تُسترد مدفوعات البطاقة يدويًا عبر بوابة الدفع.') }}</span>
                             </div>
@@ -87,9 +91,41 @@
                 @else
                     <x-admin.empty-state icon="shield-lock" title="غير مسموح" text="ليست لديك صلاحية الاسترداد." class="py-3" />
                 @endcan
+
+                @if($refund = $gateway['refund'])
+                    <div class="border-top mt-3 pt-3">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold">{{ __('الإعادة إلى البطاقة') }}</span>
+                            <x-admin.status-pill domain="gwrefund" :status="$refund->status" size="sm" />
+                        </div>
+                        <dl class="dl small mb-2">
+                            <dt>{{ __('المبلغ') }}</dt><dd><x-admin.money :minor="(int) $refund->amount_minor" /></dd>
+                            <dt>{{ __('المحاولات') }}</dt><dd class="num">{{ $refund->attempts }}</dd>
+                            @if($refund->gateway_refund_id)<dt>{{ __('رقم الاسترداد') }}</dt><dd><span class="font-monospace ltr">{{ $refund->gateway_refund_id }}</span></dd>@endif
+                            @if($refund->completed_at)<dt>{{ __('تاريخ الإعادة') }}</dt><dd class="num"><span class="ltr">{{ $refund->completed_at->format('Y-m-d H:i') }}</span></dd>@endif
+                        </dl>
+                        @if($refund->last_error)<div class="alert alert-danger small ltr text-start mb-2">{{ $refund->last_error }}</div>@endif
+                        @can('refund payments')
+                            @if(in_array($refund->status, ['failed', 'needs_review'], true))
+                                <form action="{{ route('admin.payments.refund.retry', $payment) }}" method="POST">
+                                    @csrf
+                                    @if($refund->status === 'needs_review')
+                                        <div class="form-check small mb-2">
+                                            <input class="form-check-input" type="checkbox" name="confirm_checked" value="1" id="confirm_checked" required>
+                                            <label class="form-check-label" for="confirm_checked">{{ __('تأكدتُ من بوابة ثواني أن المبلغ لم يُرد بعد') }}</label>
+                                        </div>
+                                    @endif
+                                    <button type="submit" class="btn btn-outline-primary w-100" data-busy><i class="bi bi-arrow-repeat"></i> {{ __('أعد إرسال الاسترداد') }}</button>
+                                </form>
+                            @endif
+                        @endcan
+                    </div>
+                @endif
             </x-admin.card>
         </div>
     </div>
+
+    @include('admin.payments._gateway')
 
     <x-admin.card title="التذاكر" icon="ticket-perforated" :subtitle="$payment->tickets->count() ? __('التذاكر: :count', ['count' => $payment->tickets->count()]) : null" :flush="true">
         @if($payment->tickets->isEmpty())

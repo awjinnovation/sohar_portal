@@ -47,6 +47,16 @@ return [
         'webhook_ips' => array_filter(array_map('trim', explode(',', (string) env('BANK_MUSCAT_WEBHOOK_IPS', '')))),
     ],
 
+    // Thawani Pay platform fallback; each tenant can override these in
+    // tenants.gateway_credentials.thawani (encrypted, admin panel).
+    // mode: uat (uatcheckout.thawani.om) | production (checkout.thawani.om).
+    'thawani' => [
+        'mode' => env('THAWANI_MODE', 'uat'),
+        'secret_key' => env('THAWANI_SECRET_KEY'),
+        'publishable_key' => env('THAWANI_PUBLISHABLE_KEY'),
+        'webhook_secret' => env('THAWANI_WEBHOOK_SECRET'),
+    ],
+
     // AI Experience (docs/ai_and_gate_contract.md §A). The key is read only
     // through config('services.openai.key') and is never logged.
     'openai' => [

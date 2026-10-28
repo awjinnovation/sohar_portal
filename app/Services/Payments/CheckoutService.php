@@ -292,7 +292,7 @@ class CheckoutService
             'transaction_id' => 'TXN'.strtoupper(Str::random(12)),
             'payment_type' => Payment::TYPE_TICKET,
             'method' => $method,
-            'gateway' => $method === Payment::METHOD_GATEWAY ? $this->gateways->driver() : null,
+            'gateway' => $method === Payment::METHOD_GATEWAY ? $this->gateways->driver($tenant) : null,
             'payable_id' => $quote['event']->id,
             'payable_type' => Event::class,
             'amount' => \App\Support\Money::format($quote['total_minor'], $decimals),
@@ -325,6 +325,11 @@ class CheckoutService
         ]);
         $payment->tenant_id = $tenant->id;
         $payment->save();
+
+        app(PaymentRecorder::class)->record($payment, 'created', 'api', array_filter([
+            'type' => $payment->payment_type, 'method' => $method, 'gateway' => $payment->gateway,
+            'amount_minor' => (int) $payment->amount_minor, 'box_office_order_id' => $extraMeta['box_office_order_id'] ?? null,
+        ], fn ($v) => $v !== null), null, 'pending');
 
         return $payment;
     }

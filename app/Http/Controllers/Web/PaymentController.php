@@ -9,8 +9,12 @@ use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Services\BankMuscatPaymentService;
 use App\Services\Payments\BankMuscatCallbackHandler;
+use App\Services\Payments\Gateway\GatewayException;
+use App\Services\Payments\Gateway\ThawaniGateway;
 use App\Services\Payments\PaymentFulfillmentService;
+use App\Services\Payments\ThawaniCheckout;
 use App\Tenancy\TenantContext;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -18,10 +22,13 @@ use Illuminate\Support\Facades\URL;
 /**
  * Browser-facing payment pages (opened by the app's web view).
  *
- * - /payment/redirect/{tx}  signed link: auto-posts to Bank Muscat, or shows
- *                           the fake gateway page (PAYMENT_DRIVER=fake).
+ * - /payment/redirect/{tx}  signed link: redirects to a Thawani session,
+ *                           auto-posts to Bank Muscat, or shows the fake
+ *                           gateway page (driver fake).
  * - /payment/success|cancel gateway returns here; state only changes when an
- *                           encrypted gateway response verifies.
+ *                           encrypted gateway response verifies (Bank Muscat)
+ *                           or Thawani's API confirms it (the return URL
+ *                           carries a token; ThawaniCheckout::returnToken()).
  */
 class PaymentController extends Controller
 {
@@ -38,6 +45,10 @@ class PaymentController extends Controller
 
     public const ERR_SERVER_ERROR = 'server_error';
 
+    public const ERR_GATEWAY_UNAVAILABLE = 'gateway_unavailable';
+
+    public const ERR_GATEWAY_NOT_CONFIGURED = 'gateway_not_configured';
+
     public function __construct(private TenantContext $context)
     {
     }
@@ -50,7 +61,19 @@ class PaymentController extends Controller
         return $payment;
     }
 
-    public function redirectToGateway(string $transactionId)
+    private function thawaniPayment(Request $request): ?Payment
+    {
+        $transactionId = (string) $request->query('transaction_id', '');
+        $payment = $transactionId !== '' ? Payment::withoutTenantScope()->where('transaction_id', $transactionId)->first() : null;
+        if (! $payment || $payment->gateway !== ThawaniGateway::NAME) {
+            return null;
+        }
+        $this->context->set(Tenant::find($payment->tenant_id));
+
+        return $payment;
+    }
+
+    public function redirectToGateway(Request $request, string $transactionId)
     {
         $payment = $this->paymentByTransaction($transactionId);
 
@@ -67,6 +90,19 @@ class PaymentController extends Controller
             return $payment->status === 'completed'
                 ? redirect()->route('payment.success', ['transaction_id' => $payment->transaction_id])
                 : $this->errorView(self::ERR_NOT_PENDING, $payment);
+        }
+
+        if ($payment->gateway === ThawaniGateway::NAME) {
+            try {
+                return redirect()->away(app(ThawaniCheckout::class)->checkoutUrl($payment, 'redirect'));
+            } catch (GatewayException|LockTimeoutException $e) {
+                Log::warning('Thawani checkout could not start', ['transaction_id' => $payment->transaction_id, 'error' => $e->getMessage()]);
+                $notConfigured = $e instanceof GatewayException && $e->kind === 'config';
+
+                return $this->errorView($notConfigured ? self::ERR_GATEWAY_NOT_CONFIGURED : self::ERR_GATEWAY_UNAVAILABLE, $payment, [
+                    'retryUrl' => $notConfigured ? null : $request->fullUrl(),
+                ]);
+            }
         }
 
         if ($payment->gateway === 'fake') {
@@ -131,6 +167,10 @@ class PaymentController extends Controller
         try {
             $encResponse = (string) $request->input('encResp', '');
 
+            if ($encResponse === '' && ($payment = $this->thawaniPayment($request))) {
+                return $this->thawaniResult($request, $payment);
+            }
+
             if ($encResponse === '') {
                 // Plain revisit (e.g. app polling page): display only, never mutate.
                 $transactionId = (string) $request->query('transaction_id', '');
@@ -165,6 +205,34 @@ class PaymentController extends Controller
             return $this->errorView(self::ERR_SERVER_ERROR, null, [
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ]);
+        }
+    }
+
+    /** Thawani return page: ask Thawani (throttled per payment), then show the result. */
+    private function thawaniResult(Request $request, Payment $payment)
+    {
+        $payment = $this->thawaniCheck($payment);
+
+        return match (true) {
+            $payment->status === 'completed' => $this->successView($payment),
+            $payment->isPending() => $this->errorView(self::ERR_NOT_COMPLETED, $payment, ['retryUrl' => $request->fullUrl()]),
+            $payment->status === 'cancelled' => $this->boxOfficeRedirect($payment, ['payment' => 'cancelled']) ?? view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
+            default => $this->boxOfficeRedirect($payment, ['payment' => 'failed']) ?? $this->errorView(self::ERR_PAYMENT_FAILED, $payment),
+        };
+    }
+
+    /** Throttled per payment (repeated reloads don't multiply gateway calls); never throws. */
+    private function thawaniCheck(Payment $payment): Payment
+    {
+        return app(ThawaniCheckout::class)->checkIfStale($payment, 'redirect');
+    }
+
+    private function thawaniCancel(Payment $payment): Payment
+    {
+        try {
+            return app(ThawaniCheckout::class)->cancel($payment, 'redirect', 'visitor_cancelled');
+        } catch (LockTimeoutException) {
+            return $payment->fresh();
         }
     }
 
@@ -225,7 +293,16 @@ class PaymentController extends Controller
         $encResponse = (string) $request->input('encResp', '');
         $payment = null;
 
-        if ($encResponse !== '') {
+        if ($encResponse === '' && ($thawani = $this->thawaniPayment($request))) {
+            // Only Thawani's own redirect (it carries the token) cancels:
+            // Thawani is asked first, and its sessions are cancelled too.
+            $payment = hash_equals(ThawaniCheckout::returnToken($thawani->transaction_id), (string) $request->query('t', ''))
+                ? $this->thawaniCancel($thawani)
+                : $this->thawaniCheck($thawani);
+            if ($payment->status === 'completed') {
+                return $this->successView($payment); // paid after all
+            }
+        } elseif ($encResponse !== '') {
             $result = $handler->handle($encResponse, $request->query('transaction_id'));
             $payment = $result['payment'] ?? null;
         } elseif ($transactionId = $request->query('transaction_id')) {

@@ -29,7 +29,10 @@ class TenantController extends Controller
 {
     public const OPTIONAL_COLORS = ['tertiary', 'info'];
 
-    public const GATEWAY_FIELDS = ['bank_muscat' => ['merchant_id', 'access_code', 'working_key', 'gateway_url']];
+    public const GATEWAY_FIELDS = [
+        'thawani' => ['secret_key', 'publishable_key', 'webhook_secret'],
+        'bank_muscat' => ['merchant_id', 'access_code', 'working_key', 'gateway_url'],
+    ];
 
     public const ADVANCED_THEME_KEYS = ['header_style', 'header_gradient', 'header_image_url', 'card_pattern_url', 'font_family_numeric'];
 
@@ -266,7 +269,11 @@ class TenantController extends Controller
 
     private function gatewayRules(): array
     {
-        $rules = [];
+        $drivers = array_values(array_filter(\App\Services\Payments\PaymentGatewayManager::DRIVERS, fn ($d) => $d !== 'fake' || ! app()->environment('production')));
+        $rules = [
+            'payments_driver' => ['nullable', Rule::in($drivers)],
+            'thawani_mode' => ['nullable', Rule::in(\App\Services\Payments\Gateway\ThawaniConfig::MODES)],
+        ];
         foreach (self::GATEWAY_FIELDS as $provider => $fields) {
             foreach ($fields as $field) {
                 $rules["gateway.$provider.$field"] = ['nullable', 'string', 'max:1000'];
@@ -293,6 +300,38 @@ class TenantController extends Controller
         if ($changed) {
             $tenant->gateway_credentials = $credentials;
         }
+
+        // Driver and Thawani mode are plain settings (blank = platform default, key removed).
+        foreach (['payments_driver' => 'payments.driver', 'thawani_mode' => 'payments.thawani.mode'] as $input => $key) {
+            if (! $request->has($input)) {
+                continue;
+            }
+            $settings = $tenant->settings ?? [];
+            if ($value = (string) $request->input($input)) {
+                data_set($settings, $key, $value);
+            } else {
+                $this->forget($settings, $key);
+            }
+            $tenant->settings = $settings;
+        }
+    }
+
+    /** POST tenants/{tenant}/gateway-check — read-only Thawani key check (recorded like any call). */
+    public function gatewayCheck(Tenant $tenant, \App\Services\Payments\Gateway\ThawaniGateway $thawani)
+    {
+        $config = \App\Services\Payments\Gateway\ThawaniConfig::forTenant($tenant);
+        if (! $config->isConfigured()) {
+            return back()->with('error', __('أدخل مفتاحَي ثواني السري والعام أولًا.'));
+        }
+        $result = $thawani->ping($config, ['tenant_id' => $tenant->id]);
+        AuditLog::record('tenant.gateway_check', $tenant, ['gateway' => 'thawani', 'mode' => $config->mode, 'ok' => $result['ok'], 'status' => $result['status']]);
+
+        return back()->with(
+            $result['ok'] ? 'success' : 'error',
+            $result['ok']
+                ? __('قبلت ثواني المفاتيح (:mode).', ['mode' => $config->mode])
+                : __('رفضت ثواني الاتصال: :message', ['message' => trim(($result['status'] ? $result['status'].' · ' : '').$result['message'])])
+        );
     }
 
     /**

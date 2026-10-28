@@ -31,100 +31,103 @@ use Illuminate\Support\Facades\Route;
 | (bootstrap/app.php); unknown/inactive tenants get a 404.
 */
 
-// Public routes - No authentication required
+// Public routes - No authentication required. Responses that are the same
+// for every visitor are cached per tenant + language (cache.api:<tier>,
+// config/api_cache.php, docs/caching.md); never add it to a route whose
+// answer depends on the signed-in user (e.g. /payments/quote).
 Route::prefix('v1')->group(function () {
     // Tenant config (contract §5) — public, cacheable, ETag
     Route::get('/tenant/config', [TenantConfigController::class, 'show']);
 
     // Legacy app configuration (reads from the tenant)
-    Route::get('/config', [AppConfigController::class, 'index']);
-    Route::get('/config/theme', [AppConfigController::class, 'theme']);
-    Route::get('/config/branding', [AppConfigController::class, 'branding']);
-    Route::get('/config/features', [AppConfigController::class, 'features']);
-    Route::get('/config/status', [AppConfigController::class, 'status']);
-    Route::get('/config/{key}', [AppConfigController::class, 'show']);
+    Route::get('/config', [AppConfigController::class, 'index'])->middleware('cache.api:static');
+    Route::get('/config/theme', [AppConfigController::class, 'theme'])->middleware('cache.api:static');
+    Route::get('/config/branding', [AppConfigController::class, 'branding'])->middleware('cache.api:static');
+    Route::get('/config/features', [AppConfigController::class, 'features'])->middleware('cache.api:static');
+    Route::get('/config/status', [AppConfigController::class, 'status'])->middleware('cache.api:static');
+    Route::get('/config/{key}', [AppConfigController::class, 'show'])->middleware('cache.api:static');
 
     // OTP Authentication (throttled)
     Route::post('/auth/send-otp', [AuthController::class, 'sendOtp'])->middleware('throttle:otp-send');
     Route::post('/auth/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:otp-verify');
 
     // Events
-    Route::get('/events', [EventController::class, 'index']);
-    Route::get('/events/upcoming', [EventController::class, 'upcoming']);
-    Route::get('/events/today', [EventController::class, 'today']);
-    Route::get('/events/featured', [EventController::class, 'featured']);
-    Route::get('/events/search', [EventController::class, 'index']);
-    Route::get('/events/category/{categoryId}', [EventController::class, 'byCategory']);
-    Route::get('/events/{id}/availability', [EventController::class, 'checkAvailability']);
-    Route::get('/events/{id}/daily-availability', [EventController::class, 'dailyAvailability']);
-    Route::get('/events/{id}', [EventController::class, 'show']);
+    Route::get('/events', [EventController::class, 'index'])->middleware('cache.api:catalog');
+    Route::get('/events/upcoming', [EventController::class, 'upcoming'])->middleware('cache.api:catalog');
+    Route::get('/events/today', [EventController::class, 'today'])->middleware('cache.api:live');
+    Route::get('/events/featured', [EventController::class, 'featured'])->middleware('cache.api:catalog');
+    Route::get('/events/search', [EventController::class, 'index'])->middleware('cache.api:catalog');
+    Route::get('/events/category/{categoryId}', [EventController::class, 'byCategory'])->middleware('cache.api:catalog');
+    Route::get('/events/{id}/availability', [EventController::class, 'checkAvailability'])->middleware('cache.api:live');
+    Route::get('/events/{id}/daily-availability', [EventController::class, 'dailyAvailability'])->middleware('cache.api:live');
+    Route::get('/events/{id}', [EventController::class, 'show'])->middleware('cache.api:catalog');
 
     // Categories
-    Route::get('/categories', [CategoryController::class, 'index']);
-    Route::get('/categories/{id}', [CategoryController::class, 'show']);
+    Route::get('/categories', [CategoryController::class, 'index'])->middleware('cache.api:static');
+    Route::get('/categories/{id}', [CategoryController::class, 'show'])->middleware('cache.api:static');
 
     // Restaurants (listings)
-    Route::get('/restaurants', [RestaurantController::class, 'index']);
-    Route::get('/restaurants/featured', [RestaurantController::class, 'featured']);
-    Route::get('/restaurants/open-now', [RestaurantController::class, 'openNow']);
-    Route::get('/restaurants/search', [RestaurantController::class, 'search']);
-    Route::get('/restaurants/by-cuisine', [RestaurantController::class, 'byCuisine']);
-    Route::get('/restaurants/{id}', [RestaurantController::class, 'show']);
+    Route::get('/restaurants', [RestaurantController::class, 'index'])->middleware('cache.api:catalog');
+    Route::get('/restaurants/featured', [RestaurantController::class, 'featured'])->middleware('cache.api:catalog');
+    Route::get('/restaurants/open-now', [RestaurantController::class, 'openNow'])->middleware('cache.api:live');
+    Route::get('/restaurants/search', [RestaurantController::class, 'search'])->middleware('cache.api:catalog');
+    Route::get('/restaurants/by-cuisine', [RestaurantController::class, 'byCuisine'])->middleware('cache.api:catalog');
+    Route::get('/restaurants/{id}', [RestaurantController::class, 'show'])->middleware('cache.api:catalog');
 
     // Map Locations (for events and venues)
-    Route::get('/map-locations/types', [MapLocationController::class, 'types']);
-    Route::get('/map-locations/entertainment', [MapLocationController::class, 'entertainment']);
-    Route::get('/map-locations/food', [MapLocationController::class, 'food']);
-    Route::get('/map-locations/facilities', [MapLocationController::class, 'facilities']);
-    Route::get('/map-locations/parking', [MapLocationController::class, 'parking']);
-    Route::get('/map-locations/category/{category}', [MapLocationController::class, 'byCategory']);
-    Route::get('/map-locations', [MapLocationController::class, 'index']);
+    Route::get('/map-locations/types', [MapLocationController::class, 'types'])->middleware('cache.api:static');
+    Route::get('/map-locations/entertainment', [MapLocationController::class, 'entertainment'])->middleware('cache.api:static');
+    Route::get('/map-locations/food', [MapLocationController::class, 'food'])->middleware('cache.api:static');
+    Route::get('/map-locations/facilities', [MapLocationController::class, 'facilities'])->middleware('cache.api:static');
+    Route::get('/map-locations/parking', [MapLocationController::class, 'parking'])->middleware('cache.api:static');
+    Route::get('/map-locations/category/{category}', [MapLocationController::class, 'byCategory'])->middleware('cache.api:static');
+    Route::get('/map-locations', [MapLocationController::class, 'index'])->middleware('cache.api:static');
 
     // Locations
-    Route::get('/locations', [LocationController::class, 'index']);
-    Route::get('/locations/type/{type}', [LocationController::class, 'byType']);
-    Route::get('/locations/emergency', [LocationController::class, 'emergency']);
-    Route::get('/locations/first-aid', [LocationController::class, 'firstAid']);
-    Route::get('/locations/parking', [LocationController::class, 'parking']);
-    Route::get('/locations/restrooms', [LocationController::class, 'restrooms']);
+    Route::get('/locations', [LocationController::class, 'index'])->middleware('cache.api:static');
+    Route::get('/locations/type/{type}', [LocationController::class, 'byType'])->middleware('cache.api:static');
+    Route::get('/locations/emergency', [LocationController::class, 'emergency'])->middleware('cache.api:static');
+    Route::get('/locations/first-aid', [LocationController::class, 'firstAid'])->middleware('cache.api:static');
+    Route::get('/locations/parking', [LocationController::class, 'parking'])->middleware('cache.api:static');
+    Route::get('/locations/restrooms', [LocationController::class, 'restrooms'])->middleware('cache.api:static');
     Route::get('/locations/nearby', [LocationController::class, 'nearby']);
-    Route::get('/locations/{id}', [LocationController::class, 'show']);
+    Route::get('/locations/{id}', [LocationController::class, 'show'])->middleware('cache.api:static');
 
     // Announcements
-    Route::get('/announcements', [AnnouncementController::class, 'index']);
-    Route::get('/announcements/active', [AnnouncementController::class, 'active']);
-    Route::get('/announcements/priority', [AnnouncementController::class, 'priority']);
-    Route::get('/announcements/{id}', [AnnouncementController::class, 'show']);
+    Route::get('/announcements', [AnnouncementController::class, 'index'])->middleware('cache.api:catalog');
+    Route::get('/announcements/active', [AnnouncementController::class, 'active'])->middleware('cache.api:live');
+    Route::get('/announcements/priority', [AnnouncementController::class, 'priority'])->middleware('cache.api:live');
+    Route::get('/announcements/{id}', [AnnouncementController::class, 'show'])->middleware('cache.api:catalog');
 
     // Notifications (public)
-    Route::get('/notifications/public', [NotificationController::class, 'public']);
+    Route::get('/notifications/public', [NotificationController::class, 'public'])->middleware('cache.api:catalog');
 
     // App Settings (public settings only)
-    Route::get('/app-settings', [AppSettingController::class, 'index']);
-    Route::get('/app-settings/{key}', [AppSettingController::class, 'show']);
+    Route::get('/app-settings', [AppSettingController::class, 'index'])->middleware('cache.api:static');
+    Route::get('/app-settings/{key}', [AppSettingController::class, 'show'])->middleware('cache.api:static');
 
     // Tickets
-    Route::get('/tickets/pricing', [TicketController::class, 'pricing']);
-    Route::get('/tickets/available', [TicketController::class, 'available']);
+    Route::get('/tickets/pricing', [TicketController::class, 'pricing'])->middleware('cache.api:static');
+    Route::get('/tickets/available', [TicketController::class, 'available'])->middleware('cache.api:live');
 
     // Price breakdown (server-computed; auth optional for points balance check)
     Route::get('/payments/quote', [PaymentController::class, 'quote']);
 
     // Legal
-    Route::get('/privacy-policy', [PrivacyPolicyController::class, 'index']);
-    Route::get('/privacy-policy/{language}', [PrivacyPolicyController::class, 'show']);
-    Route::get('/terms-and-conditions', [TermsAndConditionController::class, 'index']);
-    Route::get('/terms-and-conditions/{type}/{language}', [TermsAndConditionController::class, 'show']);
+    Route::get('/privacy-policy', [PrivacyPolicyController::class, 'index'])->middleware('cache.api:static');
+    Route::get('/privacy-policy/{language}', [PrivacyPolicyController::class, 'show'])->middleware('cache.api:static');
+    Route::get('/terms-and-conditions', [TermsAndConditionController::class, 'index'])->middleware('cache.api:static');
+    Route::get('/terms-and-conditions/{type}/{language}', [TermsAndConditionController::class, 'show'])->middleware('cache.api:static');
 
     // Places to visit + custom map, content collections and pages
     // (docs/places_content_contract.md §3). Published rows only.
-    Route::prefix('places')->middleware('module:places')->group(function () {
-        Route::get('/categories', [\App\Http\Controllers\Api\PlaceController::class, 'categories']);
+    Route::prefix('places')->middleware(['module:places', 'cache.api:static'])->group(function () {
+        Route::get('/categories', [\App\Http\Controllers\Api\PlaceController::class, 'categories'])->middleware('cache.api:static');
         Route::get('/map', [\App\Http\Controllers\Api\PlaceController::class, 'map']);
         Route::get('/', [\App\Http\Controllers\Api\PlaceController::class, 'index']);
         Route::get('/{place}', [\App\Http\Controllers\Api\PlaceController::class, 'show']);
     });
-    Route::prefix('content')->middleware('module:content')->group(function () {
+    Route::prefix('content')->middleware(['module:content', 'cache.api:static'])->group(function () {
         Route::get('/collections', [\App\Http\Controllers\Api\ContentController::class, 'collections']);
         Route::get('/collections/{key}/items', [\App\Http\Controllers\Api\ContentController::class, 'collectionItems']);
         Route::get('/items/{id}', [\App\Http\Controllers\Api\ContentController::class, 'item']);
@@ -134,6 +137,13 @@ Route::prefix('v1')->group(function () {
 
     // Bank Muscat server-to-server callback (verified by decryption)
     Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
+
+    // Thawani webhooks (docs/payments_thawani.md §5): stored, then applied by
+    // a queued job that asks the Thawani API. {tenant} = slug, for the
+    // tenant's webhook secret.
+    Route::post('/payments/webhooks/thawani/{tenant?}', [\App\Http\Controllers\Api\PaymentWebhookController::class, 'thawani'])
+        ->middleware('throttle:payment-webhooks')
+        ->name('payments.webhooks.thawani');
 });
 
 // Protected routes - Authentication required

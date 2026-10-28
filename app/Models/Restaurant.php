@@ -9,6 +9,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class Restaurant extends Model implements HasMedia
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
 
     use InteractsWithMedia;
     protected $fillable = [

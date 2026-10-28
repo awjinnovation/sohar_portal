@@ -15,8 +15,8 @@ this repository (`awjinnovation/sohar_portal`, branch `main`). Files:
                               │ :8080
    ┌──────────────────────────┴──────────────────────────┐
    │ app        NGINX + PHP-FPM, /up health check         │  migrations + caches on every deploy
-   │ worker     php artisan queue:work redis               │  SMS jobs
-   │ scheduler  php artisan schedule:work                  │  expiries, pruning (routes/console.php)
+   │ worker     php artisan queue:work redis               │  queues payments, default (Thawani, SMS)
+   │ scheduler  php artisan schedule:work                  │  payments:reconcile every minute, expiries
    │ mysql      MySQL 8.4, utf8mb4        volume mysql-data, mysql-backups
    │ redis      cache, sessions, queue    volume redis-data (append-only)
    └──────────── volume app-storage = storage/app (uploads), shared by app/worker/scheduler
@@ -94,8 +94,9 @@ existing MySQL volume.
 |---|---|
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD` | SMTP, [§8](#8-smtp-spf-dkim-dmarc). Defaults: `smtps`, 465, from `no-reply@awj.om`, demo requests to `systems@awj.om`. |
 | `ISMARTSMS_USER_ID`, `ISMARTSMS_PASSWORD` | Without them no OTP SMS is sent, so nobody can sign in to the app. |
-| `BANK_MUSCAT_GATEWAY_URL`, `BANK_MUSCAT_MERCHANT_ID`, `BANK_MUSCAT_ACCESS_CODE`, `BANK_MUSCAT_WORKING_KEY` | Platform fallback; a tenant can instead have its own (encrypted) in *Admin → Tenants*. The default URL is the UAT gateway. |
-| `BANK_MUSCAT_WEBHOOK_IPS` | Comma-separated IPs of Bank Muscat's callback servers. |
+| `PAYMENT_DRIVER` | `thawani` (default). [§9](#9-thawani-pay). |
+| `THAWANI_MODE`, `THAWANI_SECRET_KEY`, `THAWANI_PUBLISHABLE_KEY`, `THAWANI_WEBHOOK_SECRET` | Platform fallback; a tenant can instead have its own (encrypted) in *Admin → Tenants*. `THAWANI_MODE=uat` until go-live, then `production`. |
+| `BANK_MUSCAT_*` | Only if a tenant uses Bank Muscat ([§9b](#9b-bank-muscat-optional)). |
 | `CORS_ALLOWED_ORIGINS` | The web apps, comma-separated: `https://gate.mawsim.awj.om,https://app.mawsim.awj.om`. Default `*`. |
 
 **Optional**: `OPENAI_API_KEY` (empty = AI features off), `OPENAI_MODEL_FAST/SMART`,
@@ -206,9 +207,35 @@ Test: submit the *Book a demo* form on `https://mawsim.awj.om/#demo`; the row
 appears in *Admin → Platform → Demo requests* with *mailed*; failures are logged
 (the submission still succeeds). Many hosts block outbound port 25; 465/587 work.
 
-## 9. Bank Muscat
+## 9. Thawani Pay
 
-Send Bank Muscat (CCAvenue non-seamless) these URLs for the merchant profile /
+Design, retries and records: [`docs/payments_thawani.md`](payments_thawani.md).
+
+1. **Keys.** In the Thawani merchant portal, copy the **secret key** and the
+   **publishable key** (UAT first). Put them in *Admin → Tenants → (tenant) →
+   Payment gateway → Thawani* (encrypted per tenant), or as the platform fallback
+   `THAWANI_SECRET_KEY` / `THAWANI_PUBLISHABLE_KEY` in Coolify. Press **Test
+   connection** on the tenant page.
+2. **Webhook.** In the portal, add the webhook URL shown on the tenant page,
+   `https://mawsim.awj.om/api/v1/payments/webhooks/thawani/<tenant-slug>`, and copy
+   its **webhook secret** into the tenant (or `THAWANI_WEBHOOK_SECRET`). Deliveries
+   with a wrong signature are rejected (401) and logged. Even without webhooks,
+   payments complete: the app's status polls and the reconciler ask Thawani.
+3. **Test in UAT.** Top up the wallet and buy a ticket from the app; pay with
+   Thawani's UAT test card; refund the ticket from *Admin → Payments*. Check
+   *Admin → Payments → Gateway log* (calls and webhooks) and the payment's
+   timeline.
+4. **Go live.** Set the tenant's Thawani environment to *Production* (or
+   `THAWANI_MODE=production`), enter the production keys and webhook secret, and
+   repeat one small real payment and refund.
+
+Return URLs (`/payment/success`, `/payment/cancel`) are sent per session; nothing
+to whitelist. Queue and scheduler must run: the `worker` handles the `payments`
+queue first, the `scheduler` runs `payments:reconcile` every minute.
+
+## 9b. Bank Muscat (optional)
+
+Only for a tenant whose payment gateway is set to Bank Muscat. Send Bank Muscat (CCAvenue non-seamless) these URLs for the merchant profile /
 whitelist:
 
 | Purpose | URL |
@@ -266,9 +293,15 @@ Test a restore on a staging resource once before the season.
   (`LOG_CHANNEL=stderr`, `LOG_LEVEL=info`; set `debug` temporarily if needed),
   NGINX access logs to stdout (client IP in the last field, from `X-Forwarded-For`).
 - `app`: requests, PHP errors, migrations at start. `worker`: one line per job
-  (`App\Jobs\SendOtpSms … DONE/FAIL`), SMS gateway errors. `scheduler`: one line per
-  scheduled command (`box-office:expire` every minute, `payments:expire-pending`
-  hourly, `points:expire` 02:00, `wallet:expire-promo` 02:15, `ai:prune` 03:10 UTC).
+  (`App\Jobs\SendOtpSms … DONE/FAIL`, `ProcessPaymentWebhook`, `ReconcilePayment`,
+  `ProcessGatewayRefund`), SMS gateway errors. `scheduler`: one line per scheduled
+  command (`payments:reconcile` and `box-office:expire` every minute,
+  `payments:expire-pending` hourly, `points:expire` 02:00, `wallet:expire-promo`
+  02:15, `ai:prune` 03:10, `payments:prune-gateway-logs` 03:30 UTC).
+- Payments: *Admin → Payments → Gateway log* lists every Thawani call (attempt,
+  HTTP status, duration) and every webhook (signature, result, replay button);
+  each payment page shows its timeline. Payments that need a person (amount
+  mismatch, unclear refund) are counted on *Admin → Payments* (*Needs review*).
 - Failed jobs (after 3 tries) are kept in MySQL: `php artisan queue:failed`,
   `php artisan queue:retry all`, `php artisan queue:flush`.
 - Health: Coolify shows each service's Docker health (app `/up`, worker / scheduler
@@ -288,8 +321,13 @@ services:
 ```
 
 Redeploy. Jobs are spread over the workers by Redis. The scheduler must stay a
-**single** instance. The `app` service can be given more PHP-FPM children with
-`PHP_FPM_PM_MAX_CHILDREN` (default 20) and a larger server.
+**single** instance.
+
+**Peak traffic.** Sizing for ~20,000 visitors a day concentrated between 16:00
+and 01:00, the shared API cache and measured results: [`docs/caching.md`](caching.md).
+Recommended server: 4 vCPU, 8 GB RAM. Tune with `PHP_FPM_PM_MAX_CHILDREN`
+(default 40, about 10 per vCPU), `MYSQL_INNODB_BUFFER_POOL_SIZE` (1G) and
+`REDIS_MAXMEMORY` (768mb). Response headers show `X-Cache: HIT | MISS`.
 
 **Updates.** Push to `main` and press *Deploy* (or enable the GitHub
 auto-deploy webhook). Each deploy rebuilds the image, runs new migrations once

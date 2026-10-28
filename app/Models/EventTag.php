@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class EventTag extends Model
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
 
     protected $fillable = ['event_id', 'tag', 'tag_ar'];
 

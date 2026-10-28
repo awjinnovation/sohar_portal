@@ -38,6 +38,8 @@ class Tenant extends Model
             $tenant->resolvedSettings = null;
             Cache::forget(self::cacheKey($tenant->slug));
             Cache::forget('tenant_config_'.$tenant->id);
+            // Settings (locale, currency, modules…) shape every API response.
+            \App\Support\PublicApiCache::bumpAfterCommit($tenant->id);
         });
     }
 

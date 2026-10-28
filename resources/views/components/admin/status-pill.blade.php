@@ -14,6 +14,10 @@
         'tenant' => ['active' => 'success', 'inactive' => 'neutral'],
         'demo' => ['new' => 'brand', 'contacted' => 'info', 'closed' => 'neutral'],
         'announcement' => ['info' => 'info', 'warning' => 'warning', 'emergency' => 'error', 'critical' => 'error', 'celebration' => 'brand', 'promo' => 'brand'],
+        'gwrefund' => array_map(fn ($v) => $v[1], $L::GATEWAY_REFUND_STATUSES),
+        'webhook' => array_map(fn ($v) => $v[1], $L::WEBHOOK_STATUSES),
+        'gwsession' => array_map(fn ($v) => $v[1], $L::GATEWAY_SESSION_STATUSES),
+        'gwcall' => array_map(fn ($v) => $v[1], $L::GATEWAY_CALL_OUTCOMES),
     ];
     $labels = [
         'payment' => $L::PAYMENT_STATUSES, 'tx' => $L::TX_STATUSES, 'refund' => $L::REFUND_STATUSES,
@@ -22,6 +26,8 @@
         'tenant' => ['active' => ['نشطة'], 'inactive' => ['غير نشطة']],
         'demo' => $L::DEMO_STATUSES,
         'announcement' => ['info' => ['معلومات'], 'warning' => ['تحذير'], 'emergency' => ['طوارئ'], 'critical' => ['عاجل'], 'celebration' => ['احتفال'], 'promo' => ['ترويجي']],
+        'gwrefund' => $L::GATEWAY_REFUND_STATUSES, 'webhook' => $L::WEBHOOK_STATUSES,
+        'gwsession' => $L::GATEWAY_SESSION_STATUSES, 'gwcall' => $L::GATEWAY_CALL_OUTCOMES,
     ];
     $icons = ['success' => 'check-circle-fill', 'warning' => 'exclamation-triangle-fill', 'error' => 'x-circle-fill', 'info' => 'info-circle-fill'];
     $key = is_bool($status) ? ($status ? 'on' : 'off') : (string) $status;

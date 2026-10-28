@@ -89,6 +89,82 @@ class AdminLabels
         'wallet' => 'المحفظة',
     ];
 
+    /** Payment timeline (payment_events.type). */
+    public const PAYMENT_EVENTS = [
+        'created' => 'أُنشئت الدفعة',
+        'session_created' => 'فُتحت جلسة دفع لدى البوابة',
+        'checkout_opened' => 'فُتحت صفحة الدفع',
+        'gateway_checked' => 'استُعلم من البوابة',
+        'webhook_received' => 'وصل إشعار من البوابة',
+        'completed' => 'اكتملت الدفعة',
+        'cancelled' => 'أُلغيت الدفعة',
+        'failed' => 'فشلت الدفعة',
+        'refunded' => 'استُردت الدفعة',
+        'late_capture' => 'دُفع المبلغ بعد الإلغاء',
+        'amount_mismatch' => 'المبلغ المدفوع لا يطابق الطلب',
+        'gateway_refund_succeeded' => 'أُعيد المبلغ إلى البطاقة',
+        'gateway_refund_retry' => 'تُعاد محاولة الاسترداد',
+        'gateway_refund_failed' => 'فشل الاسترداد إلى البطاقة',
+        'gateway_refund_needs_review' => 'الاسترداد يحتاج إلى مراجعة',
+        'check_requested' => 'طُلب التحقق يدويًا',
+        'review_cleared' => 'رُوجعت الدفعة',
+        'webhook_replayed' => 'أُعيدت معالجة إشعار',
+        'duplicate_capture' => 'دُفع المبلغ مرتين',
+        'points_retaken' => 'خُصمت النقاط مجددًا',
+        'points_retake_failed' => 'تعذّر خصم النقاط مجددًا',
+    ];
+
+    public const PAYMENT_EVENT_SOURCES = [
+        'api' => 'التطبيق',
+        'redirect' => 'صفحة الدفع',
+        'webhook' => 'إشعار البوابة',
+        'reconciler' => 'المطابقة التلقائية',
+        'poll' => 'استعلام التطبيق',
+        'admin' => 'لوحة التحكم',
+        'scheduler' => 'المهام المجدولة',
+        'system' => 'النظام',
+    ];
+
+    public const GATEWAY_REFUND_STATUSES = [
+        'pending' => ['بانتظار الإرسال', 'warning'],
+        'processing' => ['قيد الإرسال', 'info'],
+        'succeeded' => ['أُعيد إلى البطاقة', 'success'],
+        'failed' => ['فشل', 'error'],
+        'needs_review' => ['يحتاج إلى مراجعة', 'warning'],
+    ];
+
+    public const WEBHOOK_STATUSES = [
+        'received' => ['مستلم', 'info'],
+        'processed' => ['عولج', 'success'],
+        'ignored' => ['لا يخص دفعة', 'neutral'],
+        'failed' => ['فشلت معالجته', 'error'],
+        'rejected' => ['مرفوض', 'error'],
+    ];
+
+    public const GATEWAY_SESSION_STATUSES = [
+        'open' => ['مفتوحة', 'info'],
+        'paid' => ['مدفوعة', 'success'],
+        'cancelled' => ['ملغاة', 'neutral'],
+        'expired' => ['منتهية', 'neutral'],
+    ];
+
+    public const GATEWAY_CALL_OUTCOMES = [
+        'ok' => ['نجح', 'success'],
+        'client_error' => ['رُفض الطلب', 'warning'],
+        'server_error' => ['خطأ لدى البوابة', 'error'],
+        'network_error' => ['تعذّر الاتصال', 'error'],
+        'circuit_open' => ['أُوقف مؤقتًا', 'neutral'],
+    ];
+
+    public const PAYMENT_REVIEW_REASONS = [
+        'amount_mismatch' => 'المبلغ المدفوع لا يطابق الطلب',
+        'refund_failed' => 'فشل الاسترداد إلى البطاقة',
+        'refund_needs_review' => 'نتيجة الاسترداد غير مؤكدة',
+        'duplicate_capture' => 'دُفع المبلغ مرتين عبر جلستين',
+        'session_unverifiable' => 'تعذّر التحقق من جلسة الدفع لدى البوابة',
+        'late_capture_points' => 'دُفع بعد الإلغاء ولم يكفِ رصيد النقاط لخصمها مجددًا',
+    ];
+
     public const VENDOR_STAFF_ROLES = [
         'staff' => 'موظف',
         'manager' => 'مدير',

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class ContentCollection extends Model
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
     use LocalizedContent;
 
     public const LAYOUTS = ['list', 'grid', 'logos', 'cards'];

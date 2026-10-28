@@ -41,6 +41,13 @@ class TopupController extends Controller
     public function show(Request $request, int $id)
     {
         $topup = WalletTopup::with('payment')->where('user_id', $request->user()->id)->findOrFail($id);
+        if ($topup->status === 'pending' && $topup->payment) {
+            // Thawani: ask the gateway now (throttled) instead of waiting for the webhook.
+            $payment = app(\App\Services\Payments\ThawaniCheckout::class)->checkIfStale($topup->payment);
+            if ($payment->status !== $topup->payment->status) {
+                $topup->refresh()->load('payment');
+            }
+        }
 
         return response()->json(['success' => true, 'data' => new TopupResource($topup)]);
     }

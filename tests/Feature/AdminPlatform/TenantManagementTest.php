@@ -207,6 +207,38 @@ class TenantManagementTest extends AdminPlatformTestCase
     }
 
     /** Values a browser would submit for the given form (no file inputs). */
+    public function test_platform_admin_sets_thawani_per_tenant(): void
+    {
+        $super = $this->superAdmin();
+        $tenant = $this->otherTenant('thawani-org');
+
+        $html = $this->actingAs($super)->get(route('admin.tenants.edit', $tenant))->assertOk()
+            ->assertSee('Thawani Pay')
+            ->assertSee(route('payments.webhooks.thawani', ['tenant' => 'thawani-org']))
+            ->getContent();
+        $data = $this->formData($html, 'tenantForm');
+        $data['payments_driver'] = 'thawani';
+        $data['thawani_mode'] = 'production';
+        $data['gateway']['thawani'] = ['secret_key' => 'sk_live_value', 'publishable_key' => 'pk_live_value', 'webhook_secret' => 'wh_live_value'];
+
+        $this->actingAs($super)->put(route('admin.tenants.update', $tenant), $data)->assertSessionHasNoErrors();
+
+        $tenant->refresh();
+        $this->assertSame('thawani', $tenant->setting('payments.driver'));
+        $this->assertSame('production', $tenant->setting('payments.thawani.mode'));
+        $this->assertSame('sk_live_value', $tenant->gatewayCredential('thawani', 'secret_key'));
+        // Encrypted at rest.
+        $this->assertStringNotContainsString('sk_live_value', (string) \DB::table('tenants')->where('id', $tenant->id)->value('gateway_credentials'));
+
+        // Back to the platform default: the keys are removed, not stored empty.
+        $data = $this->formData($this->actingAs($super)->get(route('admin.tenants.edit', $tenant))->getContent(), 'tenantForm');
+        $this->assertSame('thawani', $data['payments_driver']);
+        $data['payments_driver'] = '';
+        $data['thawani_mode'] = '';
+        $this->actingAs($super)->put(route('admin.tenants.update', $tenant), $data)->assertSessionHasNoErrors();
+        $this->assertNull(data_get($tenant->fresh()->settings, 'payments'));
+    }
+
     private function formData(string $html, string $formId): array
     {
         $dom = new \DOMDocument();

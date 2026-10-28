@@ -27,6 +27,20 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Fewer writes per API request (docs/caching.md).
+        \Laravel\Sanctum\Sanctum::usePersonalAccessTokenModel(\App\Models\PersonalAccessToken::class);
+
+        // An uploaded / converted / deleted image changes what the public
+        // API returns for its owner: drop that tenant's cached responses.
+        $bumpForMedia = function (\Spatie\MediaLibrary\MediaCollections\Models\Media $media) {
+            $tenantId = $media->model()->withoutGlobalScopes()->value('tenant_id');
+            if ($tenantId) {
+                \App\Support\PublicApiCache::bumpAfterCommit((int) $tenantId);
+            }
+        };
+        \Spatie\MediaLibrary\MediaCollections\Models\Media::saved($bumpForMedia);
+        \Spatie\MediaLibrary\MediaCollections\Models\Media::deleted($bumpForMedia);
+
         // Behind a TLS-terminating proxy (Coolify's Traefik / Caddy) the
         // proxy's X-Forwarded-Proto is trusted (config/trustedproxy.php);
         // this is the safety net so generated URLs, redirects and signed
@@ -87,5 +101,7 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         RateLimiter::for('money', fn (Request $r) => Limit::perMinute(30)->by('money:'.($r->user()?->id ?: $r->ip())));
+        // Gateway webhooks: generous (bursts at peak), per source IP.
+        RateLimiter::for('payment-webhooks', fn (Request $r) => Limit::perMinute(1200)->by('pay-webhook:'.$r->ip()));
     }
 }

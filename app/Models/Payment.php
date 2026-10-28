@@ -29,6 +29,8 @@ class Payment extends Model
         'payment_type',
         'method',
         'gateway',
+        'gateway_session_id',
+        'gateway_payment_id',
         'payable_id',
         'payable_type',
         'amount',
@@ -42,6 +44,11 @@ class Payment extends Model
         'paid_at',
         'fulfilled_at',
         'refunded_at',
+        'next_check_at',
+        'last_checked_at',
+        'check_count',
+        'needs_review',
+        'review_reason',
     ];
 
     protected $casts = [
@@ -51,6 +58,10 @@ class Payment extends Model
         'paid_at' => 'datetime',
         'fulfilled_at' => 'datetime',
         'refunded_at' => 'datetime',
+        'next_check_at' => 'datetime',
+        'last_checked_at' => 'datetime',
+        'check_count' => 'integer',
+        'needs_review' => 'boolean',
     ];
 
     protected $hidden = ['bank_muscat_response'];
@@ -68,6 +79,36 @@ class Payment extends Model
     public function tickets()
     {
         return $this->hasMany(Ticket::class, 'transaction_id', 'transaction_id');
+    }
+
+    public function gatewaySessions()
+    {
+        return $this->hasMany(PaymentGatewaySession::class)->latest('id');
+    }
+
+    public function events()
+    {
+        return $this->hasMany(PaymentEvent::class)->orderBy('id');
+    }
+
+    public function gatewayCalls()
+    {
+        return $this->hasMany(PaymentGatewayCall::class)->orderBy('id');
+    }
+
+    public function webhookEvents()
+    {
+        return $this->hasMany(PaymentWebhookEvent::class)->orderBy('id');
+    }
+
+    public function gatewayRefund()
+    {
+        return $this->hasOne(PaymentRefund::class);
+    }
+
+    public function isPending(): bool
+    {
+        return in_array($this->status, ['pending', 'processing'], true);
     }
 
     public function isCompleted(): bool

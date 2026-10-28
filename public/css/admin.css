@@ -703,3 +703,18 @@ html[dir="rtl"] .fc .fc-list-event-time { direction: ltr; text-align: right; }
   .section-nav.flex-wrap { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; }
   .section-nav.flex-wrap::-webkit-scrollbar { display: none; }
 }
+
+/* Payment timeline (admin/payments/_gateway). */
+.x-timeline { list-style: none; margin: 0; padding: 0; }
+.x-timeline li { position: relative; padding-inline-start: 24px; padding-bottom: 14px; }
+.x-timeline li::before { content: ""; position: absolute; inset-inline-start: 4px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.x-timeline li::after { content: ""; position: absolute; inset-inline-start: 8.5px; top: 21px; bottom: 0; width: 1px; background: var(--hairline); }
+.x-timeline li:last-child { padding-bottom: 0; }
+.x-timeline li:last-child::after { display: none; }
+.x-timeline li.tl-error::before { background: var(--error); box-shadow: 0 0 0 3px var(--error-container); }
+.x-timeline li.tl-muted::before { background: var(--outline-strong); box-shadow: 0 0 0 3px var(--surface-low); }
+.x-timeline .tl-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.x-timeline .tl-title { font-weight: 700; color: var(--text); }
+.x-timeline .tl-meta { color: var(--muted); font-size: 12.5px; }
+.x-timeline .tl-data { margin-top: 4px; font-size: 12px; color: var(--muted); word-break: break-word; }
+.x-json { margin: 6px 0 0; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface-low); font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; direction: ltr; text-align: left; }

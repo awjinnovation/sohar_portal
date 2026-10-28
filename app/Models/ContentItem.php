@@ -17,6 +17,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class ContentItem extends Model implements HasMedia
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
     use InteractsWithMedia;
     use LocalizedContent;
 

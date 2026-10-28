@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Announcement extends Model
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
 
     /**
      * Banner types offered by the admin. The app maps warning → warning,

@@ -3,28 +3,34 @@
 namespace App\Services\Payments;
 
 use App\Models\Payment;
+use App\Models\Tenant;
+use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\URL;
 use RuntimeException;
 
 /**
- * Chooses the gateway driver (config('payments.driver')) and builds the
- * payment_url handed to the app. The URL is a temporary *signed* link to
- * our own redirect page, which then auto-posts to Bank Muscat or — with
- * PAYMENT_DRIVER=fake — shows "Simulate success / failure" buttons.
+ * Chooses the gateway driver and builds the payment_url handed to the app.
+ * The driver is the tenant's `payments.driver` setting (Admin → Tenants →
+ * payment gateway), else config('payments.driver'); a payment keeps the
+ * driver it was created with. The URL is a temporary *signed* link to our
+ * own redirect page, which opens a Thawani session and redirects there,
+ * auto-posts to Bank Muscat, or — with the fake driver — shows "Simulate
+ * success / failure" buttons.
  */
 class PaymentGatewayManager
 {
-    public const DRIVERS = ['bankmuscat', 'fake'];
+    public const DRIVERS = ['thawani', 'bankmuscat', 'fake'];
 
-    public function driver(): string
+    public function driver(?Tenant $tenant = null): string
     {
-        $driver = (string) config('payments.driver', 'bankmuscat');
+        $tenant ??= app(TenantContext::class)->get();
+        $driver = (string) ($tenant?->setting('payments.driver') ?: config('payments.driver', 'thawani'));
 
         if (! in_array($driver, self::DRIVERS, true)) {
-            throw new RuntimeException("Unknown PAYMENT_DRIVER [$driver]");
+            throw new RuntimeException("Unknown payment driver [$driver]");
         }
         if ($driver === 'fake' && app()->environment('production')) {
-            throw new RuntimeException('PAYMENT_DRIVER=fake is not allowed in production');
+            throw new RuntimeException('The fake payment driver is not allowed in production');
         }
 
         return $driver;

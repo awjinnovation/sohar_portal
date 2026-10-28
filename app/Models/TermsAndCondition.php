@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class TermsAndCondition extends Model
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
 
     protected $fillable = [
         'title',

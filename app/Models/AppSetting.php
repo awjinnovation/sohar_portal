@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 class AppSetting extends Model
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
 
     protected $fillable = [
         'setting_key',

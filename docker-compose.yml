@@ -6,8 +6,10 @@
 #
 #   app        Laravel web (PHP-FPM + NGINX on 8080). Runs migrations and
 #              caches on every deploy (serversideup Laravel automations).
-#   worker     queue:work (SMS jobs, …)          same image, no migrations
-#   scheduler  schedule:work (expiries, pruning) same image, no migrations
+#   worker     queue:work payments,default (Thawani webhooks / reconcile /
+#              refunds first, then SMS …)       same image, no migrations
+#   scheduler  schedule:work (payments:reconcile every minute, expiries,
+#              pruning)                          same image, no migrations
 #   mysql      MySQL 8.4 (utf8mb4)
 #   redis      Redis 7 (cache, sessions, queue; append-only file)
 #
@@ -79,7 +81,15 @@ x-laravel-env: &laravel-env
   DEMO_REQUEST_CC: ${DEMO_REQUEST_CC:-}
   DEMO_REQUEST_CONFIRMATION: ${DEMO_REQUEST_CONFIRMATION:-true}
   # --- Payments (Bank Muscat) --------------------------------------------
-  PAYMENT_DRIVER: ${PAYMENT_DRIVER:-bankmuscat}
+  PAYMENT_DRIVER: ${PAYMENT_DRIVER:-thawani}
+  THAWANI_MODE: ${THAWANI_MODE:-uat}
+  THAWANI_SECRET_KEY: ${THAWANI_SECRET_KEY:-}
+  THAWANI_PUBLISHABLE_KEY: ${THAWANI_PUBLISHABLE_KEY:-}
+  THAWANI_WEBHOOK_SECRET: ${THAWANI_WEBHOOK_SECRET:-}
+  PAYMENT_GIVE_UP_AFTER_MINUTES: ${PAYMENT_GIVE_UP_AFTER_MINUTES:-120}
+  PAYMENT_LOG_RETENTION_DAYS: ${PAYMENT_LOG_RETENTION_DAYS:-400}
+  # Must exceed the longest job timeout (payment jobs: 150 s).
+  REDIS_QUEUE_RETRY_AFTER: ${REDIS_QUEUE_RETRY_AFTER:-300}
   PAYMENT_LINK_TTL_MINUTES: ${PAYMENT_LINK_TTL_MINUTES:-60}
   PAY_LINK_BASE_URL: ${PAY_LINK_BASE_URL:-}
   PAY_TOKEN_TTL_SECONDS: ${PAY_TOKEN_TTL_SECONDS:-60}
@@ -112,8 +122,20 @@ x-laravel-env: &laravel-env
   TENANCY_DEFAULT_TENANT: ${TENANCY_DEFAULT_TENANT:-north-batinah}
   TENANCY_CONFIG_CACHE_TTL: ${TENANCY_CONFIG_CACHE_TTL:-300}
   # --- serversideup/php --------------------------------------------------
+  # OPcache: image defaults (256 MB, no timestamp checks; a deploy is a new
+  # container). PHP-FPM sized for the 16:00–01:00 peak (docs/caching.md):
+  # pre-forked workers instead of the image's "ondemand" (no fork delay
+  # when a burst arrives), recycled every 1000 requests.
   PHP_OPCACHE_ENABLE: "1"
   PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-256M}
+  PHP_FPM_PM_CONTROL: ${PHP_FPM_PM_CONTROL:-dynamic}
+  PHP_FPM_PM_MAX_CHILDREN: ${PHP_FPM_PM_MAX_CHILDREN:-40}
+  PHP_FPM_PM_START_SERVERS: ${PHP_FPM_PM_START_SERVERS:-12}
+  PHP_FPM_PM_MIN_SPARE_SERVERS: ${PHP_FPM_PM_MIN_SPARE_SERVERS:-8}
+  PHP_FPM_PM_MAX_SPARE_SERVERS: ${PHP_FPM_PM_MAX_SPARE_SERVERS:-20}
+  PHP_FPM_PM_MAX_REQUESTS: ${PHP_FPM_PM_MAX_REQUESTS:-1000}
+  # Shared public API response cache (config/api_cache.php).
+  API_CACHE_ENABLED: ${API_CACHE_ENABLED:-true}
   TRUSTED_PROXY: "off"
 
 x-app-storage: &app-storage
@@ -125,7 +147,9 @@ x-app-storage: &app-storage
 x-worker: &worker
   build: *build
   restart: unless-stopped
-  command: ["php", "/var/www/html/artisan", "queue:work", "redis", "--tries=3", "--max-time=3600", "--sleep=3"]
+  # `payments` first (webhooks, reconciliation, refunds), then everything else.
+  # Payment jobs set their own tries/backoff; --tries applies to the others.
+  command: ["php", "/var/www/html/artisan", "queue:work", "redis", "--queue=payments,default", "--tries=3", "--max-time=3600", "--sleep=3"]
   # queue:work finishes the running job on SIGTERM, then exits.
   stop_signal: SIGTERM
   stop_grace_period: 60s
@@ -214,6 +238,10 @@ services:
       - --collation-server=utf8mb4_unicode_ci
       - --default-time-zone=+00:00
       - --skip-name-resolve
+      # Peak sizing (docs/caching.md): keep the working set in memory.
+      - --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-1G}
+      - --max-connections=${MYSQL_MAX_CONNECTIONS:-300}
+      - --innodb-redo-log-capacity=${MYSQL_REDO_LOG_CAPACITY:-512M}
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-mawsim}
       MYSQL_USER: ${SERVICE_USER_MYSQL}
@@ -232,9 +260,12 @@ services:
   redis:
     image: redis:7.4.11-alpine3.21
     restart: unless-stopped
-    command: ["sh", "-c", "exec redis-server --appendonly yes --appendfsync everysec --requirepass \"$$REDIS_PASSWORD\""]
+    # Memory cap with volatile-lru: only keys with a TTL (cache entries,
+    # rate limits, sessions) are evicted under pressure, never queued jobs.
+    command: ["sh", "-c", "exec redis-server --appendonly yes --appendfsync everysec --maxmemory \"$$REDIS_MAXMEMORY\" --maxmemory-policy volatile-lru --requirepass \"$$REDIS_PASSWORD\""]
     environment:
       REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-768mb}
     volumes:
       - redis-data:/data
     healthcheck:

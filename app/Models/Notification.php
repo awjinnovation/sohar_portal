@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Notification extends Model
 {
     use \App\Tenancy\BelongsToTenant;
+    use \App\Models\Concerns\BustsPublicApiCache;
 
     protected $fillable = [
         'user_id',
@@ -31,5 +32,11 @@ class Notification extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** Only public notifications are in the shared API cache (personal ones are written all the time). */
+    public function affectsPublicApiCache(): bool
+    {
+        return (bool) ($this->is_public || $this->getOriginal('is_public'));
     }
 }

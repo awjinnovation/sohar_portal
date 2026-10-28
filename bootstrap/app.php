@@ -50,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'staff' => \App\Http\Middleware\StaffMiddleware::class,
             'merchant' => \App\Http\Middleware\MerchantMiddleware::class,
             'module' => \App\Http\Middleware\EnsureModuleEnabled::class,
+            'cache.api' => \App\Http\Middleware\CachePublicApi::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,

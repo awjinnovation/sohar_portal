@@ -159,6 +159,12 @@ class PaymentController extends Controller
             ->firstOrFail();
     }
 
+    /** A pending Thawani payment is checked with Thawani (throttled) before answering a poll. */
+    private function fresh(Payment $payment): Payment
+    {
+        return app(\App\Services\Payments\ThawaniCheckout::class)->checkIfStale($payment);
+    }
+
     private function statusPayload(Payment $payment): array
     {
         $tenant = $this->context->get();
@@ -181,7 +187,7 @@ class PaymentController extends Controller
     public function confirm(Request $request)
     {
         $request->validate(['transaction_id' => 'required|string']);
-        $payment = $this->ownedPayment($request, $request->input('transaction_id'));
+        $payment = $this->fresh($this->ownedPayment($request, $request->input('transaction_id')));
         $completed = $payment->status === 'completed';
 
         return response()->json([
@@ -194,7 +200,7 @@ class PaymentController extends Controller
     /** GET /payments/status/{transactionId} — owner only. */
     public function checkStatus(Request $request, string $transactionId)
     {
-        $payment = $this->ownedPayment($request, $transactionId);
+        $payment = $this->fresh($this->ownedPayment($request, $transactionId));
 
         return response()->json(['success' => true, 'data' => $this->statusPayload($payment)] + $this->statusPayload($payment));
     }
@@ -210,7 +216,11 @@ class PaymentController extends Controller
         $payment = $this->ownedPayment($request, $request->input('transaction_id') ?? $request->input('order_id'));
 
         if ($payment->status === 'pending') {
-            $payment = $fulfillment->fail($payment, 'cancelled');
+            // Thawani: asked first and its sessions cancelled, so the open
+            // payment page cannot be paid after the app gave up on it.
+            $payment = $payment->gateway === \App\Services\Payments\Gateway\ThawaniGateway::NAME
+                ? app(\App\Services\Payments\ThawaniCheckout::class)->cancel($payment, 'api', 'cancelled_in_app')
+                : $fulfillment->fail($payment, 'cancelled', [], 'api', ['reason' => 'cancelled_in_app']);
         }
 
         return response()->json([
