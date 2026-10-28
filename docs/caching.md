@@ -155,6 +155,33 @@ Also add a second queue worker (`worker-2: *worker`, see `docker-compose.yml`).
 Tested and rejected: persistent Redis connections (`REDIS_PERSISTENT=true`)
 used ~40 % more PHP CPU at the same load, so they stay off.
 
+## Connections: no port per request
+
+PHP-FPM opens its database and Redis connections per request and closes
+them at the end. Over TCP, Linux keeps each closed connection's port for 60
+seconds (TIME_WAIT), and a container has 28,232 source ports per
+destination: about 470 new connections a second. On staging (28 Oct 2026)
+that stopped a test at ~2,000 visitors (~450 requests/s) with `Cannot assign
+requested address`, while the server used 10 % of its CPU.
+
+- **MySQL and Redis use Unix sockets** (`docker-compose.yml`: volumes
+  `mysql-socket`, `redis-socket`; `DB_SOCKET`, `REDIS_HOST`, `REDIS_PORT=0`).
+  No ports, no DNS lookup, nothing kept between requests. For a database on
+  another server, set `DB_SOCKET=` and `REDIS_HOST=redis`, `REDIS_PORT=6379`.
+- **The tenant lookup is cached** (`Tenant::findBySlug`, 60 s, cleared when
+  the tenant is saved), so a response from the API cache runs no SQL at all.
+- **Safety net** for the remaining TCP (Thawani, SMS, AI): app, worker and
+  scheduler get 55,000 source ports and `tcp_tw_reuse` (`x-net-sysctls`).
+
+Local Docker, production image, 800 requests/s for 90 s with a large
+server's TIME_WAIT limit:
+
+| | TCP (before) | Sockets (after) |
+|---|---|---|
+| Failed requests | 32 % (`Cannot assign requested address`) | 0 % |
+| Ports held for MySQL / Redis | 28,232 / 28,231 (all) | 0 / 0 |
+| Median / p95 / p99 | 4 / 7 / 13 ms | 2 / 3 / 6 ms |
+
 ## Not cached on purpose
 
 - Ticket checkout, quotes, payments, wallet, points, tickets: always live.

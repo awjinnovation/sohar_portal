@@ -49,6 +49,12 @@ x-laravel-env: &laravel-env
   DB_CONNECTION: mysql
   DB_HOST: mysql
   DB_PORT: "3306"
+  # Same server: MySQL and Redis are reached through Unix sockets (shared
+  # volumes below), not TCP. A TCP connection per request holds a port for
+  # 60 s after it closes, and at ~470 requests/s the container ran out of
+  # ports (docs/caching.md). For a database on another server: DB_SOCKET=""
+  # and REDIS_HOST=redis with REDIS_PORT=6379.
+  DB_SOCKET: ${DB_SOCKET-/var/run/mysqld/mysqld.sock}
   DB_DATABASE: ${DB_DATABASE:-mawsim}
   DB_USERNAME: ${SERVICE_USER_MYSQL}
   DB_PASSWORD: ${SERVICE_PASSWORD_MYSQL}
@@ -56,8 +62,8 @@ x-laravel-env: &laravel-env
   DB_COLLATION: utf8mb4_unicode_ci
   # --- Redis: cache, sessions, queue -------------------------------------
   REDIS_CLIENT: phpredis
-  REDIS_HOST: redis
-  REDIS_PORT: "6379"
+  REDIS_HOST: ${REDIS_HOST:-/var/run/redis/redis.sock}
+  REDIS_PORT: ${REDIS_PORT:-0}            # 0 = the socket (phpredis); 6379 with REDIS_HOST=redis
   REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
   REDIS_PREFIX: ${REDIS_PREFIX:-mawsim_}
   CACHE_STORE: redis
@@ -138,8 +144,17 @@ x-laravel-env: &laravel-env
   API_CACHE_ENABLED: ${API_CACHE_ENABLED:-true}
   TRUSTED_PROXY: "off"
 
+# storage/app (uploads), and the MySQL and Redis sockets.
 x-app-storage: &app-storage
   - app-storage:/var/www/html/storage/app
+  - mysql-socket:/var/run/mysqld
+  - redis-socket:/var/run/redis
+
+# Safety net for the TCP that is left (Thawani, SMS, AI): 55,000 source ports
+# instead of 28,000, and ports in TIME_WAIT reused for new connections.
+x-net-sysctls: &net-sysctls
+  net.ipv4.ip_local_port_range: "10240 65535"
+  net.ipv4.tcp_tw_reuse: "1"
 
 # Queue worker (SMS jobs, …). To scale out, add another service with the same
 # definition, e.g. `worker-2: *worker` under services (Coolify names every
@@ -159,6 +174,7 @@ x-worker: &worker
     AUTORUN_LARAVEL_MIGRATION: "false"
     AUTORUN_LARAVEL_STORAGE_LINK: "false"
   volumes: *app-storage
+  sysctls: *net-sysctls
   depends_on:
     app:
       condition: service_healthy
@@ -189,6 +205,7 @@ services:
       AUTORUN_LARAVEL_STORAGE_LINK: "false"
       AUTORUN_LARAVEL_OPTIMIZE: "true"
     volumes: *app-storage
+    sysctls: *net-sysctls
     depends_on:
       mysql:
         condition: service_healthy
@@ -220,6 +237,7 @@ services:
       AUTORUN_LARAVEL_MIGRATION: "false"
       AUTORUN_LARAVEL_STORAGE_LINK: "false"
     volumes: *app-storage
+    sysctls: *net-sysctls
     depends_on:
       app:
         condition: service_healthy
@@ -250,6 +268,7 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - mysql-backups:/backups
+      - mysql-socket:/var/run/mysqld
     healthcheck:
       test: ["CMD-SHELL", "MYSQL_PWD=\"$${MYSQL_PASSWORD}\" mysql -h 127.0.0.1 -u \"$${MYSQL_USER}\" -e 'SELECT 1' \"$${MYSQL_DATABASE}\" > /dev/null"]
       interval: 10s
@@ -262,12 +281,13 @@ services:
     restart: unless-stopped
     # Memory cap with volatile-lru: only keys with a TTL (cache entries,
     # rate limits, sessions) are evicted under pressure, never queued jobs.
-    command: ["sh", "-c", "exec redis-server --appendonly yes --appendfsync everysec --maxmemory \"$$REDIS_MAXMEMORY\" --maxmemory-policy volatile-lru --requirepass \"$$REDIS_PASSWORD\""]
+    command: ["sh", "-c", "exec redis-server --appendonly yes --appendfsync everysec --maxmemory \"$$REDIS_MAXMEMORY\" --maxmemory-policy volatile-lru --requirepass \"$$REDIS_PASSWORD\" --unixsocket /var/run/redis/redis.sock --unixsocketperm 777"]
     environment:
       REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
       REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-768mb}
     volumes:
       - redis-data:/data
+      - redis-socket:/var/run/redis
     healthcheck:
       test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" redis-cli ping | grep -q PONG"]
       interval: 10s
@@ -280,3 +300,5 @@ volumes:
   mysql-data:
   mysql-backups:
   redis-data:
+  mysql-socket:
+  redis-socket:

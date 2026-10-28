@@ -36,11 +36,24 @@ class Tenant extends Model
     {
         static::saved(function (Tenant $tenant) {
             $tenant->resolvedSettings = null;
-            Cache::forget(self::cacheKey($tenant->slug));
+            self::forgetSlugs([$tenant->slug, $tenant->getOriginal('slug')]);
             Cache::forget('tenant_config_'.$tenant->id);
             // Settings (locale, currency, modules…) shape every API response.
             \App\Support\PublicApiCache::bumpAfterCommit($tenant->id);
         });
+        static::deleted(fn (Tenant $tenant) => self::forgetSlugs([$tenant->slug]));
+    }
+
+    /** Now and again after the transaction commits, so a request cannot re-cache the old row meanwhile. */
+    private static function forgetSlugs(array $slugs): void
+    {
+        $forget = function () use ($slugs) {
+            foreach (array_unique(array_filter($slugs)) as $slug) {
+                Cache::forget(self::cacheKey($slug));
+            }
+        };
+        $forget();
+        \Illuminate\Support\Facades\DB::afterCommit($forget);
     }
 
     public static function cacheKey(string $slug): string
@@ -54,7 +67,12 @@ class Tenant extends Model
             return null;
         }
 
-        return static::where('slug', $slug)->first();
+        // Every API request resolves its tenant: cached for 60 s (cleared when
+        // the tenant is saved) so a request answered from the API cache needs
+        // no MySQL connection at all. The row is cached, not the model.
+        $row = Cache::remember(self::cacheKey($slug), 60, fn () => static::where('slug', $slug)->first()?->getAttributes() ?? false);
+
+        return $row ? (new static)->newFromBuilder($row) : null;
     }
 
     public function isActive(): bool

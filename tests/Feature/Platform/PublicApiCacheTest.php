@@ -152,6 +152,30 @@ class PublicApiCacheTest extends TestCase
     }
 
     #[Test]
+    public function a_cached_response_needs_no_database_query(): void
+    {
+        $this->makeEvent();
+        $this->get_('/api/v1/events')->assertHeader('X-Cache', 'MISS');
+
+        $queries = 0;
+        DB::listen(function () use (&$queries) {
+            $queries++;
+        });
+        $this->get_('/api/v1/events')->assertOk()->assertHeader('X-Cache', 'HIT');
+        $this->assertSame(0, $queries, 'tenant lookup and response both come from the cache');
+    }
+
+    #[Test]
+    public function a_deactivated_tenant_is_refused_on_the_next_request(): void
+    {
+        $this->get_('/api/v1/categories')->assertOk();
+
+        $this->tenant->update(['status' => 'suspended']);
+
+        $this->get_('/api/v1/categories')->assertNotFound()->assertJsonPath('code', 'TENANT_NOT_FOUND');
+    }
+
+    #[Test]
     public function the_cache_can_be_switched_off(): void
     {
         config(['api_cache.enabled' => false]);
