@@ -122,6 +122,25 @@ class OtpTest extends TestCase
     }
 
     #[Test]
+    public function the_per_ip_limit_is_lifted_only_with_a_test_code_outside_production(): void
+    {
+        $this->app['env'] = 'staging';
+        config(['auth.otp.test_code' => '123456']);
+        for ($i = 0; $i < 25; $i++) {
+            $phone = '968000001'.str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+            $this->postJson('/api/v1/auth/send-otp', ['phone_number' => $phone])->assertOk();
+            $this->postJson('/api/v1/auth/verify-otp', ['phone_number' => $phone, 'otp' => '123456'])->assertOk();
+        }
+
+        // Production ignores the test code and keeps 20 sends per hour per IP.
+        $this->app['env'] = 'production';
+        for ($i = 0; $i < 20; $i++) {
+            $this->postJson('/api/v1/auth/send-otp', ['phone_number' => '968000002'.str_pad((string) $i, 2, '0', STR_PAD_LEFT)])->assertOk();
+        }
+        $this->postJson('/api/v1/auth/send-otp', ['phone_number' => '96800000399'])->assertStatus(429);
+    }
+
+    #[Test]
     public function review_code_that_is_not_six_digits_is_ignored(): void
     {
         config(['auth.otp.review_phone' => '96890000099', 'auth.otp.review_code' => '1234']);

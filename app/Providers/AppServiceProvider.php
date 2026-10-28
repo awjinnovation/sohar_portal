@@ -79,18 +79,23 @@ class AppServiceProvider extends ServiceProvider
     {
         $phone = fn (Request $r) => preg_replace('/\D/', '', (string) $r->input('phone_number'));
 
+        // The per-IP caps guard against SMS cost and code guessing. With a fixed
+        // test code (staging / test servers: no SMS, the code is known) they
+        // are lifted, so a load test can sign in many accounts from one machine.
+        $perIp = fn (Limit $limit) => (! app()->environment('production') && config('auth.otp.test_code')) ? null : $limit;
+
         // send-otp: 1 per 2 minutes and 5 per hour per phone, 20 per hour per IP.
-        RateLimiter::for('otp-send', fn (Request $r) => [
+        RateLimiter::for('otp-send', fn (Request $r) => array_values(array_filter([
             Limit::perMinutes(2, 1)->by('otp-send-min:'.$phone($r)),
             Limit::perHour(5)->by('otp-send-hour:'.$phone($r)),
-            Limit::perHour(20)->by('otp-send-ip:'.$r->ip()),
-        ]);
+            $perIp(Limit::perHour(20)->by('otp-send-ip:'.$r->ip())),
+        ])));
 
         // verify-otp: 10 per 10 minutes per phone, 30 per hour per IP.
-        RateLimiter::for('otp-verify', fn (Request $r) => [
+        RateLimiter::for('otp-verify', fn (Request $r) => array_values(array_filter([
             Limit::perMinutes(10, 10)->by('otp-verify:'.$phone($r)),
-            Limit::perHour(30)->by('otp-verify-ip:'.$r->ip()),
-        ]);
+            $perIp(Limit::perHour(30)->by('otp-verify-ip:'.$r->ip())),
+        ])));
 
         // Landing-page demo form: 5 per hour and 20 per day per IP.
         RateLimiter::for('demo-requests', fn (Request $r) => [
