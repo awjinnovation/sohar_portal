@@ -59,6 +59,8 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
+                // Reuse one connection per PHP worker instead of opening one per request (DB_PERSISTENT=true).
+                PDO::ATTR_PERSISTENT => env('DB_PERSISTENT', false),
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
