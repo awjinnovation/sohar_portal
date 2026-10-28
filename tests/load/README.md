@@ -54,3 +54,41 @@ k6 run --vus 1 --iterations 2 -e THINK=0 visitors.js
 server's reverse proxy). Use `https://` in `BASE` if the proxy only answers
 HTTPS (certificate checks are skipped with `HOST_IP`). The run stops early
 only if more than half of the requests fail.
+
+### Signed-in visitors (staging / test server only)
+
+OTP sign-in allows 20 codes and 30 checks per hour per IP, so a test from
+one machine cannot log in hundreds of users. Create ready accounts with API
+tokens on the server instead (`loadtest:users` refuses `APP_ENV=production`):
+
+```bash
+# On the server: 300 users 96800000000… with 5.000 OMR wallet credit each
+docker exec -i <app-container> php artisan loadtest:users north-batinah 300 --balance=5000 > tokens.json
+
+# Then, next to visitors.js:
+k6 run -e BASE=https://v2-mawsim.awj.om -e USERS=300 -e TOKENS=tokens.json visitors.js
+
+# Afterwards: delete the tokens (the users stay)
+docker exec -i <app-container> php artisan loadtest:users north-batinah --revoke
+```
+
+Each visitor slot uses its own account: the home screen adds the wallet,
+transactions and unread count, and every round opens one personal screen
+(my tickets, notifications, wallet, points).
+
+### Bookings
+
+`BOOK` (signed-in visitors only) is the chance per round that a visitor books
+one ticket and then opens *my tickets*:
+
+```bash
+# Wallet bookings (accounts need credit: loadtest:users … --balance=5000)
+k6 run -e BASE=… -e TOKENS=tokens.json -e USERS=300 -e BOOK=0.2 -e PAY=wallet visitors.js
+
+# Card bookings through the fake gateway (test servers with PAYMENT_DRIVER=fake):
+# the visitor opens the payment page and presses "Simulate success".
+k6 run -e BASE=… -e TOKENS=tokens.json -e USERS=300 -e BOOK=0.2 -e PAY=mixed visitors.js
+```
+
+Never point card bookings at Thawani (UAT or production): it would load-test
+their service. Check a real Thawani payment by hand instead (docs/payments_thawani.md).

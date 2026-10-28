@@ -191,30 +191,21 @@ class Ticket extends Model
     }
 
     /**
-     * Generate unique ticket number
+     * TKT-YYYY-XXXXXXXX: 8 random Crockford base32 characters (no I, L, O,
+     * U, so staff can type it from a screen). Nothing is read first, so
+     * simultaneous checkouts never compute the same number and there is no
+     * yearly ceiling; a rare duplicate hits the unique index and
+     * TicketIssuer retries with a new one. Unique platform-wide.
      */
     public static function generateTicketNumber(): string
     {
-        $prefix = 'TKT';
-        $year = now()->year;
-
-        // Get the last ticket number for this year
-        // Ticket numbers are unique platform-wide (they are the QR payload),
-        // so look across all tenants.
-        $lastTicket = static::withoutTenantScope()
-            ->where('ticket_number', 'like', "{$prefix}-{$year}-%")
-            ->orderBy('ticket_number', 'desc')
-            ->first();
-
-        if ($lastTicket) {
-            // Extract the number and increment
-            $lastNumber = (int) substr($lastTicket->ticket_number, -6);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
+        $alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+        $code = '';
+        for ($i = 0; $i < 8; $i++) {
+            $code .= $alphabet[random_int(0, 31)];
         }
 
-        return sprintf('%s-%d-%06d', $prefix, $year, $newNumber);
+        return sprintf('TKT-%d-%s', now()->year, $code);
     }
 
     /**

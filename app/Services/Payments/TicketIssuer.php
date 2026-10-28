@@ -17,8 +17,9 @@ use Illuminate\Support\Facades\DB;
  * lock on the payment and tickets already issued for the transaction are
  * returned instead of duplicated.
  *
- * qr_code === ticket_number (TKT-YYYY-NNNNNN) — the format the gate scanner
- * (/tickets/validate) looks up.
+ * ticket_number: TKT-YYYY-XXXXXXXX (random, Ticket::generateTicketNumber).
+ * qr_code: ticket_number + 12 random characters — what the gate scanner
+ * matches; staff may type the ticket number by hand (manual source).
  */
 class TicketIssuer
 {
@@ -116,7 +117,7 @@ class TicketIssuer
                     return $ticket;
                 });
             } catch (UniqueConstraintViolationException $e) {
-                // Concurrent issuance grabbed the same sequential number.
+                // The random number already exists (rare): try another.
                 if ($try >= $attempts) {
                     throw $e;
                 }

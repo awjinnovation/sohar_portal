@@ -82,7 +82,7 @@ class CheckoutTest extends TestCase
         $tickets = Ticket::where('transaction_id', $res->json('transaction_id'))->get();
         $this->assertCount(2, $tickets);
         foreach ($tickets as $t) {
-            $this->assertMatchesRegularExpression('/^TKT-\d{4}-\d{6}-[A-Z0-9]{12}$/', $t->qr_code);
+            $this->assertMatchesRegularExpression('/^TKT-\d{4}-[0-9A-HJKMNP-TV-Z]{8}-[A-Z0-9]{12}$/', $t->qr_code);
             $this->assertStringStartsWith($t->ticket_number, $t->qr_code);
             $this->assertSame('2.500', $t->price);
         }
