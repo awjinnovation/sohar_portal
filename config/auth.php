@@ -116,10 +116,14 @@ return [
     | Phone OTP login (Api\AuthController).
     | OTP_DEBUG=true returns the code in the send-otp response (never in
     | production). OTP_TEST_CODE forces a fixed code outside production.
+    | OTP_REVIEW_PHONE + OTP_REVIEW_CODE (6 digits) give one store-review
+    | account a fixed code, production included; no SMS is sent to it.
     */
     'otp' => [
         'debug' => (bool) env('OTP_DEBUG', false),
         'test_code' => env('OTP_TEST_CODE'),
+        'review_phone' => env('OTP_REVIEW_PHONE'),
+        'review_code' => env('OTP_REVIEW_CODE'),
         'ttl_minutes' => (int) env('OTP_TTL_MINUTES', 5),
         'max_attempts' => (int) env('OTP_MAX_ATTEMPTS', 5),
     ],

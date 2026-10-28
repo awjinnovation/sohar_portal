@@ -79,6 +79,48 @@ class OtpTest extends TestCase
     }
 
     #[Test]
+    public function review_number_gets_the_fixed_code_in_production_without_sms(): void
+    {
+        $this->app['env'] = 'production';
+        config(['auth.otp.review_phone' => '96890000099', 'auth.otp.review_code' => '246810', 'auth.otp.test_code' => '123456']);
+
+        $this->postJson('/api/v1/auth/send-otp', ['phone_number' => '96890000099'])
+            ->assertOk()->assertJsonMissingPath('otp');
+        Queue::assertNotPushed(SendOtpSms::class);
+
+        $res = $this->postJson('/api/v1/auth/verify-otp', ['phone_number' => '96890000099', 'otp' => '246810'])->assertOk();
+        $this->assertNotEmpty($res->json('token'));
+    }
+
+    #[Test]
+    public function other_numbers_keep_random_codes_and_sms_when_a_review_number_is_set(): void
+    {
+        $this->app['env'] = 'production';
+        config(['auth.otp.review_phone' => '96890000099', 'auth.otp.review_code' => '246810', 'auth.otp.test_code' => '123456']);
+
+        $this->postJson('/api/v1/auth/send-otp', ['phone_number' => '96897777777'])->assertOk();
+        Queue::assertPushed(SendOtpSms::class, fn ($job) => $job->phone === '96897777777');
+
+        // neither the review code nor the (production-ignored) test code works
+        $stored = DB::table('otp_verifications')->where('phone_number', '96897777777')->value('otp_code');
+        $this->assertNotSame(AuthController::hashOtp('96897777777', '246810'), $stored);
+        $this->assertNotSame(AuthController::hashOtp('96897777777', '123456'), $stored);
+    }
+
+    #[Test]
+    public function review_code_that_is_not_six_digits_is_ignored(): void
+    {
+        config(['auth.otp.review_phone' => '96890000099', 'auth.otp.review_code' => '1234']);
+
+        $this->postJson('/api/v1/auth/send-otp', ['phone_number' => '96890000099'])->assertOk();
+        Queue::assertPushed(SendOtpSms::class);
+        $this->assertNotSame(
+            AuthController::hashOtp('96890000099', '1234'),
+            DB::table('otp_verifications')->where('phone_number', '96890000099')->value('otp_code'),
+        );
+    }
+
+    #[Test]
     public function verify_otp_is_rate_limited(): void
     {
         DB::table('otp_verifications')->insert([

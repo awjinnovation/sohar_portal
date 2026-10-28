@@ -210,6 +210,7 @@ class CheckoutService
         }
 
         try {
+            // attempts: complete() runs nested in here, so a deadlock is retried at this level.
             return DB::transaction(function () use ($user, $tenant, $input, $method, $key) {
                 // Serialise capacity checks for this event.
                 Event::whereKey($input['event_id'])->lockForUpdate()->first();
@@ -257,7 +258,7 @@ class CheckoutService
                 }
 
                 return $payment;
-            });
+            }, 3);
         } catch (UniqueConstraintViolationException $e) {
             if ($key && ($existing = $this->findByKey($user, $key))) {
                 return $existing;

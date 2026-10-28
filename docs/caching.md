@@ -97,6 +97,64 @@ saving matters most: without the cache every app open costs ~335 queries.
 
 Re-run: `tests/load/peak.js` and `tests/load/README.md`.
 
+## Capacity of a 16-core / 64 GB server
+
+Measured on 28 Oct 2026, with the app container capped at 4 and then 8 CPUs.
+The traffic was the same app-open mix with the cache on, and some runs added
+wallet ticket purchases.
+
+| Cost per request | Value |
+|---|---|
+| PHP (nginx + PHP-FPM) | 3.1–3.7 ms CPU, the same at 4 and 8 CPUs |
+| MySQL | ~0.7 ms CPU |
+| Redis | ~0.1 ms CPU |
+| Requests per app open | ~12 |
+
+At 4 CPUs the app saturated at about **1,290 requests/s**, which matches
+4 CPUs ÷ 3.1 ms. Above about 1,300 requests/s the test machine itself ran out
+of connections (macOS ports, Docker Desktop port forwarding), so the 16-core
+figures below are calculated from the measured cost per request.
+
+| 16 cores (≈ 4.3–4.5 ms CPU per request in all; ~0.75 core kept for OS, worker, scheduler) | Per second | Concurrent active users* |
+|---|---|---|
+| CPU as fast as the test machine (Apple M4 Max) | ~3,300 requests (~275 app opens) | ~25,000 |
+| Typical server vCPU (assume 0.5–0.7 of that) | **1,700–2,300 requests (140–190 app opens)** | **13,000–17,000** |
+| Comfortable, at 70 % CPU | 1,200–1,600 requests (100–130 app opens) | **9,000–12,000** |
+
+\* A visitor with the app open sends about 8 requests a minute on average
+(home screen, a few screens, status polls), so one request/s ≈ 7.5 active
+users. A push notification that makes 6,000 people open the app within a
+minute is ~100 app opens/s (~1,200 requests/s), which is within the
+comfortable range.
+
+The daily target (20,000 visitors, mostly 16:00–01:00) is far below this.
+The busiest hour is a few thousand visitors, with a few hundred to a
+thousand using the app at the same moment.
+
+**Purchases** are limited per event, not by CPU. Purchases of one event are
+serialised by a row lock (about 20–25 ms each), so an estimated 40
+purchases/s per event at most. Different events run in parallel.
+
+**Above capacity** requests queue inside PHP-FPM until the client gives up
+(60 s), so latency climbs for everyone rather than a few requests failing.
+Keep peak CPU under ~70 %, and confirm with `tests/load/peak.js` from
+another machine before the event.
+
+Settings for this server (Coolify environment variables):
+
+| Variable | Value |
+|---|---|
+| `PHP_FPM_PM_MAX_CHILDREN` | 160 (≈ 10 GB at ~60 MB each) |
+| `PHP_FPM_PM_START_SERVERS` / `MIN_SPARE` / `MAX_SPARE` | 48 / 32 / 64 |
+| `MYSQL_INNODB_BUFFER_POOL_SIZE` | 8G |
+| `MYSQL_MAX_CONNECTIONS` | 500 |
+| `REDIS_MAXMEMORY` | 2gb |
+
+Also add a second queue worker (`worker-2: *worker`, see `docker-compose.yml`).
+
+Tested and rejected: persistent Redis connections (`REDIS_PERSISTENT=true`)
+used ~40 % more PHP CPU at the same load, so they stay off.
+
 ## Not cached on purpose
 
 - Ticket checkout, quotes, payments, wallet, points, tickets: always live.

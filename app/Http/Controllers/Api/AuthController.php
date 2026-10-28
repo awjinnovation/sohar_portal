@@ -20,7 +20,8 @@ class AuthController extends Controller
      *
      * Throttled (route middleware throttle:otp-send). The code is stored as
      * an HMAC, never returned to the client unless OTP_DEBUG=true outside
-     * production.
+     * production. The store-review number (auth.otp.review_phone) gets the
+     * fixed auth.otp.review_code in every environment and no SMS.
      */
     public function sendOtp(Request $request, TenantContext $context)
     {
@@ -34,6 +35,10 @@ class AuthController extends Controller
         $otp = (string) random_int(100000, 999999);
         if (!app()->environment('production') && config('auth.otp.test_code')) {
             $otp = (string) config('auth.otp.test_code');
+        }
+        $isReviewer = self::isReviewPhone($phoneNumber);
+        if ($isReviewer) {
+            $otp = (string) config('auth.otp.review_code');
         }
 
         DB::table('otp_verifications')
@@ -58,7 +63,9 @@ class AuthController extends Controller
             ':code' => $otp,
             ':minutes' => (string) $ttl,
         ]);
-        SendOtpSms::dispatch($phoneNumber, $message);
+        if (!$isReviewer) {
+            SendOtpSms::dispatch($phoneNumber, $message);
+        }
 
         $response = [
             'success' => true,
@@ -75,6 +82,16 @@ class AuthController extends Controller
     public static function hashOtp(string $phone, string $code): string
     {
         return hash_hmac('sha256', $phone.'|'.$code, (string) config('app.key'));
+    }
+
+    /** Only when both review settings are set and the code is exactly 6 digits. */
+    private static function isReviewPhone(string $phone): bool
+    {
+        $reviewPhone = (string) config('auth.otp.review_phone');
+
+        return $reviewPhone !== ''
+            && preg_match('/^\d{6}$/', (string) config('auth.otp.review_code')) === 1
+            && hash_equals($reviewPhone, $phone);
     }
 
     /**
