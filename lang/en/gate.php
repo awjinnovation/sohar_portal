@@ -18,6 +18,7 @@ return [
     'details' => [
         'used_at' => 'used at :time (:gate)',
         'used_at_no_gate' => 'used at :time',
+        'used_on' => 'used on :date at :time',
         'valid_on' => 'valid on :date',
         'expired' => 'the ticket has expired',
         'event_ended' => 'the event has ended',

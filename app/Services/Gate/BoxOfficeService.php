@@ -38,6 +38,12 @@ use Illuminate\Validation\ValidationException;
  * earns their points and marks the order paid (markPaid). Orders not paid
  * within `gate_sales.link_ttl_minutes` expire (box-office:expire, every
  * minute, plus lazily on read); staff may cancel pending orders.
+ *
+ * Validity (docs/ticket_types_contract.md §7): an order's `booking_date`
+ * column is the gate day it was sold for and applies to its dated lines;
+ * any_day / all_days lines carry no date (their tickets get none, they hold
+ * no seat of the day) and the API shows `booking_date: null` when no line
+ * is dated.
  */
 class BoxOfficeService
 {
@@ -286,6 +292,7 @@ class BoxOfficeService
                     $order->lines()->create([
                         'ticket_type_id' => $l['ticket_type_id'], 'key' => $l['key'], 'name' => $l['name'], 'quantity' => $l['quantity'],
                         'unit_price_minor' => $l['unit_price_minor'], 'line_total_minor' => $l['line_total_minor'], 'admits' => $l['admits'],
+                        'validity' => $l['validity'],
                     ]);
                 }
 
@@ -447,8 +454,11 @@ class BoxOfficeService
             $lines = $locked->lines->map(fn (BoxOfficeOrderLine $l) => [
                 'ticket_type_id' => $l->ticket_type_id, 'key' => $l->key, 'name' => $l->name, 'quantity' => $l->quantity,
                 'unit_price_minor' => $l->unit_price_minor, 'line_total_minor' => $l->line_total_minor, 'admits' => $l->admits,
+                'validity' => EventTicketType::normalizeValidity($l->validity),
             ])->all();
             $attempt = (int) ($locked->meta['payment_attempts'] ?? 0) + 1;
+            // The day applies to the dated lines only (docs/ticket_types_contract.md §7).
+            $bookingDate = $locked->lines->contains(fn (BoxOfficeOrderLine $l) => $l->isDated()) ? $locked->booking_date->toDateString() : null;
 
             $payment = $this->checkout->createGatewayPayment($buyer, $tenant, [
                 'event' => $event,
@@ -463,7 +473,7 @@ class BoxOfficeService
                 'deposit_minor' => $locked->deposit_minor,
                 'tickets_minor' => $locked->subtotal_minor,
                 'total_minor' => $locked->total_minor,
-            ], $locked->booking_date->toDateString(), "box_office:{$locked->id}:{$attempt}", [
+            ], $bookingDate, "box_office:{$locked->id}:{$attempt}", [
                 'box_office_order_id' => $locked->id,
                 'box_office_reference' => $locked->reference,
                 'box_office_lang' => $lang ?? $locked->locale,
@@ -534,7 +544,10 @@ class BoxOfficeService
         return false;
     }
 
-    /** Seats for every line of a (no longer holding) order on its booking date. */
+    /**
+     * Seats for every line of a (no longer holding) order: dated lines on its
+     * booking date, undated lines against their type's total capacity.
+     */
     private function seatsFree(BoxOfficeOrder $order): bool
     {
         $event = Event::withoutTenantScope()->whereKey($order->event_id)->lockForUpdate()->first();
@@ -543,7 +556,8 @@ class BoxOfficeService
         }
         $date = $order->booking_date->toDateString();
         $eventLeft = $event->getAvailableTicketsForDate($date);
-        if ($eventLeft !== -1 && $eventLeft < $order->quantity) {
+        $dated = $order->lines->isEmpty() ? $order->quantity : (int) $order->lines->filter->isDated()->sum('quantity');
+        if ($eventLeft !== -1 && $eventLeft < $dated) {
             return false;
         }
         foreach ($order->lines as $line) {
@@ -551,7 +565,8 @@ class BoxOfficeService
             if (! $type) {
                 continue;
             }
-            $left = $type->setRelation('event', $event)->availableOn($date, $eventLeft);
+            $type->setRelation('event', $event);
+            $left = $line->isDated() ? $type->availableOn($date, $eventLeft) : $type->availableTotal();
             if ($left !== null && $left < $line->quantity) {
                 return false;
             }
@@ -628,12 +643,13 @@ class BoxOfficeService
             }
             $tickets = $tickets->whereIn('id', $ids)->values();
         } else {
-            $tickets = $tickets->filter(fn (Ticket $t) => $t->status === 'active' && (int) $t->check_in_count < $t->admits())->values();
+            $tickets = $tickets->filter(fn (Ticket $t) => $t->status === 'active' && $t->entriesUsed() < $t->admits())->values();
         }
 
         $results = [];
         foreach ($tickets as $ticket) {
-            $left = max(1, $ticket->admits() - (int) $ticket->check_in_count);
+            // Entries left (today's, for a season pass).
+            $left = max(1, $ticket->admits() - $ticket->entriesUsed());
             $times = $entries ? min($entries, $left) : $left;
             $outcome = null;
             $admitted = 0;
@@ -709,7 +725,9 @@ class BoxOfficeService
                 'title_text' => $locale === 'ar' ? ($event->title_ar ?: $event->title) : $event->title,
                 'title' => ['en' => $event->title, 'ar' => $event->title_ar ?: $event->title],
             ] : null,
-            'booking_date' => $order->booking_date?->toDateString(),
+            // Null when no line is dated (docs/ticket_types_contract.md §7).
+            'booking_date' => $order->lines->contains(fn (BoxOfficeOrderLine $l) => $l->isDated()) || $order->lines->isEmpty()
+                ? $order->booking_date?->toDateString() : null,
             'ticket_type' => count($lines) === 1 ? $lines[0]['key'] : null,
             'quantity' => $order->quantity,
             'lines' => $lines,
@@ -734,8 +752,9 @@ class BoxOfficeService
                 'status' => $t->status,
                 'ticket_type' => $t->ticketTypeApi(),
                 'admits' => $t->admits(),
-                'entries_used' => (int) $t->check_in_count,
-            ])->values()->all(),
+                'entries_used' => $t->entriesUsed(),
+                'booking_date' => $t->booking_date?->toDateString(),
+            ] + $t->validityApi())->values()->all(),
             'gate' => $order->gate ? ['id' => $order->gate->id, 'code' => $order->gate->code] : null,
             'staff' => $order->staff ? ['id' => $order->staff->id, 'name' => $order->staff->name] : null,
             'created_at' => TenantTime::iso($order->created_at, $tenant),

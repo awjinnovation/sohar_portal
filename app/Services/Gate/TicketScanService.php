@@ -29,6 +29,13 @@ use Illuminate\Support\Str;
  * reentry_ok (gate.allow_reentry; with `gate.reentry_requires_exit` the
  * last movement must be an exit) or already_used; otherwise valid.
  *
+ * Validity (docs/ticket_types_contract.md §7): `date` tickets admit on their
+ * booking date; undated tickets (`any_day`, and older tickets without a
+ * booking date) on any day the event runs, their entries counted over the
+ * ticket's life; `all_days` tickets on every day the event runs with
+ * `admits` entries per gate day (entries used = today's admitted entry
+ * scans), so they are never marked `used`.
+ *
  * `valid` entries mark the ticket used inside a DB transaction holding a row
  * lock on the ticket, so the same ticket scanned at two gates at once gives
  * one `valid` and one `already_used`. Every scan is logged once per
@@ -176,12 +183,24 @@ class TicketScanService
         }
 
         $max = max(1, (int) ($ticket->max_check_ins ?: 1));
+        if ($ticket->isDailyPass()) {
+            // Season pass: `admits` entries on each gate day.
+            $used = $ticket->entriesUsedOn($day, $tenant);
+            if ($used < $max) {
+                return $out(ScanResult::VALID);
+            }
+            if ($gate?->allow_reentry && $this->mayReenter($ticket, $tenant)) {
+                return $out(ScanResult::REENTRY_OK);
+            }
+
+            return $out(ScanResult::ALREADY_USED, ...$this->usedDetail($ticket, $zone, $day, $tenant));
+        }
         if ($ticket->status === 'used' || (int) $ticket->check_in_count >= $max) {
             if ($gate?->allow_reentry && (int) $ticket->check_in_count > 0 && $this->mayReenter($ticket, $tenant)) {
                 return $out(ScanResult::REENTRY_OK);
             }
 
-            return $out(ScanResult::ALREADY_USED, ...$this->usedDetail($ticket, $zone));
+            return $out(ScanResult::ALREADY_USED, ...$this->usedDetail($ticket, $zone, $day, $tenant));
         }
 
         return $out(ScanResult::VALID);
@@ -226,7 +245,8 @@ class TicketScanService
         if ($first || ! $ticket->used_at) {
             $ticket->used_at = $at->copy()->min(Carbon::now());
         }
-        if ($ticket->check_in_count >= max(1, (int) ($ticket->max_check_ins ?: 1))) {
+        // A season pass (all_days) admits again the next day: never `used`.
+        if ($ticket->check_in_count >= max(1, (int) ($ticket->max_check_ins ?: 1)) && ! $ticket->isDailyPass()) {
             $ticket->status = 'used';
         }
         $ticket->save();
@@ -265,20 +285,35 @@ class TicketScanService
         return $last?->direction === 'out';
     }
 
-    private function firstAdmission(Ticket $ticket): ?GateScan
+    /** @param  array{0: Carbon, 1: Carbon}|null  $window  only admissions inside this gate day */
+    private function firstAdmission(Ticket $ticket, ?array $window = null): ?GateScan
     {
         return GateScan::with('gate')->where('ticket_id', $ticket->id)->where('direction', 'in')
-            ->whereIn('result', ScanResult::ADMITTED)->orderBy('scanned_at')->orderBy('id')->first();
+            ->whereIn('result', ScanResult::ADMITTED)
+            ->when($window, fn ($q) => $q->where('scanned_at', '>=', $window[0])->where('scanned_at', '<', $window[1]))
+            ->orderBy('scanned_at')->orderBy('id')->first();
     }
 
-    /** @return array{0: string, 1: array} */
-    private function usedDetail(Ticket $ticket, string $zone): array
+    /**
+     * "Used at 18:42 (Main Gate A)": the first admission of the ticket, or of
+     * today for a season pass. An undated ticket used on another gate day
+     * says which day ("used on 2026-12-22 at 18:42").
+     *
+     * @return array{0: string, 1: array}
+     */
+    private function usedDetail(Ticket $ticket, string $zone, string $day, Tenant $tenant): array
     {
-        $time = $ticket->used_at?->copy()->setTimezone($zone)->format('H:i');
+        $first = $this->firstAdmission($ticket, $ticket->isDailyPass() ? GateDay::window($day, $tenant) : null);
+        $at = $ticket->isDailyPass() ? $first?->scanned_at : $ticket->used_at;
+        $time = $at?->copy()->setTimezone($zone)->format('H:i');
         if (! $time) {
             return [null, []];
         }
-        $gate = $this->firstAdmission($ticket)?->gate;
+        $usedDay = GateDay::dateFor($at, $tenant);
+        if (! $ticket->booking_date && $usedDay !== $day) {
+            return ['used_on', ['date' => $usedDay, 'time' => $time]];
+        }
+        $gate = $first?->gate;
         $gateName = $gate ? ['en' => $gate->localizedName('en'), 'ar' => $gate->localizedName('ar')] : $ticket->validation_location;
 
         return $gateName ? ['used_at', ['time' => $time, 'gate' => $gateName]] : ['used_at_no_gate', ['time' => $time]];

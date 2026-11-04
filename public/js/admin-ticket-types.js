@@ -29,6 +29,9 @@
       var name = (ar ? t.name.ar : t.name.en) || t.name_text;
       var badges = [];
       if (t.admits > 1) badges.push('<span class="pill pill-brand pill-sm"><i class="bi bi-people"></i>' + esc(fmt(T.admits, t.admits)) + '</span>');
+      // Validity (docs/ticket_types_contract.md §7): undated types get a badge.
+      var validity = cfg.validities && cfg.validities[t.validity];
+      if (validity && t.validity !== 'date') badges.push('<span class="pill pill-info pill-sm" data-validity="' + esc(t.validity) + '"><i class="bi bi-' + esc(validity.icon) + '"></i>' + esc(validity.label) + '</span>');
       if (t.visibility === 'box_office') badges.push('<span class="pill pill-info pill-sm"><i class="bi bi-door-open"></i>' + esc(T.boxOffice) + '</span>');
       if (!t.is_active) badges.push('<span class="pill pill-neutral pill-sm">' + esc(T.inactive) + '</span>');
       else if (!t.sales_open) badges.push('<span class="pill pill-warning pill-sm">' + esc(T.salesClosed) + '</span>');
@@ -72,6 +75,8 @@
       field(k).value = v[k] == null ? '' : v[k];
     });
     field('category').value = v.category || 'general';
+    field('validity').value = v.validity || 'date';
+    syncCapacityLabel();
     field('visibility').value = v.visibility || 'public';
     field('requires_id').checked = !!v.requires_id;
     field('is_active').checked = v.is_active !== false;
@@ -79,6 +84,13 @@
     field('color').value = v.color || cfg.colors[v.category || 'general'] || '#2F8E80';
     errorBox.classList.add('d-none');
     form.querySelectorAll('.is-invalid').forEach(function (el) { el.classList.remove('is-invalid'); });
+  }
+
+  // Undated types count their capacity over all event days (not per day).
+  function syncCapacityLabel() {
+    var dated = field('validity').value === 'date';
+    document.getElementById('tt_capacity_label').textContent = dated ? T.capacityDaily : T.capacityTotal;
+    document.getElementById('tt_capacity_help').textContent = dated ? T.capacityHelpDaily : T.capacityHelpTotal;
   }
 
   function open(values, id) {
@@ -105,7 +117,7 @@
       if (!t) return;
       open({
         name_ar: t.name.ar, name_en: t.name.en, description_ar: t.description.ar, description_en: t.description.en, key: t.key,
-        category: t.category, price: t.price_input, admits: t.admits, capacity: t.capacity, per_order_max: t.per_order_max,
+        category: t.category, price: t.price_input, admits: t.admits, validity: t.validity, capacity: t.capacity, per_order_max: t.per_order_max,
         min_age: t.min_age, max_age: t.max_age, sales_start: t.sales_start_local, sales_end: t.sales_end_local,
         visibility: t.visibility, color: t.own_color, requires_id: t.requires_id, is_active: t.is_active
       }, t.id);
@@ -122,6 +134,7 @@
     if (colorDefault.checked) field('color').value = cfg.colors[field('category').value] || '#6B7280';
   });
   field('color').addEventListener('input', function () { colorDefault.checked = false; });
+  field('validity').addEventListener('change', syncCapacityLabel);
   field('name_en').addEventListener('input', function () {
     if (editingId || field('key').dataset.touched) return;
     field('key').value = uniqueKey(field('name_en').value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40));
@@ -130,7 +143,7 @@
 
   document.getElementById('ttSave').addEventListener('click', function () {
     var body = {};
-    ['name_ar', 'name_en', 'description_ar', 'description_en', 'key', 'category', 'price', 'admits', 'capacity', 'per_order_max', 'min_age', 'max_age', 'sales_start', 'sales_end', 'visibility'].forEach(function (k) {
+    ['name_ar', 'name_en', 'description_ar', 'description_en', 'key', 'category', 'price', 'admits', 'validity', 'capacity', 'per_order_max', 'min_age', 'max_age', 'sales_start', 'sales_end', 'visibility'].forEach(function (k) {
       var v = field(k).value; body[k] = v === '' ? null : v;
     });
     body.requires_id = field('requires_id').checked;

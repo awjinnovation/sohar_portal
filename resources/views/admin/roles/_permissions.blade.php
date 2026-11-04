@@ -22,6 +22,7 @@
         'settings' => [__('الإعدادات'), 'sliders'],
         'tenants' => [__('المنظمات'), 'buildings'],
         'points' => [__('النقاط'), 'stars'],
+        'satisfaction' => [__('رضا الزوار'), 'emoji-smile'],
     ];
     $permVerbs = [
         'view' => __('عرض'), 'manage' => __('إدارة'), 'validate' => __('التحقق من'), 'refund' => __('استرداد'),

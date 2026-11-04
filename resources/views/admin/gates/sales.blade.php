@@ -113,10 +113,10 @@
             <tr data-order="{{ $order->reference }}">
                 <td class="text-nowrap"><a href="{{ route('admin.gates.sales.show', $order) }}" class="font-monospace small ltr">{{ $order->reference }}</a></td>
                 <td class="cell-title">{{ $order->event ? (app()->getLocale() === 'ar' ? ($order->event->title_ar ?: $order->event->title) : $order->event->title) : '—' }}
-                    <div class="cell-sub num">{{ $order->booking_date?->format('Y-m-d') }}</div></td>
+                    @if($order->lines->isEmpty() || $order->lines->contains(fn ($l) => $l->isDated()))<div class="cell-sub num">{{ $order->booking_date?->format('Y-m-d') }}</div>@endif</td>
                 <td class="small">
                     @foreach($order->lines as $line)
-                        <div class="text-nowrap"><span class="num">{{ $line->quantity }}</span> × {{ \App\Models\EventTicketType::pickLocale($line->name) ?: $line->key }}</div>
+                        <div class="text-nowrap"><span class="num">{{ $line->quantity }}</span> × {{ \App\Models\EventTicketType::pickLocale($line->name) ?: $line->key }}@unless($line->isDated()) <span class="text-muted" data-validity="{{ $line->validity }}">· {{ \App\Models\EventTicketType::validityLabel($line->validity) }}</span>@endunless</div>
                     @endforeach
                 </td>
                 <td>

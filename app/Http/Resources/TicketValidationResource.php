@@ -33,12 +33,14 @@ class TicketValidationResource extends JsonResource
             'visitor_phone' => $this->user?->phone_number ?? null,
             'visitor_email' => $this->user?->email ?? null,
             'visit_date' => \App\Support\TenantTime::isoDate($this->booking_date),
+            // docs/ticket_types_contract.md §7 (visit_date is null for undated tickets).
+            ...$this->resource->validityApi(),
             'visit_time' => null, // Can be added if needed
             'ticket_type' => $this->ticket_type,
             'number_of_people' => $this->quantity ?? 1,
             'validated_at' => \App\Support\TenantTime::iso($this->used_at),
             'validated_by' => $this->validated_by,
-            'check_in_count' => $this->check_in_count ?? 0,
+            'check_in_count' => $this->resource->entriesUsed(),
             'max_check_ins' => $this->max_check_ins ?? 1,
             'created_at' => \App\Support\TenantTime::iso($this->created_at),
             'metadata' => [

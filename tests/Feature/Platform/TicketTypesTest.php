@@ -57,7 +57,7 @@ class TicketTypesTest extends GateTestCase
         $this->assertSame(['general', 'family', 'child'], $types->keys()->all());
         $res->assertJsonPath('data.price_from_minor', 500)->assertJsonPath('data.price_from', '0.500')
             ->assertJsonPath('data.price', 2); // legacy price = the General type
-        $this->assertSame(['id', 'key', 'name', 'name_text', 'description_text', 'category', 'icon', 'price_minor', 'price', 'is_free', 'admits', 'per_order_max',
+        $this->assertSame(['id', 'key', 'name', 'name_text', 'description_text', 'category', 'icon', 'price_minor', 'price', 'is_free', 'admits', 'validity', 'per_order_max',
             'min_age', 'max_age', 'requires_id', 'color', 'available', 'sales_open', 'sales_start', 'sales_end', 'visibility'], array_keys($types['child']));
         $this->assertSame([4, 5, '6.000'], [$types['family']['admits'], $types['family']['available'], $types['family']['price']]);
         $this->assertSame([11, true, '#123456', 'Child'], [$types['child']['max_age'], $types['child']['requires_id'], $types['child']['color'], $types['child']['name_text']]);
@@ -85,7 +85,7 @@ class TicketTypesTest extends GateTestCase
             ->assertJsonPath('data.total_minor', 10000)
             ->assertJsonPath('data.unit_price_minor', null)
             ->assertJsonPath('data.lines.0', ['ticket_type_id' => $general->id, 'key' => 'general', 'name_text' => 'General admission', 'quantity' => 2,
-                'unit_price_minor' => 2000, 'unit_price' => '2.000', 'line_total_minor' => 4000, 'line_total' => '4.000', 'admits' => 1])
+                'unit_price_minor' => 2000, 'unit_price' => '2.000', 'line_total_minor' => 4000, 'line_total' => '4.000', 'admits' => 1, 'validity' => 'date'])
             ->assertJsonPath('data.lines.1.line_total_minor', 6000);
 
         $q(['quantity' => 2])->assertOk()->assertJsonPath('data.ticket_type', 'general')->assertJsonPath('data.unit_price_minor', 2000)
@@ -146,7 +146,7 @@ class TicketTypesTest extends GateTestCase
 
         $mine = $this->api('GET', '/api/v1/tickets/my-tickets', [], $user)->assertOk();
         $fam = collect($mine->json('data'))->firstWhere('ticket.type', 'family');
-        $this->assertSame(['id' => $family->id, 'key' => 'family', 'name_text' => 'Family', 'category' => 'family', 'color' => '#E5883C', 'admits' => 4], $fam['ticket_type']);
+        $this->assertSame(['id' => $family->id, 'key' => 'family', 'name_text' => 'Family', 'category' => 'family', 'color' => '#E5883C', 'admits' => 4, 'validity' => 'date'], $fam['ticket_type']);
         $this->assertSame([4, 0], [$fam['admits'], $fam['entries_used']]);
         $this->api('GET', '/api/v1/tickets/'.$tickets[1]->id, [], $user)->assertOk()->assertJsonPath('data.ticket_type.key', 'family');
     }

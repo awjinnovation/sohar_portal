@@ -133,6 +133,24 @@ class Event extends Model implements HasMedia
         return $today < $first ? $first : ($today > $last ? $last : $today);
     }
 
+    /** The event's end (tenant wall-clock) has passed. */
+    public function hasEnded(): bool
+    {
+        return $this->end_time !== null
+            && \App\Support\TenantTime::localNow(Tenant::find($this->tenant_id)) > $this->end_time->format('Y-m-d H:i:s');
+    }
+
+    /** First and last day the event runs (Y-m-d), the validity window of undated tickets. */
+    public function firstDay(): ?string
+    {
+        return $this->start_time?->toDateString();
+    }
+
+    public function lastDay(): ?string
+    {
+        return $this->end_time?->toDateString();
+    }
+
     /** Cheapest active public type, or null when the event has none. */
     public function priceFromMinor(): ?int
     {
@@ -216,7 +234,9 @@ class Event extends Model implements HasMedia
      * Seats left for a date (-1 = unlimited): the daily capacity minus the
      * tickets issued for that date (active or already used) and the seats
      * held by pending, unexpired gate box office orders
-     * (docs/gate_sales_contract.md §2).
+     * (docs/gate_sales_contract.md §2). Undated tickets (any_day / all_days,
+     * docs/ticket_types_contract.md §7) are not counted: they have no
+     * booking date and only their type's own capacity applies.
      */
     public function getAvailableTicketsForDate(string $date): int
     {
@@ -235,8 +255,17 @@ class Event extends Model implements HasMedia
             ->whereDate('booking_date', $date)
             ->holding()
             ->sum('quantity');
+        // Undated lines of those orders hold no seat on the day.
+        $held -= (int) \Illuminate\Support\Facades\DB::table('box_office_order_lines as l')
+            ->join('box_office_orders as o', 'o.id', '=', 'l.order_id')
+            ->where('o.event_id', $this->id)
+            ->whereDate('o.booking_date', $date)
+            ->where('o.status', BoxOfficeOrder::STATUS_PENDING)
+            ->where('o.expires_at', '>', now())
+            ->where('l.validity', '!=', EventTicketType::VALIDITY_DATE)
+            ->sum('l.quantity');
 
-        return max(0, (int) $this->total_tickets - $issued - $held);
+        return max(0, (int) $this->total_tickets - $issued - max(0, $held));
     }
 
     /**

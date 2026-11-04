@@ -18,6 +18,7 @@ return [
     'details' => [
         'used_at' => 'استُخدمت الساعة :time (:gate)',
         'used_at_no_gate' => 'استُخدمت الساعة :time',
+        'used_on' => 'استُخدمت يوم :date الساعة :time',
         'valid_on' => 'صالحة بتاريخ :date',
         'expired' => 'انتهت صلاحية التذكرة',
         'event_ended' => 'انتهت الفعالية',

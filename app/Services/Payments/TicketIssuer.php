@@ -20,6 +20,9 @@ use Illuminate\Support\Facades\DB;
  * ticket_number: TKT-YYYY-XXXXXXXX (random, Ticket::generateTicketNumber).
  * qr_code: ticket_number + 12 random characters — what the gate scanner
  * matches; staff may type the ticket number by hand (manual source).
+ *
+ * Validity (docs/ticket_types_contract.md §7) is copied from the order line:
+ * dated lines get the order's booking date, any_day / all_days lines none.
  */
 class TicketIssuer
 {
@@ -54,15 +57,17 @@ class TicketIssuer
         $tickets = collect();
         $n = 0;
         foreach ($lines as $l) {
+            $dated = $l['validity'] === \App\Models\EventTicketType::VALIDITY_DATE;
             for ($i = 0; $i < $l['quantity']; $i++) {
                 $tickets->push($this->createWithRetry([
                     'user_id' => $payment->user_id,
                     'event_id' => $eventId,
                     'transaction_id' => $payment->transaction_id,
-                    'booking_date' => $meta['booking_date'] ?? null,
+                    'booking_date' => $dated ? ($meta['booking_date'] ?? null) : null,
                     'quantity' => 1,
                     'ticket_type' => $l['key'],
                     'ticket_type_id' => $l['ticket_type_id'],
+                    'validity' => $l['validity'],
                     // A family ticket admitting 4 is scanned up to 4 times.
                     'max_check_ins' => max(1, (int) $l['admits']),
                     'status' => 'active',
@@ -81,7 +86,7 @@ class TicketIssuer
      * Lines of the order (metadata.lines). Payments made before ticket types
      * carry only quantity + ticket_type: they map to the type of that key.
      *
-     * @return list<array{ticket_type_id: ?int, key: string, quantity: int, unit_price_minor: int, admits: int}>
+     * @return list<array{ticket_type_id: ?int, key: string, quantity: int, unit_price_minor: int, admits: int, validity: string}>
      */
     private function lines(array $meta, ?Event $event): array
     {
@@ -92,6 +97,8 @@ class TicketIssuer
                 'quantity' => max(0, (int) ($l['quantity'] ?? 0)),
                 'unit_price_minor' => (int) ($l['unit_price_minor'] ?? 0),
                 'admits' => max(1, (int) ($l['admits'] ?? 1)),
+                // Orders made before validity existed are dated.
+                'validity' => \App\Models\EventTicketType::normalizeValidity($l['validity'] ?? null),
             ], $meta['lines']));
         }
         $type = $event?->ticketTypeByKey($meta['ticket_type'] ?? null, \App\Models\EventTicketType::CHANNEL_BOX_OFFICE);
@@ -102,6 +109,7 @@ class TicketIssuer
             'quantity' => max(1, (int) ($meta['quantity'] ?? 1)),
             'unit_price_minor' => (int) ($meta['unit_price_minor'] ?? 0),
             'admits' => max(1, (int) ($type?->admits ?? 1)),
+            'validity' => \App\Models\EventTicketType::VALIDITY_DATE,
         ]];
     }
 

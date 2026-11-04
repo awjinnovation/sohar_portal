@@ -17,7 +17,9 @@ use Illuminate\Database\Seeder;
  * the organizer to edit or switch off (see README).
  * demo: a full example set (VIP with its own capacity, student ID check,
  * group ticket admitting 5, a gate-only door ticket, free child ticket,
- * family ticket admitting 4, a closed early-bird window).
+ * family ticket admitting 4, a closed early-bird window, and on the expo a
+ * ticket valid on any day plus a pass valid on every day, §7).
+ * north-batinah types stay `date` (one chosen day).
  *
  * Idempotent: types are matched by (event, key); edited types are left as is.
  */
@@ -112,6 +114,13 @@ class TicketTypesSeeder extends Seeder
                 ['key' => 'early_bird', 'category' => 'other', 'price_minor' => 1500, 'sales_end_days_before_start' => 1,
                     'name' => ['en' => 'Early bird', 'ar' => 'حجز مبكر'],
                     'description' => ['en' => 'On sale until the day before the expo opens.', 'ar' => 'متاحة حتى اليوم السابق لافتتاح المعرض.']],
+                // Validity examples (docs/ticket_types_contract.md §7): no date to choose.
+                ['key' => 'any_day', 'category' => 'general', 'price_minor' => 2500, 'validity' => EventTicketType::VALIDITY_ANY_DAY,
+                    'name' => ['en' => 'Any-day ticket', 'ar' => 'تذكرة ليوم من اختيارك'],
+                    'description' => ['en' => 'One visit on any day of the expo, with no date to choose.', 'ar' => 'زيارة واحدة في أي يوم من أيام المعرض دون اختيار تاريخ.']],
+                ['key' => 'expo_pass', 'category' => 'vip', 'price_minor' => 5000, 'validity' => EventTicketType::VALIDITY_ALL_DAYS, 'capacity' => 200, 'per_order_max' => 4,
+                    'name' => ['en' => 'Expo pass (all days)', 'ar' => 'تذكرة المعرض لجميع الأيام'],
+                    'description' => ['en' => 'Entry on every day of the expo.', 'ar' => 'دخول في كل يوم من أيام المعرض.']],
             ],
             'Magic & Illusions Show' => [
                 ['key' => 'child', 'category' => 'child', 'price_minor' => 2000, 'max_age' => 11,

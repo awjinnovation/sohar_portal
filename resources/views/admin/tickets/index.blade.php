@@ -49,7 +49,8 @@
                     <div class="cell-title">{{ $ticket->holder_name ?: '—' }}</div>
                     @if($ticket->user?->phone_number)<div class="cell-sub num"><span dir="ltr">{{ $ticket->user->phone_number }}</span></div>@endif
                 </td>
-                <td class="num">{{ $ticket->booking_date?->format('Y-m-d') ?? '—' }}</td>
+                {{-- Undated tickets (any_day / all_days) show their validity instead of a date (docs/ticket_types_contract.md §7). --}}
+                <td class="num">@if($ticket->booking_date){{ $ticket->booking_date->format('Y-m-d') }}@elseif($ticket->validityValue() !== \App\Models\EventTicketType::VALIDITY_DATE)<span class="cell-sub" data-validity="{{ $ticket->validity }}">{{ \App\Models\EventTicketType::validityLabel($ticket->validity) }}</span>@else—@endif</td>
                 <td class="nowrap">
                     @if((float) $ticket->price == 0)
                         <x-admin.status-pill variant="success" label="مجانية" />

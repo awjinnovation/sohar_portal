@@ -21,6 +21,16 @@ return [
         'per_order_limit' => 'الحد الأقصى لتذاكر «:type» في الطلب الواحد :max.',
         'per_order_limit_total' => 'الحد الأقصى لعدد التذاكر في الطلب الواحد :max.',
         'items_required' => 'اختر تذكرة واحدة على الأقل.',
+        // Validity per ticket type (docs/ticket_types_contract.md §7).
+        'type_sold_out_total' => 'نفدت تذاكر «:type».',
+        'booking_date_required' => 'اختر يوم الزيارة.',
+        'event_ended' => 'انتهت الفعالية.',
+    ],
+    // Validity of a ticket type or ticket (docs/ticket_types_contract.md §7).
+    'validity' => [
+        'date' => 'صالحة في يوم الحجز',
+        'any_day' => 'صالحة لزيارة واحدة في أي يوم',
+        'all_days' => 'صالحة في جميع أيام الفعالية',
     ],
     'tx' => [
         'topup' => ['title' => 'شحن المحفظة', 'description' => 'تمت الإضافة إلى محفظتك'],

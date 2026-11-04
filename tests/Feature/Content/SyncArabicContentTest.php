@@ -80,7 +80,7 @@ class SyncArabicContentTest extends TestCase
         $this->assertSame(DemoTenantSeeder::content()['events'][1][1], Event::where('title', 'Expo Day Pass')->value('title_ar'));
 
         // English fields and gate tables are untouched; a second run has nothing left to do.
-        $this->assertSame('Welcome to North Batinah events! Ask me about the Sohar Festival, races, heritage events, tickets or parking.', $nb->settings['ai']['welcome']['en']);
+        $this->assertSame(TenantSeeder::northBatinah()['settings']['ai']['welcome']['en'], $nb->settings['ai']['welcome']['en']);
         $this->assertSame($gatesBefore, DB::table('gates')->orderBy('id')->get()->toJson());
         $this->assertGreaterThan(0, Gate::withoutTenantScope()->count());
         $this->assertStringContainsString('0 changes in 0 rows.', $this->sync());

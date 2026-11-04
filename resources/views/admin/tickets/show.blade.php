@@ -35,11 +35,21 @@
                     </div>
                     <div class="kv">
                         <div class="k">{{ __('تاريخ الحجز') }}</div>
-                        <div class="v num">{{ $ticket->booking_date?->format('Y-m-d') ?? '—' }}</div>
+                        @if($ticket->booking_date || $ticket->validityValue() === \App\Models\EventTicketType::VALIDITY_DATE)
+                            <div class="v num">{{ $ticket->booking_date?->format('Y-m-d') ?? '—' }}</div>
+                        @else
+                            {{-- Undated ticket (docs/ticket_types_contract.md §7): its validity and the event's days. --}}
+                            <div class="v" data-validity="{{ $ticket->validity }}">{{ \App\Models\EventTicketType::validityLabel($ticket->validity) }}
+                                @if($ticket->validFrom())<div class="small text-muted num">{{ __('من :from إلى :to', ['from' => $ticket->validFrom(), 'to' => $ticket->validUntil()]) }}</div>@endif</div>
+                        @endif
                     </div>
                     <div class="kv">
                         <div class="k">{{ __('مرات الدخول') }}</div>
-                        <div class="v num"><span dir="ltr">{{ (int) $ticket->check_in_count }} / {{ (int) $ticket->max_check_ins }}</span></div>
+                        @if($ticket->isDailyPass())
+                            <div class="v num"><span dir="ltr">{{ $ticket->entriesUsed() }} / {{ (int) $ticket->max_check_ins }}</span> <span class="small text-muted">{{ __('اليوم') }}</span></div>
+                        @else
+                            <div class="v num"><span dir="ltr">{{ (int) $ticket->check_in_count }} / {{ (int) $ticket->max_check_ins }}</span></div>
+                        @endif
                     </div>
                 </div>
 

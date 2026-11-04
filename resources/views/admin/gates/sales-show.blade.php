@@ -35,12 +35,12 @@
                 </div>
 
                 <dl class="dl">
-                    <dt>{{ __('الفعالية') }}</dt><dd>{{ $order->event ? (app()->getLocale() === 'ar' ? ($order->event->title_ar ?: $order->event->title) : $order->event->title) : '—' }} · <span class="num">{{ $order->booking_date?->format('Y-m-d') }}</span></dd>
+                    <dt>{{ __('الفعالية') }}</dt><dd>{{ $order->event ? (app()->getLocale() === 'ar' ? ($order->event->title_ar ?: $order->event->title) : $order->event->title) : '—' }}@if($order->lines->isEmpty() || $order->lines->contains(fn ($l) => $l->isDated())) · <span class="num">{{ $order->booking_date?->format('Y-m-d') }}</span>@endif</dd>
                     <dt>{{ __('التذاكر') }}</dt>
                     <dd>
                         @foreach($order->lines as $line)
                             <div class="d-flex justify-content-between gap-3" data-line="{{ $line->key }}">
-                                <span><span class="num">{{ $line->quantity }}</span> × {{ \App\Models\EventTicketType::pickLocale($line->name) ?: $line->key }}@if($line->admits > 1) <span class="text-muted small">({{ __('يدخل بها :count', ['count' => $line->admits]) }})</span>@endif</span>
+                                <span><span class="num">{{ $line->quantity }}</span> × {{ \App\Models\EventTicketType::pickLocale($line->name) ?: $line->key }}@if($line->admits > 1) <span class="text-muted small">({{ __('يدخل بها :count', ['count' => $line->admits]) }})</span>@endif @unless($line->isDated()) <span class="text-muted small" data-validity="{{ $line->validity }}">· {{ \App\Models\EventTicketType::validityLabel($line->validity) }}</span>@endunless</span>
                                 <x-admin.money :minor="(int) $line->line_total_minor" />
                             </div>
                         @endforeach
@@ -86,7 +86,7 @@
                                     @else {{ $ticket->ticket_number }} @endif
                                 </td>
                                 <td>{{ $ticket->ticketType?->nameText() ?? $ticket->ticket_type }}</td>
-                                <td class="num">{{ (int) $ticket->check_in_count }} / {{ $ticket->admits() }}</td>
+                                <td class="num">{{ $ticket->entriesUsed() }} / {{ $ticket->admits() }}</td>
                                 <td><x-admin.status-pill domain="ticket" :status="$ticket->status" /></td>
                             </tr>
                         @empty

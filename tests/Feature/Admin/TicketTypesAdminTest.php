@@ -116,4 +116,35 @@ class TicketTypesAdminTest extends TestCase
         $this->assertSame(3250, EventTicketType::where('event_id', $event->id)->where('key', 'general')->value('price_minor'));
         $this->assertSame('3.250', $event->fresh()->price);
     }
+
+    #[Test]
+    public function the_validity_of_a_type_is_edited_and_shown_on_tickets(): void
+    {
+        // docs/ticket_types_contract.md §7
+        $event = $this->makeEvent(null, ['price' => '2.000']);
+        $admin = $this->admin('event-manager');
+        $base = route('admin.events.ticket-types.store', $event);
+
+        $this->actingAs($admin)->get(route('admin.events.edit', $event))->assertOk()
+            ->assertSee('id="tt_validity"', false)->assertSee('جميع أيام الفعالية');
+        $this->actingAs($admin)->postJson($base, $this->payload(['key' => 'pass', 'validity' => 'season']))->assertStatus(422)->assertJsonValidationErrors('validity');
+        $res = $this->actingAs($admin)->postJson($base, $this->payload(['key' => 'pass', 'validity' => 'all_days']))->assertCreated();
+        $this->assertSame('all_days', collect($res->json('data'))->firstWhere('key', 'pass')['validity']);
+        $pass = EventTicketType::where('event_id', $event->id)->where('key', 'pass')->firstOrFail();
+
+        // An editor that does not send the field keeps the value.
+        $payload = $this->payload(['key' => 'pass']);
+        unset($payload['validity']);
+        $this->actingAs($admin)->putJson("$base/{$pass->id}", $payload)->assertOk();
+        $this->assertSame('all_days', $pass->fresh()->validity);
+
+        $ticket = $this->inTenant($this->tenant, fn () => Ticket::create([
+            'event_id' => $event->id, 'user_id' => $admin->id, 'ticket_type' => 'pass', 'ticket_type_id' => $pass->id, 'validity' => 'all_days',
+            'status' => 'active', 'price' => '4.500', 'currency' => 'OMR', 'holder_name' => 'Salim', 'purchase_date' => now(), 'quantity' => 1, 'max_check_ins' => 4,
+        ]));
+        $this->grantRole($admin, 'admin');
+        $this->actingAs($admin)->get(route('admin.tickets.index'))->assertOk()->assertSee('data-validity="all_days"', false)->assertSee('صالحة في جميع أيام الفعالية');
+        $this->actingAs($admin)->get(route('admin.tickets.show', $ticket))->assertOk()->assertSee('صالحة في جميع أيام الفعالية')
+            ->assertSee($event->start_time->toDateString());
+    }
 }

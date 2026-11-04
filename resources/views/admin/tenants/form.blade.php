@@ -33,13 +33,13 @@
         'vendors' => 'التجار', 'announcements' => 'الإعلانات', 'favorites' => 'المفضلة', 'notifications' => 'الإشعارات',
         'wallet' => 'المحفظة', 'topup' => 'شحن الرصيد', 'deposits' => 'التأمينات', 'points' => 'النقاط',
         'refunds' => 'الاسترداد', 'ticket_transfer' => 'نقل التذاكر', 'staff_scanner' => 'ماسح الموظفين', 'ai_assistant' => 'ai.admin.module_ai_assistant', 'ai_plan' => 'ai.admin.module_ai_plan',
-        'places' => 'الأماكن والخريطة المخصصة', 'content' => 'المجموعات والصفحات',
+        'places' => 'الأماكن والخريطة المخصصة', 'content' => 'المجموعات والصفحات', 'radi' => 'راضي لقياس رضا الزوار',
     ];
     $moduleIcons = [
         'events' => 'calendar-event', 'tickets' => 'ticket-perforated', 'calendar' => 'calendar3', 'map' => 'map', 'vendors' => 'shop-window',
         'announcements' => 'megaphone', 'favorites' => 'heart', 'notifications' => 'bell', 'wallet' => 'wallet2', 'topup' => 'cash-coin',
         'deposits' => 'lock', 'points' => 'stars', 'refunds' => 'arrow-counterclockwise', 'ticket_transfer' => 'send', 'staff_scanner' => 'qr-code-scan', 'ai_assistant' => 'stars', 'ai_plan' => 'map',
-        'places' => 'pin-map', 'content' => 'collection',
+        'places' => 'pin-map', 'content' => 'collection', 'radi' => 'emoji-smile',
     ];
     $socialLabels = ['instagram' => 'إنستغرام', 'x' => 'X (تويتر)', 'tiktok' => 'تيك توك', 'youtube' => 'يوتيوب', 'facebook' => 'فيسبوك'];
     $gatewayLabels = ['merchant_id' => 'Merchant ID', 'access_code' => 'Access Code', 'working_key' => 'Working Key', 'gateway_url' => 'Gateway URL',
@@ -53,7 +53,7 @@
         'sec-identity' => ['building', 'الهوية'], 'sec-logos' => ['image', 'الشعارات'], 'sec-colors' => ['palette', 'الألوان'],
         'sec-type' => ['fonts', 'الخطوط والشكل'], 'sec-locale' => ['globe2', 'اللغة والتواصل'], 'sec-modules' => ['toggles', 'الوحدات'],
         'sec-map' => ['geo-alt', 'الخريطة'], 'sec-wallet' => ['wallet2', 'المحفظة'], 'sec-points' => ['stars', 'النقاط'],
-        'sec-app' => ['phone', 'التطبيق'], 'sec-ai' => ['stars', 'ai.admin.ai_settings'], 'sec-gate-sales' => ['cart-check', 'مبيعات البوابات'], 'sec-billing' => ['receipt', 'الفوترة والرسائل'],
+        'sec-app' => ['phone', 'التطبيق'], 'sec-ai' => ['stars', 'ai.admin.ai_settings'], 'sec-gate-sales' => ['cart-check', 'مبيعات البوابات'], 'sec-radi' => ['emoji-smile', 'راضي'], 'sec-billing' => ['receipt', 'الفوترة والرسائل'],
     ];
     if ($platform) { $sections['sec-gateway'] = ['shield-lock', 'بوابة الدفع']; }
     $sections['sec-advanced'] = ['code-slash', 'متقدم'];
@@ -400,6 +400,8 @@
                 @include('admin.ai._tenant-settings')
 
                 @include('admin.gates._sales-settings')
+
+                @include('admin.satisfaction._tenant-settings')
 
                 {{-- Billing & messages --}}
                 <x-admin.card id="sec-billing" title="بيانات الفوترة والرسائل" icon="receipt">

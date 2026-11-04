@@ -137,9 +137,11 @@ class TicketController extends Controller
                 'used_at' => $t->used_at,
                 // docs/ticket_types_contract.md §2
                 'booking_date' => $t->booking_date?->format('Y-m-d'),
+                // docs/ticket_types_contract.md §7: validity, validity_text, valid_from, valid_until.
+                ...$t->validityApi(),
                 'ticket_type' => $t->ticketTypeApi(),
                 'admits' => $t->admits(),
-                'entries_used' => (int) $t->check_in_count,
+                'entries_used' => $t->entriesUsed(),
                 'ticket' => [
                     'id' => $t->event_id,
                     'event_id' => $t->event_id,
@@ -178,8 +180,8 @@ class TicketController extends Controller
                 'ticket_type' => $ticket->ticketTypeApi(),
                 'ticket_type_key' => $ticket->ticket_type,
                 'admits' => $ticket->admits(),
-                'entries_used' => (int) $ticket->check_in_count,
-            ]),
+                'entries_used' => $ticket->entriesUsed(),
+            ] + $ticket->validityApi()),
         ]);
     }
 

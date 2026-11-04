@@ -2,7 +2,9 @@
 @php
     $isAr = $lang === 'ar';
     $t = fn ($ar, $en) => $isAr ? $ar : $en;
-    $bookingDate = $order->booking_date?->copy()->locale($lang);
+    // The date applies to the dated lines only; undated lines show their validity (docs/ticket_types_contract.md §7).
+    $hasDated = $order->lines->isEmpty() || $order->lines->contains(fn ($l) => $l->isDated());
+    $bookingDate = $hasDated ? $order->booking_date?->copy()->locale($lang) : null;
     $venue = $event?->mapLocation ? \App\View\PublicPage::pick($event->mapLocation, 'name', $lang) : \App\View\PublicPage::pick($event, 'location', $lang);
     $muted = $muted ?? false;
 @endphp
@@ -23,6 +25,7 @@
             <dt>
                 <span class="bo-type-name">{{ \App\Models\EventTicketType::pickLocale($line->name, $lang) ?: $line->key }}</span>
                 <span class="muted num bo-type-qty">× {{ $line->quantity }}</span>
+                @unless($line->isDated())<span class="muted bo-type-validity" style="display:block; font-size: 12.5px" data-validity="{{ $line->validity }}">{{ \App\Models\EventTicketType::validityLabel($line->validity, $lang) }}</span>@endunless
             </dt>
             <dd><x-admin.money :minor="(int) $line->line_total_minor" :currency="$order->currency" /></dd>
         </div>

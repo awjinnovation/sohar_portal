@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Model;
  *
  * Capacity is counted in tickets per booking date. `capacity` null = the
  * type only shares the event's daily capacity; otherwise both limits apply.
+ * Undated types (`validity` any_day / all_days, §7) have no booking date:
+ * their `capacity` is a total for the whole event (sold + held, all time)
+ * and the event's daily capacity does not apply to them.
  * Sales window times are tenant wall-clock (like events.start_time).
  *
  * @property array $name {en, ar}
@@ -28,6 +31,18 @@ class EventTicketType extends Model
     public const VISIBILITY_BOX_OFFICE = 'box_office';
 
     public const VISIBILITIES = [self::VISIBILITY_PUBLIC, self::VISIBILITY_BOX_OFFICE];
+
+    /**
+     * Validity (docs/ticket_types_contract.md §7): `date` = the visitor picks
+     * a day and the ticket admits on that gate day only; `any_day` = no date,
+     * one visit (its `admits` entries) on any day the event runs; `all_days`
+     * = no date, `admits` entries on every day the event runs (a season pass).
+     */
+    public const VALIDITY_DATE = 'date';
+    public const VALIDITY_ANY_DAY = 'any_day';
+    public const VALIDITY_ALL_DAYS = 'all_days';
+
+    public const VALIDITIES = [self::VALIDITY_DATE, self::VALIDITY_ANY_DAY, self::VALIDITY_ALL_DAYS];
 
     /** Sales channels: the visitor app sees public types, the gate box office sees both. */
     public const CHANNEL_APP = 'app';
@@ -46,8 +61,12 @@ class EventTicketType extends Model
     ];
 
     protected $fillable = [
-        'event_id', 'key', 'name', 'description', 'category', 'price_minor', 'admits', 'capacity', 'per_order_max',
+        'event_id', 'key', 'name', 'description', 'category', 'price_minor', 'admits', 'validity', 'capacity', 'per_order_max',
         'min_age', 'max_age', 'requires_id', 'sales_start', 'sales_end', 'visibility', 'color', 'sort', 'is_active',
+    ];
+
+    protected $attributes = [
+        'validity' => self::VALIDITY_DATE,
     ];
 
     protected $casts = [
@@ -117,6 +136,23 @@ class EventTicketType extends Model
         return self::pickLocale($this->description, $locale) ?: null;
     }
 
+    /** `date`, `any_day` or `all_days` (unknown values read as `date`). */
+    public function validityValue(): string
+    {
+        return self::normalizeValidity($this->validity);
+    }
+
+    /** Bought for one chosen day (needs a booking date). */
+    public function isDated(): bool
+    {
+        return $this->validityValue() === self::VALIDITY_DATE;
+    }
+
+    public static function normalizeValidity(?string $validity): string
+    {
+        return in_array($validity, self::VALIDITIES, true) ? $validity : self::VALIDITY_DATE;
+    }
+
     public function colorValue(): string
     {
         return $this->color ?: (self::CATEGORY_COLORS[$this->category] ?? self::CATEGORY_COLORS['other']);
@@ -136,10 +172,17 @@ class EventTicketType extends Model
     /**
      * Tickets left of this type for a date, within the event capacity:
      * null = unlimited. Counts issued tickets (active / used) and seats
-     * held by pending gate orders.
+     * held by pending gate orders. Undated types ignore the date: see
+     * availableTotal().
      */
-    public function availableOn(string $date, ?int $eventAvailable = null): ?int
+    public function availableOn(?string $date, ?int $eventAvailable = null): ?int
     {
+        if (! $this->isDated()) {
+            return $this->availableTotal();
+        }
+        if ($date === null) {
+            return null;
+        }
         $event = $this->relationLoaded('event') ? $this->event : Event::withoutTenantScope()->find($this->event_id);
         $eventAvailable ??= $event ? $event->getAvailableTicketsForDate($date) : -1;
         $eventLeft = $eventAvailable === -1 ? null : max(0, $eventAvailable);
@@ -169,6 +212,40 @@ class EventTicketType extends Model
             ->sum('l.quantity');
     }
 
+    /**
+     * Tickets left of an undated type (any_day / all_days): its own
+     * `capacity` minus every ticket sold (active / used) and every seat held
+     * by a pending gate order, whatever the day; null = unlimited. Not
+     * limited by the event's daily capacity. 0 once the event has ended.
+     */
+    public function availableTotal(): ?int
+    {
+        $event = $this->relationLoaded('event') ? $this->event : Event::withoutTenantScope()->find($this->event_id);
+        if ($event?->hasEnded()) {
+            return 0;
+        }
+        if ($this->capacity === null) {
+            return null;
+        }
+
+        return max(0, $this->capacity - $this->soldTotal() - $this->heldTotal());
+    }
+
+    public function soldTotal(): int
+    {
+        return (int) Ticket::withoutTenantScope()->where('ticket_type_id', $this->id)->whereIn('status', ['active', 'used'])->count();
+    }
+
+    public function heldTotal(): int
+    {
+        return (int) \Illuminate\Support\Facades\DB::table('box_office_order_lines as l')
+            ->join('box_office_orders as o', 'o.id', '=', 'l.order_id')
+            ->where('l.ticket_type_id', $this->id)
+            ->where('o.status', BoxOfficeOrder::STATUS_PENDING)
+            ->where('o.expires_at', '>', now())
+            ->sum('l.quantity');
+    }
+
     /** True when tickets were ever sold for this type (it can then only be deactivated). */
     public function hasSales(): bool
     {
@@ -177,8 +254,9 @@ class EventTicketType extends Model
     }
 
     /**
-     * API shape (docs/ticket_types_contract.md §2). `available` is for $date
-     * (null = unlimited).
+     * API shape (docs/ticket_types_contract.md §2, `validity` §7). `available`
+     * is for $date (null = unlimited); for undated types it is the total left
+     * whatever the date.
      */
     public function toApi(?string $date = null, ?Tenant $tenant = null, ?int $eventAvailable = null): array
     {
@@ -197,12 +275,13 @@ class EventTicketType extends Model
             'price' => $tenant ? $tenant->formatMoney((int) $this->price_minor) : \App\Support\Money::format((int) $this->price_minor),
             'is_free' => (int) $this->price_minor === 0,
             'admits' => max(1, (int) $this->admits),
+            'validity' => $this->validityValue(),
             'per_order_max' => max(1, (int) $this->per_order_max),
             'min_age' => $this->min_age,
             'max_age' => $this->max_age,
             'requires_id' => (bool) $this->requires_id,
             'color' => $this->colorValue(),
-            'available' => $date ? $this->availableOn($date, $eventAvailable) : null,
+            'available' => $date || ! $this->isDated() ? $this->availableOn($date, $eventAvailable) : null,
             'sales_open' => $this->salesOpen(),
             'sales_start' => TenantTime::iso($this->sales_start, $tenant),
             'sales_end' => TenantTime::iso($this->sales_end, $tenant),
@@ -223,6 +302,15 @@ class EventTicketType extends Model
             'min_age' => $this->min_age,
             'max_age' => $this->max_age,
         ];
+    }
+
+    /**
+     * Short validity label for staff and admin pages, e.g. «صالحة في جميع
+     * أيام الفعالية» (lang/{ar,en}/platform.php `validity`).
+     */
+    public static function validityLabel(?string $validity, ?string $locale = null): string
+    {
+        return trans('platform.validity.'.self::normalizeValidity($validity), [], $locale);
     }
 
     public static function pickLocale(?array $value, ?string $locale = null): string

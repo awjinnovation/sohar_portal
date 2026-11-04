@@ -34,7 +34,7 @@ class PrivacyPolicySeeder extends Seeder
         return <<<HTML
 <h2>Privacy Policy for {app_en}</h2>
 <p><strong>Managed by {org_en}</strong></p>
-<p><em>Last Updated: October 2026</em></p>
+<p><em>Last Updated: November 2026</em></p>
 
 <h3>1. Introduction</h3>
 <p>Welcome to {app_en}. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and services. {app_en} is managed by the {org_en} ({org_ar}).</p>
@@ -54,6 +54,9 @@ class PrivacyPolicySeeder extends Seeder
 </ul>
 <p>When you allow it, the app uses your location on your device only, to show where you are on the map. It is not sent to our servers.</p>
 
+<h4>2.3 Satisfaction Survey</h4>
+<p>If you choose to rate your visit in the app, we store your overall and detailed ratings, your comment if you write one, the event you rated, the app language, platform and version, and a coded identifier of your device. If you are signed in, your answer is linked to your account, and we contact you about it only if you allow it. We use these answers to measure visitor satisfaction and to improve the festival and its services.</p>
+
 <h3>3. How We Use Your Information</h3>
 <p>We use the collected information to:</p>
 <ul>
@@ -61,6 +64,7 @@ class PrivacyPolicySeeder extends Seeder
     <li>Process ticket purchases and bookings</li>
     <li>Send important notifications about events and updates</li>
     <li>Improve app functionality and user experience</li>
+    <li>Measure visitor satisfaction and improve the festival</li>
     <li>Ensure security and prevent fraud</li>
     <li>Comply with legal obligations</li>
 </ul>
@@ -116,7 +120,7 @@ HTML;
         return <<<HTML
 <h2>سياسة الخصوصية لتطبيق {app_ar}</h2>
 <p><strong>بإدارة {org_ar}</strong></p>
-<p><em>آخر تحديث في أكتوبر 2026</em></p>
+<p><em>آخر تحديث في نوفمبر 2026</em></p>
 
 <h3>1. مقدمة</h3>
 <p>مرحبًا بكم في {app_ar}. توضح هذه السياسة كيف نجمع معلوماتك ونستخدمها ونفصح عنها ونحميها حين تستخدم تطبيقنا وخدماتنا. والجهة المسؤولة عن إدارة التطبيق هي {org_ar}.</p>
@@ -136,6 +140,9 @@ HTML;
 </ul>
 <p>وإذا أذنت للتطبيق باستخدام موقعك، فإنه يستخدمه على جهازك فقط ليعرض مكانك على الخريطة، ولا يرسله إلى خوادمنا.</p>
 
+<h4>2.3 استبيان الرضا</h4>
+<p>إذا اخترت تقييم زيارتك في التطبيق، نحفظ تقييمك العام وتقييماتك التفصيلية، وتعليقك إن كتبته، والفعالية التي قيّمتها، ولغة التطبيق ونظام الجهاز وإصدار التطبيق، ومعرّفًا رمزيًا لجهازك. وإذا كنت مسجّل الدخول نربط إجابتك بحسابك، ولا نتواصل معك بشأنها إلا إذا أذنت بذلك. ونستخدم هذه الإجابات لقياس رضا الزوار وتحسين المهرجان وخدماته.</p>
+
 <h3>3. كيف نستخدم معلوماتك</h3>
 <p>نستخدم المعلومات التي نجمعها في الأغراض الآتية:</p>
 <ul>
@@ -143,6 +150,7 @@ HTML;
     <li>إتمام عمليات شراء التذاكر والحجوزات</li>
     <li>إرسال الإشعارات المهمة عن الفعاليات ومستجداتها</li>
     <li>تطوير وظائف التطبيق وتحسين تجربة استخدامه</li>
+    <li>قياس رضا الزوار وتحسين المهرجان</li>
     <li>حماية الخدمة ومنع الاحتيال</li>
     <li>الوفاء بالالتزامات القانونية</li>
 </ul>

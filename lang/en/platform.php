@@ -21,6 +21,16 @@ return [
         'per_order_limit' => 'At most :max :type tickets per order.',
         'per_order_limit_total' => 'At most :max tickets per order.',
         'items_required' => 'Choose at least one ticket.',
+        // Validity per ticket type (docs/ticket_types_contract.md §7).
+        'type_sold_out_total' => 'No :type tickets are left.',
+        'booking_date_required' => 'Choose the day of your visit.',
+        'event_ended' => 'The event has ended.',
+    ],
+    // Validity of a ticket type or ticket (docs/ticket_types_contract.md §7).
+    'validity' => [
+        'date' => 'Valid on the booked day',
+        'any_day' => 'One visit, any day',
+        'all_days' => 'Valid every day of the event',
     ],
     'tx' => [
         'topup' => ['title' => 'Wallet top-up', 'description' => 'Added to your wallet'],

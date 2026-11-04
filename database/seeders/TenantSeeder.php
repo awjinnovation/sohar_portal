@@ -20,8 +20,8 @@ class TenantSeeder extends Seeder
         $settings = [
             'tenant' => [
                 'tagline' => [
-                    'en' => 'Sohar Festival, races and heritage across the wilayats of North Al Batinah',
-                    'ar' => 'مهرجان صحار والسباقات والتراث في ولايات شمال الباطنة',
+                    'en' => 'Suhar Festival events, tickets and services in one app',
+                    'ar' => 'فعاليات مهرجان صحار وتذاكره وخدماته في تطبيق واحد',
                 ],
                 'default_locale' => 'ar',
                 'locales' => [
@@ -54,20 +54,22 @@ class TenantSeeder extends Seeder
                 ],
             ],
             'branding' => [
-                'logo_url' => '/tenants/north-batinah/logo.png',
-                'logo_on_primary_url' => '/tenants/north-batinah/logo_on_primary.png',
-                'icon_url' => '/tenants/north-batinah/mark.png',
+                // Suhar Festival logo (docs/brand/suhar_festival). ?v= busts
+                // the apps' image cache when the files are replaced.
+                'logo_url' => '/tenants/north-batinah/logo.png?v=2',
+                'logo_on_primary_url' => '/tenants/north-batinah/logo_on_primary.png?v=2',
+                'icon_url' => '/tenants/north-batinah/mark.png?v=2',
                 'splash_url' => '',
                 'onboarding' => [
                     [
                         'image_url' => '/tenants/north-batinah/onboarding_1.jpg',
                         'title' => [
-                            'en' => 'Welcome to North Batinah Events',
-                            'ar' => 'مرحبًا بكم في فعاليات شمال الباطنة',
+                            'en' => 'Welcome to Suhar Festival',
+                            'ar' => 'مرحبًا بكم في مهرجان صحار',
                         ],
                         'body' => [
-                            'en' => 'Sohar Festival, camel and horse racing, the rally and heritage events across Sohar, Shinas, Liwa, Saham, Al Khaburah and Al Suwaiq.',
-                            'ar' => 'مهرجان صحار وسباقات الهجن والخيل والرالي والفعاليات التراثية في صحار وشناص ولوى وصحم والخابورة والسويق.',
+                            'en' => 'Discover the festival events and daily shows at Sohar Entertainment Centre, and book your tickets from your phone.',
+                            'ar' => 'تعرّف على فعاليات المهرجان وعروضه اليومية في مركز صحار الترفيهي، واحجز تذاكرك من هاتفك.',
                         ],
                     ],
                     [
@@ -97,10 +99,11 @@ class TenantSeeder extends Seeder
             'theme' => [
                 'mode' => 'light',
                 'colors' => [
-                    'primary' => '#2F8E80',
+                    // Suhar Festival logo: navy #314F99, amber #F9A40D.
+                    'primary' => '#314F99',
                     'on_primary' => '#FFFFFF',
-                    'secondary' => '#E5883C',
-                    'on_secondary' => '#FFFFFF',
+                    'secondary' => '#F9A40D',
+                    'on_secondary' => '#1A1A1A',
                     'background' => '#FFFFFF',
                     'surface' => '#FFFFFF',
                     'on_surface' => '#1A1A1A',
@@ -109,8 +112,8 @@ class TenantSeeder extends Seeder
                     'success' => '#4CAF50',
                     'warning' => '#FF9800',
                     'error' => '#F44336',
-                    'wallet_card_start' => '#2F8E80',
-                    'wallet_card_end' => '#206257',
+                    'wallet_card_start' => '#314F99',
+                    'wallet_card_end' => '#1F3468',
                 ],
                 'font_family_ar' => 'Cairo',
                 'font_family_en' => 'Cairo',
@@ -248,7 +251,7 @@ class TenantSeeder extends Seeder
         ];
         $settings['theme'] += [
             'header_style' => 'gradient',
-            'header_gradient' => ['#2F8E80', '#2C7DA5'],
+            'header_gradient' => ['#314F99', '#24397A'],
             'font_family_numeric' => 'Inter',
         ];
         // Places + content are reached from Home (places_featured,
@@ -263,21 +266,35 @@ class TenantSeeder extends Seeder
         $settings['gate_sales'] = ['enabled' => true];
         // Places to visit + content (docs/places_content_contract.md §1).
         $settings['modules'] += ['places' => true, 'content' => true];
+        // The governorate's visitor satisfaction programme «راضي»
+        // (docs/radi_satisfaction_contract.md §1). The official logo is not
+        // delivered yet, so logo_url stays empty (the app shows a neutral
+        // icon); aspects are the platform defaults.
+        $settings['modules'] += ['radi' => true];
+        $settings['radi'] = [
+            'logo_url' => '',
+            'external_url' => '',
+            'title' => ['en' => 'Radi', 'ar' => 'راضي'],
+            'intro' => [
+                'en' => 'North Al Batinah Governorate\'s programme for measuring visitor satisfaction. Rate your Suhar Festival experience in less than a minute.',
+                'ar' => 'برنامج محافظة شمال الباطنة لقياس رضا الزوار. قيّم تجربتك في مهرجان صحار في أقل من دقيقة.',
+            ],
+        ];
         $settings['ai'] = [
             'assistant_name' => ['en' => 'Ask Sohar', 'ar' => 'اسأل صحار'],
             'welcome' => [
-                'en' => 'Welcome to North Batinah events! Ask me about the Sohar Festival, races, heritage events, tickets or parking.',
-                'ar' => 'حيّاك الله في فعاليات شمال الباطنة. اسألني عن مهرجان صحار والسباقات والفعاليات التراثية والتذاكر ومواقف السيارات.',
+                'en' => 'Welcome to Suhar Festival! Ask me about events, shows, tickets or parking.',
+                'ar' => 'أهلًا بك في مهرجان صحار. اسألني عن الفعاليات والعروض والتذاكر ومواقف السيارات.',
             ],
             'suggestions' => [
                 ['en' => "What's on this weekend?", 'ar' => 'ما فعاليات عطلة نهاية الأسبوع؟'],
-                ['en' => 'When does the Sohar Festival start?', 'ar' => 'متى يبدأ مهرجان صحار؟'],
+                ['en' => 'When does Suhar Festival start?', 'ar' => 'متى يبدأ مهرجان صحار؟'],
                 ['en' => 'Plan a family evening at the festival', 'ar' => 'خطّط أمسية عائلية في المهرجان'],
                 ['en' => 'Where can I park?', 'ar' => 'أين أجد مواقف السيارات؟'],
             ],
             'monthly_token_budget' => 2000000,
             'venue_info' => [
-                'en' => 'The Sohar Festival is held at the Sohar Entertainment Centre (festival grounds) and runs daily in the evening during the festival season. Families are welcome. Most events are free; some activities (e.g. karting) are paid.',
+                'en' => 'Suhar Festival is held at the Sohar Entertainment Centre (festival grounds) and runs daily in the evening during the festival season. Families are welcome. Most events are free; some activities (e.g. karting) are paid.',
                 'ar' => 'يُقام مهرجان صحار في أرض المهرجان بمركز صحار الترفيهي، ويفتح أبوابه مساء كل يوم طوال موسم المهرجان، والعائلات مرحب بها. أغلب الفعاليات مجانية، وبعض الأنشطة كالكارتينج برسوم.',
             ],
         ];
@@ -288,9 +305,10 @@ class TenantSeeder extends Seeder
 
         return [
             'slug' => 'north-batinah',
+            // App name chosen by the organizer: «مهرجان صحار» / Suhar Festival.
             'name' => [
-                'en' => 'North Batinah Events',
-                'ar' => 'فعاليات شمال الباطنة',
+                'en' => 'Suhar Festival',
+                'ar' => 'مهرجان صحار',
             ],
             'status' => 'active',
             'settings' => $settings,
@@ -534,6 +552,8 @@ class TenantSeeder extends Seeder
         $settings['gate_sales'] = ['enabled' => true];
         // Places + content on (docs/places_content_contract.md §1).
         $settings['modules'] += ['places' => true, 'content' => true];
+        // Visitor satisfaction survey with the platform defaults (docs/radi_satisfaction_contract.md §1).
+        $settings['modules'] += ['radi' => true];
         $settings['ai'] = [
             'assistant_name' => ['en' => 'Ask Demo', 'ar' => 'المساعد التجريبي'],
             'welcome' => [

@@ -46,7 +46,8 @@
                     <div>
                         <dt>
                             {{ \App\View\PublicPage::pick($issued->event, 'title', $lang) ?: $t('تذكرة', 'Ticket') }}
-                            @if($issued->booking_date)<span class="muted num" style="display:block; font-size: 12.5px">{{ $issued->booking_date->locale($lang)->translatedFormat('j F Y') }}</span>@endif
+                            @if($issued->booking_date)<span class="muted num" style="display:block; font-size: 12.5px">{{ $issued->booking_date->locale($lang)->translatedFormat('j F Y') }}</span>
+                            @elseif($issued->validityValue() !== \App\Models\EventTicketType::VALIDITY_DATE)<span class="muted" style="display:block; font-size: 12.5px" data-validity="{{ $issued->validity }}">{{ \App\Models\EventTicketType::validityLabel($issued->validity, $lang) }}</span>@endif
                         </dt>
                         <dd><a href="{{ route('payment.ticket.single', $issued->qr_code) }}?lang={{ $lang }}" class="mono ltr">{{ $issued->ticket_number ?: \Illuminate\Support\Str::limit($issued->qr_code, 16) }}</a></dd>
                     </div>

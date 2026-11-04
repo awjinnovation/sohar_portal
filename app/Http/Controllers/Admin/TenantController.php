@@ -456,6 +456,15 @@ class TenantController extends Controller
             $f["messages.box_office_sms.$l"] = ['string', 'nullable|string|max:500'];
         }
 
+        // Visitor satisfaction survey «راضي» (docs/radi_satisfaction_contract.md §1; admin/satisfaction/_tenant-settings).
+        $f['radi.logo_url'] = ['string', $url];
+        $f['radi.external_url'] = ['string', 'nullable|url:http,https|max:500'];
+        foreach (['en', 'ar'] as $l) {
+            $f["radi.title.$l"] = ['string', 'nullable|string|max:60'];
+            $f["radi.intro.$l"] = ['string', 'nullable|string|max:300'];
+        }
+        $f['radi.aspects'] = ['json', 'nullable|json|max:4000'];
+
         return $f;
     }
 
@@ -603,6 +612,10 @@ class TenantController extends Controller
             if (! $valid) {
                 $errors['s.ai.suggestions'] = __('ai.admin.suggestions_help');
             }
+        }
+
+        if (array_key_exists('radi.aspects', $values)) {
+            $errors += \App\Services\Satisfaction\RadiSettings::aspectsErrors($values['radi.aspects'], 's.radi.aspects');
         }
 
         return $errors;

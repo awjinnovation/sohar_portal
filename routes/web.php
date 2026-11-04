@@ -104,6 +104,12 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         });
         Route::resource('gates', Admin\GateController::class, ['as' => 'admin'])->except(['show'])->middleware('can:manage gates');
 
+        // Visitor satisfaction «راضي» report + CSV export (docs/radi_satisfaction_contract.md §4)
+        Route::middleware('can:view satisfaction')->prefix('satisfaction')->name('admin.satisfaction.')->group(function () {
+            Route::get('/', [Admin\SatisfactionController::class, 'index'])->name('index');
+            Route::get('export', [Admin\SatisfactionController::class, 'export'])->middleware('throttle:10,1')->name('export');
+        });
+
         // Payments
         Route::middleware('can:view payments')->group(function () {
             Route::get('payments', [Admin\PaymentController::class, 'index'])->name('admin.payments.index');

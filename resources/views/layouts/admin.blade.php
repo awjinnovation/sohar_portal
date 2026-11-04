@@ -31,6 +31,7 @@
     $menuSections = [
         ['title' => 'نظرة عامة', 'items' => [
             ['admin.dashboard', 'admin.dashboard', 'grid-1x2', 'لوحة التحكم', null],
+            ['admin.satisfaction.index', 'admin.satisfaction.*', 'emoji-smile', 'رضا الزوار', 'view satisfaction'],
         ]],
         ['title' => 'الفعاليات والتذاكر', 'items' => [
             ['admin.events.index', 'admin.events.*', 'calendar-event', 'الفعاليات', 'manage events'],

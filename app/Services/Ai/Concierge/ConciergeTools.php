@@ -505,7 +505,9 @@ class ConciergeTools
                 'status' => $t->status,
             ];
             $this->seenTickets[$t->id] = $card;
-            $rows[] = $card + ['event_id' => $t->event_id, 'quantity' => (int) $t->quantity, 'ticket_type' => $t->ticket_type];
+            // validity (docs/ticket_types_contract.md §7): an undated ticket admits from valid_from to valid_until.
+            $rows[] = $card + ['event_id' => $t->event_id, 'quantity' => (int) $t->quantity, 'ticket_type' => $t->ticket_type,
+                'validity' => $t->validityValue(), 'valid_from' => $t->validFrom(), 'valid_until' => $t->validUntil()];
         }
 
         return ['count' => count($rows), 'tickets' => array_map(function ($r) {

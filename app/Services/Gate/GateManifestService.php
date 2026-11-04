@@ -2,7 +2,9 @@
 
 namespace App\Services\Gate;
 
+use App\Models\EventTicketType;
 use App\Models\Gate;
+use App\Models\GateScan;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Support\TenantTime;
@@ -43,8 +45,8 @@ class GateManifestService
 
     /**
      * Tickets valid on an operating day: booked for that date, or without a
-     * booking date for an event running that day. Optionally limited to the
-     * gate's event.
+     * booking date (any_day / all_days, docs/ticket_types_contract.md §7) for
+     * an event running that day. Optionally limited to the gate's event.
      */
     public function ticketsFor(string $date, ?Gate $gate = null): Builder
     {
@@ -73,25 +75,33 @@ class GateManifestService
     }
 
     /**
-     * @return array{version: string, generated_at: string, date: string, salt: string, gate_id: ?int, count: int, tickets: list<array{h: string, s: string, t: ?string, e: int, d: string}>}
+     * Entries `u` are over the ticket's life, except for season passes
+     * (all_days): today's admitted entries, so they are `active` again every
+     * day. Undated tickets add `v` (any_day | all_days).
+     *
+     * @return array{version: string, generated_at: string, date: string, salt: string, gate_id: ?int, count: int, tickets: list<array{h: string, s: string, t: ?string, e: int, d: string, a: int, u: int, v?: string}>}
      */
     public function build(Tenant $tenant, string $date, ?Gate $gate = null): array
     {
         $salt = $this->salt($tenant, $date);
         $tickets = [];
+        $today = $this->entriesToday($tenant, $date, $gate);
 
         $this->ticketsFor($date, $gate)
             ->toBase()
-            ->select(['tickets.id', 'tickets.qr_code', 'tickets.status', 'tickets.ticket_type', 'tickets.event_id', 'tickets.booking_date', 'tickets.check_in_count', 'tickets.max_check_ins'])
+            ->select(['tickets.id', 'tickets.qr_code', 'tickets.status', 'tickets.ticket_type', 'tickets.validity', 'tickets.event_id', 'tickets.booking_date', 'tickets.check_in_count', 'tickets.max_check_ins'])
             ->orderBy('tickets.id')
-            ->chunk(2000, function ($rows) use (&$tickets, $salt, $date) {
+            ->chunk(2000, function ($rows) use (&$tickets, $salt, $date, $today) {
                 foreach ($rows as $row) {
                     if (! $row->qr_code) {
                         continue;
                     }
+                    $validity = EventTicketType::normalizeValidity($row->validity);
+                    $pass = $validity === EventTicketType::VALIDITY_ALL_DAYS;
+                    $used = $pass ? (int) ($today[$row->id] ?? 0) : (int) $row->check_in_count;
                     $status = match (true) {
                         $row->status === 'expired', $row->status === 'cancelled' => 'cancelled',
-                        $row->status === 'used', (int) $row->check_in_count >= max(1, (int) $row->max_check_ins) => 'used',
+                        ! $pass && $row->status === 'used', $used >= max(1, (int) $row->max_check_ins) => 'used',
                         default => 'active',
                     };
                     $tickets[] = [
@@ -100,10 +110,10 @@ class GateManifestService
                         't' => $row->ticket_type,
                         'e' => (int) $row->event_id,
                         'd' => $row->booking_date ? substr((string) $row->booking_date, 0, 10) : $date,
-                        // Multi-entry (docs/ticket_types_contract.md): people admitted / entries used.
+                        // Multi-entry (docs/ticket_types_contract.md): people admitted / entries used (today, for a season pass).
                         'a' => max(1, (int) $row->max_check_ins),
-                        'u' => (int) $row->check_in_count,
-                    ];
+                        'u' => $used,
+                    ] + ($validity === EventTicketType::VALIDITY_DATE ? [] : ['v' => $validity]);
                 }
             });
 
@@ -118,6 +128,23 @@ class GateManifestService
             'count' => count($tickets),
             'tickets' => $tickets,
         ];
+    }
+
+    /** @return array<int, int> ticket id → admitted entries on that gate day, for the season passes in scope */
+    private function entriesToday(Tenant $tenant, string $date, ?Gate $gate): array
+    {
+        [$from, $to] = GateDay::window($date, $tenant);
+
+        return GateScan::withoutTenantScope()
+            ->where('tenant_id', $tenant->id)
+            ->whereIn('ticket_id', $this->ticketsFor($date, $gate)->where('tickets.validity', EventTicketType::VALIDITY_ALL_DAYS)->select('tickets.id'))
+            ->where('direction', 'in')->where('result', 'valid')
+            ->where('scanned_at', '>=', $from)->where('scanned_at', '<', $to)
+            ->groupBy('ticket_id')
+            ->selectRaw('ticket_id, count(*) as n')
+            ->pluck('n', 'ticket_id')
+            ->map(fn ($n) => (int) $n)
+            ->all();
     }
 
     /** Cancelled tickets of refunded payments are sent as `refunded`. */

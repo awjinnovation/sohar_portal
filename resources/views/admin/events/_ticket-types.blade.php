@@ -7,6 +7,12 @@
         'child' => ['أطفال', 'balloon'], 'senior' => ['كبار السن', 'person-walking'], 'student' => ['طلاب', 'mortarboard'],
         'group' => ['مجموعات', 'people-fill'], 'other' => ['أخرى', 'tag'],
     ];
+    // Validity (docs/ticket_types_contract.md §7): label, list badge icon.
+    $ttValidities = [
+        'date' => ['يوم يختاره الزائر', 'calendar-event'],
+        'any_day' => ['زيارة واحدة في أي يوم', 'calendar-check'],
+        'all_days' => ['جميع أيام الفعالية', 'calendar-range'],
+    ];
     $ttTemplates = [
         'general' => ['key' => 'general', 'name_ar' => 'تذكرة عامة', 'name_en' => 'General admission', 'category' => 'general', 'admits' => 1],
         'family' => ['key' => 'family', 'name_ar' => 'تذكرة عائلية', 'name_en' => 'Family', 'category' => 'family', 'admits' => 4, 'per_order_max' => 5,
@@ -26,6 +32,7 @@
         'currency' => $ttCurrency,
         'locale' => app()->getLocale(),
         'categories' => collect($ttCategories)->map(fn ($c) => ['label' => __($c[0]), 'icon' => $c[1]]),
+        'validities' => collect($ttValidities)->map(fn ($v) => ['label' => __($v[0]), 'icon' => $v[1]]),
         'colors' => \App\Models\EventTicketType::CATEGORY_COLORS,
         'templates' => $ttTemplates,
         'types' => app(\App\Http\Controllers\Admin\EventTicketTypeController::class)->list($event),
@@ -36,6 +43,9 @@
             'cannotDelete' => __('بيعت تذاكر من هذا النوع، فيمكن إيقافه ولا يمكن حذفه.'), 'newType' => __('نوع تذكرة جديد'), 'editType' => __('تعديل نوع التذكرة'),
             'saved' => __('حُفظ نوع التذكرة'), 'error' => __('تعذّر الحفظ. راجع الحقول وأعد المحاولة.'), 'salesClosed' => __('البيع مغلق الآن'), 'empty' => __('لا توجد أنواع تذاكر'),
             'perOrder' => __('الحد في الطلب :count'), 'capacity' => __('السعة :count'),
+            'capacityDaily' => __('السعة اليومية'), 'capacityTotal' => __('السعة الإجمالية'),
+            'capacityHelpDaily' => __('اتركها فارغة ليشارك النوع سعة الفعالية'),
+            'capacityHelpTotal' => __('اتركها فارغة ليكون البيع غير محدود، ولا تسري عليه سعة الفعالية اليومية'),
         ],
     ];
 @endphp
@@ -103,11 +113,16 @@
                         <div class="form-text">{{ __('السعر 0 يجعل النوع مجانيًا') }}</div></div>
                     <div class="col-md-4"><label class="form-label" for="tt_admits">{{ __('عدد الأشخاص بالتذكرة') }}</label><input class="form-control" id="tt_admits" data-f="admits" type="number" min="1" max="50" dir="ltr">
                         <div class="form-text">{{ __('تُمسح التذكرة العائلية لأربعة أشخاص أربع مرات') }}</div></div>
-                    <div class="col-md-4"><label class="form-label" for="tt_capacity">{{ __('السعة اليومية') }}</label><input class="form-control" id="tt_capacity" data-f="capacity" type="number" min="0" dir="ltr" placeholder="{{ __('سعة الفعالية') }}">
-                        <div class="form-text">{{ __('اتركها فارغة ليشارك النوع سعة الفعالية') }}</div></div>
+                    <div class="col-md-4"><label class="form-label" for="tt_capacity" id="tt_capacity_label">{{ __('السعة اليومية') }}</label><input class="form-control" id="tt_capacity" data-f="capacity" type="number" min="0" dir="ltr" placeholder="{{ __('سعة الفعالية') }}">
+                        <div class="form-text" id="tt_capacity_help">{{ __('اتركها فارغة ليشارك النوع سعة الفعالية') }}</div></div>
                     <div class="col-md-4"><label class="form-label" for="tt_per_order_max">{{ __('الحد في الطلب') }}</label><input class="form-control" id="tt_per_order_max" data-f="per_order_max" type="number" min="1" max="100" dir="ltr"></div>
                     <div class="col-md-3"><label class="form-label" for="tt_min_age">{{ __('أدنى عمر') }}</label><input class="form-control" id="tt_min_age" data-f="min_age" type="number" min="0" max="120" dir="ltr"></div>
                     <div class="col-md-3"><label class="form-label" for="tt_max_age">{{ __('أقصى عمر') }}</label><input class="form-control" id="tt_max_age" data-f="max_age" type="number" min="0" max="120" dir="ltr"></div>
+                    <div class="col-md-6"><label class="form-label" for="tt_validity">{{ __('صلاحية التذكرة') }}</label>
+                        <select class="form-select" id="tt_validity" data-f="validity">
+                            @foreach($ttValidities as $vk => [$vl])<option value="{{ $vk }}">{{ __($vl) }}</option>@endforeach
+                        </select>
+                        <div class="form-text">{{ __('يختار الزائر يوم الزيارة في الخيار الأول فقط. يسري تغيير الصلاحية على التذاكر الجديدة فقط.') }}</div></div>
                     <div class="col-md-6"><label class="form-label" for="tt_visibility">{{ __('مكان البيع') }}</label>
                         <select class="form-select" id="tt_visibility" data-f="visibility">
                             <option value="public">{{ __('التطبيق والبوابات') }}</option>

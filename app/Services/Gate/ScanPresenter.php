@@ -20,6 +20,8 @@ class ScanPresenter
         $t = $o->ticket;
         $locale = app()->getLocale();
         $event = $t?->event;
+        // Today's entries for a season pass (all_days), else over the ticket's life.
+        $used = $t ? $t->entriesUsed() : 0;
 
         return [
             'result' => $o->result,
@@ -33,15 +35,17 @@ class ScanPresenter
                 'event_id' => $t->event_id,
                 'event_title' => $event ? ($locale === 'ar' ? ($event->title_ar ?: $event->title) : $event->title) : null,
                 'valid_date' => $t->booking_date?->toDateString(),
+                // docs/ticket_types_contract.md §7: validity, validity_text («صالحة في جميع أيام الفعالية»), valid_from, valid_until.
+                ...$t->validityApi($locale),
                 'used_at' => TenantTime::iso($t->used_at, $tenant),
                 'quantity' => (int) ($t->quantity ?: 1),
                 'quantity_label' => trans_choice('gate.people', (int) ($t->quantity ?: 1), ['count' => (int) ($t->quantity ?: 1)]),
-                'check_in_count' => (int) $t->check_in_count,
+                'check_in_count' => $used,
                 'max_check_ins' => (int) ($t->max_check_ins ?: 1),
             ] : null,
             // docs/ticket_types_contract.md §2: type badge, ID/age note, "2 of 4".
             'ticket_type' => $t ? $this->typePayload($t) : null,
-            'entry' => $t ? ['used' => (int) $t->check_in_count, 'admits' => $t->admits()] : null,
+            'entry' => $t ? ['used' => $used, 'admits' => $t->admits()] : null,
             'scan_id' => $o->scan?->id,
             'replay' => $o->replay,
         ] + ($withCounts ? ['counts' => $this->counts($device)] : []);
@@ -51,10 +55,11 @@ class ScanPresenter
     {
         $type = $t->ticketType;
 
-        return $type ? $type->toScanApi() : [
+        // The ticket's own validity (copied at sale), not the type's current one.
+        return ($type ? $type->toScanApi() : [
             'id' => null, 'key' => $t->ticket_type, 'name_text' => (string) $t->ticket_type, 'category' => 'general',
             'color' => \App\Models\EventTicketType::CATEGORY_COLORS['general'], 'requires_id' => false, 'min_age' => null, 'max_age' => null,
-        ];
+        ]) + ['validity' => $t->validityValue()];
     }
 
     /** @return array{in_today: int, out_today: int} */

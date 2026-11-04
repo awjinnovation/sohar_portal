@@ -37,16 +37,17 @@ class RolesAndPermissionsSeeder extends Seeder
         'manage places',        // places to visit, place categories, places map
         'manage content',       // content collections + items, pages
         'sell tickets',         // gate box office (docs/gate_sales_contract.md)
+        'view satisfaction',    // visitor satisfaction report «راضي» (docs/radi_satisfaction_contract.md §4)
     ];
 
     public const ROLES = [
         // Tenant admin: everything inside the tenant (also via Gate::before).
         'admin' => self::PERMISSIONS,
-        'event-manager' => ['view dashboard', 'manage events', 'manage tickets', 'view payments', 'manage announcements'],
+        'event-manager' => ['view dashboard', 'manage events', 'manage tickets', 'view payments', 'manage announcements', 'view satisfaction'],
         'ticket-manager' => ['view dashboard', 'manage tickets', 'validate tickets', 'view payments', 'refund payments', 'manage gates'],
-        'content-manager' => ['view dashboard', 'manage events', 'manage restaurants', 'manage locations', 'manage announcements', 'manage notifications', 'manage settings', 'manage places', 'manage content'],
+        'content-manager' => ['view dashboard', 'manage events', 'manage restaurants', 'manage locations', 'manage announcements', 'manage notifications', 'manage settings', 'manage places', 'manage content', 'view satisfaction'],
         'finance-manager' => ['view dashboard', 'view payments', 'refund payments', 'manage wallets', 'manage refunds', 'manage deposits', 'manage vendors'],
-        'viewer' => ['view dashboard', 'view payments'],
+        'viewer' => ['view dashboard', 'view payments', 'view satisfaction'],
         // App-side roles
         'staff' => ['validate tickets', 'manage deposits', 'sell tickets'],
         'vendor-staff' => ['charge wallets', 'manage deposits'],

@@ -17,7 +17,9 @@ use Illuminate\Validation\Rule;
  * Admin → event → Ticket types (docs/ticket_types_contract.md §3). JSON for
  * the event form's editor (session + CSRF, permission `manage events`).
  * Changing a price affects new orders only; a type with sales can be
- * deactivated but not deleted; an event keeps at least one type.
+ * deactivated but not deleted; an event keeps at least one type. Validity
+ * (§7: date | any_day | all_days) is copied to tickets when sold, so
+ * changing it affects new tickets only.
  */
 class EventTicketTypeController extends Controller
 {
@@ -125,6 +127,7 @@ class EventTicketTypeController extends Controller
             'category' => ['required', Rule::in(EventTicketType::CATEGORIES)],
             'price' => ['required', 'numeric', 'min:0', 'max:100000'],
             'admits' => ['required', 'integer', 'between:1,50'],
+            'validity' => ['nullable', Rule::in(EventTicketType::VALIDITIES)],
             'capacity' => ['nullable', 'integer', 'min:0', 'max:10000000'],
             'per_order_max' => ['required', 'integer', 'between:1,100'],
             'min_age' => ['nullable', 'integer', 'between:0,120'],
@@ -137,7 +140,7 @@ class EventTicketTypeController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ], [], [
             'key' => __('الرمز'), 'name_ar' => __('الاسم بالعربية'), 'name_en' => __('الاسم بالإنجليزية'), 'price' => __('السعر'),
-            'admits' => __('عدد الأشخاص'), 'per_order_max' => __('الحد في الطلب'), 'max_age' => __('أقصى عمر'), 'sales_end' => __('نهاية البيع'),
+            'admits' => __('عدد الأشخاص'), 'validity' => __('صلاحية التذكرة'), 'per_order_max' => __('الحد في الطلب'), 'max_age' => __('أقصى عمر'), 'sales_end' => __('نهاية البيع'),
         ]);
         $tenant = $this->context->get();
         $local = fn ($v) => $v ? Carbon::parse($v)->format('Y-m-d H:i:s') : null;
@@ -150,6 +153,8 @@ class EventTicketTypeController extends Controller
             'category' => $data['category'],
             'price_minor' => $tenant->toMinor((string) $data['price']),
             'admits' => (int) $data['admits'],
+            // Omitted (older editor) = unchanged.
+            'validity' => $data['validity'] ?? ($type?->validityValue() ?? EventTicketType::VALIDITY_DATE),
             'capacity' => isset($data['capacity']) ? (int) $data['capacity'] : null,
             'per_order_max' => (int) $data['per_order_max'],
             'min_age' => isset($data['min_age']) ? (int) $data['min_age'] : null,

@@ -23,14 +23,17 @@ class TicketResource extends JsonResource
             'ticket_number' => $this->ticket_number,
             'qr_code' => $this->qr_code,
             'status' => $this->status,
+            // Null for undated tickets (any_day / all_days): see valid_from / valid_until (docs/ticket_types_contract.md §7).
             'booking_date' => $this->booking_date?->format('Y-m-d'),
+            ...$this->resource->validityApi(),
             'purchase_date' => \App\Support\TenantTime::iso($this->purchase_date),
             'used_at' => \App\Support\TenantTime::iso($this->used_at),
             'transaction_id' => $this->transaction_id,
             // docs/ticket_types_contract.md §2
             'ticket_type' => $this->resource->ticketTypeApi(),
             'admits' => $this->resource->admits(),
-            'entries_used' => (int) $this->check_in_count,
+            // Today's entries for an all_days ticket.
+            'entries_used' => $this->resource->entriesUsed(),
             'ticket' => [
                 'id' => $this->event_id,
                 'event_id' => $this->event_id,

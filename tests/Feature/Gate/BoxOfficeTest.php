@@ -682,4 +682,44 @@ class BoxOfficeTest extends GateTestCase
         $this->assertTrue($first->fresh()->metadata['box_office_refund_required']);
         $this->assertSame([$first->id], $model->fresh()->meta['refund_payment_ids']);
     }
+
+    #[Test]
+    public function undated_types_are_sold_without_a_date_and_hold_only_their_own_capacity(): void
+    {
+        // docs/ticket_types_contract.md §7: undated lines carry no date and hold no seat of the day.
+        config(['api_cache.enabled' => false]);
+        $event = $this->todayEvent(['total_tickets' => 1]);
+        $pass = $this->addType($event, ['key' => 'pass', 'validity' => EventTicketType::VALIDITY_ALL_DAYS, 'capacity' => 2, 'price_minor' => 3000]);
+        [, $token] = $this->sellingDevice();
+        $catalogPass = fn () => collect($this->gate('GET', '/api/v1/gate/sales/catalog', [], $token)->json('data.events.0.ticket_types'))->firstWhere('key', 'pass');
+        $this->assertSame(['all_days', 2], [$catalogPass()['validity'], $catalogPass()['available']]);
+
+        $this->gate('POST', '/api/v1/gate/sales/quote', ['event_id' => $event->id, 'items' => [['ticket_type_id' => $pass->id, 'quantity' => 1]]], $token)
+            ->assertOk()->assertJsonPath('data.booking_date', null)->assertJsonPath('data.lines.0.validity', 'all_days');
+        $order = $this->order($token, $event, ['items' => [['ticket_type_id' => $pass->id, 'quantity' => 1]], 'quantity' => null])->assertCreated()
+            ->assertJsonPath('data.order.booking_date', null)
+            ->assertJsonPath('data.order.lines.0.validity', 'all_days')
+            ->json('data.order');
+
+        // The pending pass holds a pass, not the day's only seat.
+        $this->assertSame(1, $catalogPass()['available']);
+        $this->assertSame(1, $this->getJson("/api/v1/events/{$event->id}/availability?date=".\App\Services\Gate\GateDay::today(), $this->tenantHeaders())->json('data.available_tickets'));
+        $this->order($token, $event, ['items' => [['ticket_type_id' => $pass->id, 'quantity' => 2]], 'quantity' => null])->assertStatus(422)
+            ->assertJsonPath('code', 'SOLD_OUT')->assertJsonPath('data.ticket_type_id', $pass->id)->assertJsonPath('data.available', 1);
+        $this->order($token, $event, ['items' => [
+            ['ticket_type_id' => $this->general($event)->id, 'quantity' => 1], ['ticket_type_id' => $pass->id, 'quantity' => 1],
+        ], 'quantity' => null])->assertCreated()->assertJsonPath('data.order.booking_date', \App\Services\Gate\GateDay::today());
+
+        $path = parse_url($order['payment_url'], PHP_URL_PATH);
+        $this->get($path.'?lang=en')->assertOk()->assertSee('data-validity="all_days"', false)->assertSee('Valid every day of the event');
+        $this->followRedirects($this->payOnline($order['payment_url']))->assertOk()->assertSee('data-order-status="paid"', false);
+
+        $ticket = Ticket::where('ticket_type_id', $pass->id)->sole();
+        $this->assertSame(['all_days', null], [$ticket->validity, $ticket->booking_date]);
+        $this->gate('GET', "/api/v1/gate/sales/orders/{$order['id']}", [], $token)->assertOk()
+            ->assertJsonPath('data.order.tickets.0.validity', 'all_days')->assertJsonPath('data.order.tickets.0.booking_date', null);
+        $this->gate('POST', "/api/v1/gate/sales/orders/{$order['id']}/admit", [], $token)->assertOk()
+            ->assertJsonPath('data.results.0.result', 'valid')->assertJsonPath('data.results.0.ticket.validity', 'all_days');
+        $this->assertSame('active', $ticket->fresh()->status);
+    }
 }

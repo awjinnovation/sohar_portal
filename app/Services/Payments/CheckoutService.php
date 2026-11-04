@@ -35,7 +35,7 @@ class CheckoutService
      * Legacy single-type quote: `quantity` of `ticket_type` (a type key;
      * empty / `standard` = the event's default type).
      */
-    public function quote(Tenant $tenant, int $eventId, string $bookingDate, int $quantity, ?string $ticketType, int $pointsToRedeem = 0, ?User $user = null): array
+    public function quote(Tenant $tenant, int $eventId, ?string $bookingDate, int $quantity, ?string $ticketType, int $pointsToRedeem = 0, ?User $user = null): array
     {
         return $this->quoteItems($tenant, $eventId, $bookingDate, [['ticket_type' => $ticketType, 'quantity' => $quantity]], $pointsToRedeem, $user);
     }
@@ -46,16 +46,24 @@ class CheckoutService
      * or legacy [{ticket_type: key|null, quantity}]; zero quantities are
      * skipped, repeated types merged.
      *
+     * Validity (docs/ticket_types_contract.md §7): the booking date is
+     * required only when a line is of a `date` type; it applies to those
+     * lines only (undated lines get no date) and is dropped (null) when no
+     * line is dated. Dated lines count against the event's daily capacity and
+     * their type's daily capacity; undated lines only against their type's
+     * total capacity, and are refused once the event has ended.
+     *
      * Errors: EVENT_NOT_FOUND, TYPE_NOT_AVAILABLE (unknown / inactive /
      * other channel), SALES_CLOSED, PER_ORDER_LIMIT (per type or the whole
      * order: `ticket_type_id` null), SOLD_OUT (type capacity: with
-     * `ticket_type_id`; event capacity or a date outside the event: null).
+     * `ticket_type_id`; event capacity, a date outside the event or an ended
+     * event: null), VALIDATION_ERROR (`booking_date` missing for a dated line).
      *
-     * @return array{event: Event, quantity:int, ticket_type:?string, unit_price_minor:?int, lines: list<array>,
+     * @return array{event: Event, booking_date:?string, quantity:int, ticket_type:?string, unit_price_minor:?int, lines: list<array>,
      *               subtotal_minor:int, points_to_redeem:int, points_discount_minor:int, deposit_per_ticket_minor:int,
      *               deposit_minor:int, tickets_minor:int, total_minor:int}
      */
-    public function quoteItems(Tenant $tenant, int $eventId, string $bookingDate, array $items, int $pointsToRedeem = 0, ?User $user = null,
+    public function quoteItems(Tenant $tenant, int $eventId, ?string $bookingDate, array $items, int $pointsToRedeem = 0, ?User $user = null,
         string $channel = EventTicketType::CHANNEL_APP, ?int $maxQuantity = null): array
     {
         $event = Event::where('is_active', true)->find($eventId);
@@ -70,17 +78,31 @@ class CheckoutService
             throw new ApiException('PER_ORDER_LIMIT', __('platform.errors.per_order_limit_total', ['max' => $maxQuantity]), 422,
                 ['ticket_type_id' => null, 'per_order_max' => $maxQuantity]);
         }
-        if (! $event->canBookForDate($bookingDate, $quantity)) {
-            throw new ApiException('SOLD_OUT', 'Not enough tickets available for the selected date', 422, [
-                'ticket_type_id' => null,
-                'available' => max(0, $event->getAvailableTicketsForDate($bookingDate)),
-            ]);
+        $dated = array_sum(array_map(fn ($l) => $l['type']->isDated() ? $l['quantity'] : 0, $lines));
+        $eventAvailable = null;
+        if ($dated > 0) {
+            if ($bookingDate === null || $bookingDate === '') {
+                throw \Illuminate\Validation\ValidationException::withMessages(['booking_date' => [__('platform.errors.booking_date_required')]]);
+            }
+            if (! $event->canBookForDate($bookingDate, $dated)) {
+                throw new ApiException('SOLD_OUT', 'Not enough tickets available for the selected date', 422, [
+                    'ticket_type_id' => null,
+                    'available' => max(0, $event->getAvailableTicketsForDate($bookingDate)),
+                ]);
+            }
+            $eventAvailable = $event->getAvailableTicketsForDate($bookingDate);
+        } else {
+            $bookingDate = null;
         }
-        $eventAvailable = $event->getAvailableTicketsForDate($bookingDate);
+        if ($dated < $quantity && $event->hasEnded()) {
+            throw new ApiException('SOLD_OUT', __('platform.errors.event_ended'), 422, ['ticket_type_id' => null, 'available' => 0]);
+        }
         foreach ($lines as $line) {
-            $left = $line['type']->availableOn($bookingDate, $eventAvailable);
+            $type = $line['type'];
+            $left = $type->isDated() ? $type->availableOn($bookingDate, $eventAvailable) : $type->availableTotal();
             if ($left !== null && $line['quantity'] > $left) {
-                throw new ApiException('SOLD_OUT', __('platform.errors.type_sold_out', ['type' => $line['name_text']]), 422, [
+                $message = $type->isDated() ? 'platform.errors.type_sold_out' : 'platform.errors.type_sold_out_total';
+                throw new ApiException('SOLD_OUT', __($message, ['type' => $line['name_text']]), 422, [
                     'ticket_type_id' => $line['ticket_type_id'],
                     'available' => max(0, $left),
                 ]);
@@ -117,6 +139,8 @@ class CheckoutService
 
         return [
             'event' => $event,
+            // Null when no line is dated (docs/ticket_types_contract.md §7).
+            'booking_date' => $bookingDate,
             'quantity' => $quantity,
             // Legacy single-type fields: the key / unit price when the order has one type (one price).
             'ticket_type' => count($lines) === 1 ? $lines[0]['key'] : null,
@@ -132,7 +156,7 @@ class CheckoutService
         ];
     }
 
-    /** @return list<array{type: EventTicketType, ticket_type_id:int, key:string, name: array, name_text:string, quantity:int, unit_price_minor:int, line_total_minor:int, admits:int}> */
+    /** @return list<array{type: EventTicketType, ticket_type_id:int, key:string, name: array, name_text:string, quantity:int, unit_price_minor:int, line_total_minor:int, admits:int, validity:string}> */
     private function resolveLines(Event $event, array $items, string $channel): array
     {
         $types = $event->sellableTicketTypes($channel)->keyBy('id');
@@ -184,6 +208,7 @@ class CheckoutService
                 'unit_price_minor' => (int) $type->price_minor,
                 'line_total_minor' => (int) $type->price_minor * $qty,
                 'admits' => max(1, (int) $type->admits),
+                'validity' => $type->validityValue(),
             ];
         }
 
@@ -191,7 +216,7 @@ class CheckoutService
     }
 
     /**
-     * @param  array{event_id:int, booking_date:string, quantity?:int, ticket_type?:string|null, items?: list<array{ticket_type_id:int, quantity:int}>,
+     * @param  array{event_id:int, booking_date?:string|null, quantity?:int, ticket_type?:string|null, items?: list<array{ticket_type_id:int, quantity:int}>,
      *               method:string, points_to_redeem?:int|null, idempotency_key?:string|null}  $input
      */
     public function initialize(User $user, Tenant $tenant, array $input): Payment
@@ -218,10 +243,10 @@ class CheckoutService
                 $items = ! empty($input['items'])
                     ? $input['items']
                     : [['ticket_type' => $input['ticket_type'] ?? null, 'quantity' => (int) ($input['quantity'] ?? 0)]];
-                $quote = $this->quoteItems($tenant, (int) $input['event_id'], $input['booking_date'], $items,
+                $quote = $this->quoteItems($tenant, (int) $input['event_id'], $input['booking_date'] ?? null, $items,
                     (int) ($input['points_to_redeem'] ?? 0), $user);
 
-                $payment = $this->createPayment($user, $tenant, $quote, $input['booking_date'], $method, $key);
+                $payment = $this->createPayment($user, $tenant, $quote, $quote['booking_date'], $method, $key);
 
                 if ($quote['points_to_redeem'] > 0) {
                     $this->points->spend($user, $tenant, $quote['points_to_redeem'], $payment, "pay:{$payment->id}:points");
@@ -273,7 +298,7 @@ class CheckoutService
      * capacity check, no points; completion goes through
      * PaymentFulfillmentService like any checkout.
      */
-    public function createGatewayPayment(User $user, Tenant $tenant, array $quote, string $bookingDate, ?string $key, array $extraMeta = []): Payment
+    public function createGatewayPayment(User $user, Tenant $tenant, array $quote, ?string $bookingDate, ?string $key, array $extraMeta = []): Payment
     {
         return $this->createPayment($user, $tenant, $quote, $bookingDate, Payment::METHOD_GATEWAY, $key, $extraMeta);
     }
@@ -285,7 +310,7 @@ class CheckoutService
             : null;
     }
 
-    private function createPayment(User $user, Tenant $tenant, array $quote, string $bookingDate, string $method, ?string $key, array $extraMeta = []): Payment
+    private function createPayment(User $user, Tenant $tenant, array $quote, ?string $bookingDate, string $method, ?string $key, array $extraMeta = []): Payment
     {
         $decimals = $tenant->currencyDecimals();
         $payment = new Payment([
@@ -310,7 +335,9 @@ class CheckoutService
                     'ticket_type_id' => $l['ticket_type_id'], 'key' => $l['key'], 'name' => $l['name'],
                     'quantity' => $l['quantity'], 'unit_price_minor' => $l['unit_price_minor'],
                     'line_total_minor' => $l['line_total_minor'], 'admits' => $l['admits'],
+                    'validity' => EventTicketType::normalizeValidity($l['validity'] ?? null),
                 ], $quote['lines'] ?? [])),
+                // For the dated lines only; null when no line is dated (docs/ticket_types_contract.md §7).
                 'booking_date' => $bookingDate,
                 'user_phone' => $user->phone_number,
                 'currency_decimals' => $decimals,

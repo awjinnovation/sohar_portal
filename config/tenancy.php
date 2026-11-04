@@ -93,6 +93,8 @@ return [
             // Places to visit + custom map, and content collections + pages
             // (docs/places_content_contract.md §1) — off unless enabled per tenant.
             'places' => false, 'content' => false,
+            // Visitor satisfaction survey «راضي» (docs/radi_satisfaction_contract.md §1) — off unless enabled per tenant.
+            'radi' => false,
         ],
 
         'navigation' => ['home', 'events', 'wallet', 'tickets', 'more'],
@@ -161,6 +163,28 @@ return [
             'copilot_enabled' => true,           // admin copilot, daily briefing, gate insights
             // Free text the concierge may quote (opening hours, gates, parking, rules).
             'venue_info' => ['en' => '', 'ar' => ''],
+        ],
+
+        // Visitor satisfaction survey (docs/radi_satisfaction_contract.md §1),
+        // public in /tenant/config → radi. logo_url empty = the app shows a
+        // neutral icon; external_url = optional official survey link.
+        // aspects: ordered rated aspects (a list, so a tenant list replaces it).
+        'radi' => [
+            'logo_url' => '',
+            'external_url' => '',
+            'title' => ['en' => 'Rate your visit', 'ar' => 'قيّم زيارتك'],
+            'intro' => [
+                'en' => 'It takes less than a minute, and your answers help us improve the next visit.',
+                'ar' => 'يستغرق التقييم أقل من دقيقة، وتساعدنا إجاباتك على تحسين الزيارة القادمة.',
+            ],
+            'aspects' => [
+                ['key' => 'organization', 'label' => ['en' => 'Organization', 'ar' => 'التنظيم']],
+                ['key' => 'cleanliness', 'label' => ['en' => 'Cleanliness', 'ar' => 'النظافة']],
+                ['key' => 'facilities', 'label' => ['en' => 'Services and facilities', 'ar' => 'الخدمات والمرافق']],
+                ['key' => 'events', 'label' => ['en' => 'Events and shows', 'ar' => 'الفعاليات والعروض']],
+                ['key' => 'entry', 'label' => ['en' => 'Entry and tickets', 'ar' => 'الدخول والتذاكر']],
+                ['key' => 'app', 'label' => ['en' => 'The app', 'ar' => 'التطبيق']],
+            ],
         ],
 
         // Server-side only (never exposed by /tenant/config).

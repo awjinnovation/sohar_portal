@@ -30,7 +30,8 @@ class PaymentController extends Controller
         return [
             'event_id' => 'required_without:payable_id|integer',
             'payable_id' => 'required_without:event_id|integer', // legacy alias of event_id
-            'booking_date' => 'required|date_format:Y-m-d',
+            // Needed only when a line is of a `date` type (docs/ticket_types_contract.md §7); CheckoutService asks for it.
+            'booking_date' => 'nullable|date_format:Y-m-d',
             // Legacy single type (key; empty / `standard` = the event's default type)…
             'quantity' => 'required_without:items|nullable|integer|min:1|max:'.config('payments.max_tickets_per_order', 10),
             'ticket_type' => 'nullable|string|max:40',
@@ -62,16 +63,17 @@ class PaymentController extends Controller
             'line_total_minor' => (int) $l['line_total_minor'],
             'line_total' => $tenant->formatMoney((int) $l['line_total_minor']),
             'admits' => max(1, (int) ($l['admits'] ?? 1)),
+            'validity' => \App\Models\EventTicketType::normalizeValidity($l['validity'] ?? null),
         ], $lines));
     }
 
-    /** GET /payments/quote?event_id=&booking_date=&quantity=&ticket_type=&points_to_redeem= */
+    /** GET /payments/quote?event_id=&booking_date=&quantity=&ticket_type=&points_to_redeem= (booking_date only for dated types) */
     public function quote(Request $request)
     {
         $data = $request->validate($this->checkoutRules());
         $tenant = $this->context->get();
 
-        $q = $this->checkout->quoteItems($tenant, (int) ($data['event_id'] ?? $data['payable_id']), $data['booking_date'],
+        $q = $this->checkout->quoteItems($tenant, (int) ($data['event_id'] ?? $data['payable_id']), $data['booking_date'] ?? null,
             $this->items($data), (int) ($data['points_to_redeem'] ?? 0), $request->user('sanctum'));
 
         $fmt = fn (int $m) => $tenant->formatMoney($m);
@@ -80,6 +82,7 @@ class PaymentController extends Controller
             'success' => true,
             'data' => [
                 'event_id' => $q['event']->id,
+                'booking_date' => $q['booking_date'],
                 'quantity' => $q['quantity'],
                 'ticket_type' => $q['ticket_type'],
                 'unit_price_minor' => $q['unit_price_minor'],
@@ -101,7 +104,7 @@ class PaymentController extends Controller
 
     /**
      * POST /payments/initialize
-     * {event_id, booking_date, quantity, ticket_type?, method: gateway|wallet, points_to_redeem?, idempotency_key}
+     * {event_id, booking_date (only for dated types), quantity | items, ticket_type?, method: gateway|wallet, points_to_redeem?, idempotency_key}
      * Any client-sent `amount` is ignored.
      */
     public function initialize(Request $request)

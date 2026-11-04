@@ -274,3 +274,10 @@ Route::prefix('v1/ai')->group(function () {
     Route::post('/plan', [\App\Http\Controllers\Api\AiPlanController::class, 'store']);
     Route::get('/plans/{id}', [\App\Http\Controllers\Api\AiPlanController::class, 'show'])->middleware('throttle:60,1');
 });
+
+// Visitor satisfaction survey «راضي» (docs/radi_satisfaction_contract.md §3) —
+// module `radi`, auth optional: Sanctum bearer token or the app's device_id.
+Route::prefix('v1/satisfaction')->middleware('module:radi')->group(function () {
+    Route::get('/survey', [\App\Http\Controllers\Api\SatisfactionController::class, 'survey'])->middleware('throttle:60,1');
+    Route::post('/responses', [\App\Http\Controllers\Api\SatisfactionController::class, 'store'])->middleware('throttle:satisfaction');
+});

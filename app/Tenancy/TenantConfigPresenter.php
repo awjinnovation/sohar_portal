@@ -67,6 +67,8 @@ class TenantConfigPresenter
                 'welcome' => $s['ai']['welcome'] ?? ['en' => '', 'ar' => ''],
                 'suggestions' => array_values((array) ($s['ai']['suggestions'] ?? [])),
             ],
+            // Visitor satisfaction survey «راضي» (docs/radi_satisfaction_contract.md §1).
+            'radi' => \App\Services\Satisfaction\RadiSettings::present($tenant),
         ];
     }
 }
