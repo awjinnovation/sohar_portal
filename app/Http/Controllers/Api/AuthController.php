@@ -3,26 +3,25 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\SendOtpSms;
-use App\Models\User;
+use App\Services\Auth\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use App\Models\Wallet;
 use App\Tenancy\TenantContext;
-use Carbon\Carbon;
 
 class AuthController extends Controller
 {
+    public function __construct(private OtpService $otp)
+    {
+    }
+
     /**
-     * Send OTP to phone number.
+     * Send OTP to phone number (OtpService::send).
      *
-     * Throttled (route middleware throttle:otp-send). The code is stored as
-     * an HMAC, never returned to the client unless OTP_DEBUG=true outside
-     * production. The store-review number (auth.otp.review_phone) gets the
-     * fixed auth.otp.review_code in every environment and no SMS. Outside
-     * production, OTP_TEST_CODE gives every number that code and no SMS.
+     * Throttled (route middleware throttle:otp-send). The code is never
+     * returned to the client unless OTP_DEBUG=true outside production.
      */
     public function sendOtp(Request $request, TenantContext $context)
     {
@@ -30,52 +29,15 @@ class AuthController extends Controller
             'phone_number' => 'required|string|regex:/^[0-9]{8,15}$/'
         ]);
 
-        $phoneNumber = $request->phone_number;
-        $ttl = (int) config('auth.otp.ttl_minutes', 5);
-
-        $otp = (string) random_int(100000, 999999);
-        $isTestCode = !app()->environment('production') && config('auth.otp.test_code');
-        if ($isTestCode) {
-            $otp = (string) config('auth.otp.test_code');
-        }
-        $isReviewer = self::isReviewPhone($phoneNumber);
-        if ($isReviewer) {
-            $otp = (string) config('auth.otp.review_code');
-        }
-
-        DB::table('otp_verifications')
-            ->where('phone_number', $phoneNumber)
-            ->where('is_used', false)
-            ->delete();
-
-        DB::table('otp_verifications')->insert([
-            'phone_number' => $phoneNumber,
-            'otp_code' => self::hashOtp($phoneNumber, $otp),
-            'expires_at' => Carbon::now()->addMinutes($ttl),
-            'attempts' => 0,
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
-
-        $tenant = $context->get();
-        $locale = app()->getLocale();
-        $template = $tenant->setting("messages.otp_sms.$locale") ?? $tenant->setting('messages.otp_sms.en');
-        $message = strtr((string) $template, [
-            ':app' => $tenant->localizedName($locale),
-            ':code' => $otp,
-            ':minutes' => (string) $ttl,
-        ]);
-        if (!$isReviewer && !$isTestCode) {
-            SendOtpSms::dispatch($phoneNumber, $message);
-        }
+        $sent = $this->otp->send($request->phone_number, $context->get(), app()->getLocale());
 
         $response = [
             'success' => true,
             'message' => 'OTP sent successfully',
-            'expires_in' => $ttl * 60,
+            'expires_in' => $sent['expires_in'],
         ];
         if (config('auth.otp.debug') && !app()->environment('production')) {
-            $response['otp'] = $otp;
+            $response['otp'] = $sent['code'];
         }
 
         return response()->json($response);
@@ -83,17 +45,7 @@ class AuthController extends Controller
 
     public static function hashOtp(string $phone, string $code): string
     {
-        return hash_hmac('sha256', $phone.'|'.$code, (string) config('app.key'));
-    }
-
-    /** Only when both review settings are set and the code is exactly 6 digits. */
-    private static function isReviewPhone(string $phone): bool
-    {
-        $reviewPhone = (string) config('auth.otp.review_phone');
-
-        return $reviewPhone !== ''
-            && preg_match('/^\d{6}$/', (string) config('auth.otp.review_code')) === 1
-            && hash_equals($reviewPhone, $phone);
+        return OtpService::hash($phone, $code);
     }
 
     /**
@@ -110,26 +62,9 @@ class AuthController extends Controller
         ]);
 
         $phoneNumber = $request->phone_number;
-        $otpCode = (string) ($request->otp_code ?? $request->otp);
-        $maxAttempts = (int) config('auth.otp.max_attempts', 5);
+        $result = $this->otp->verify($phoneNumber, (string) ($request->otp_code ?? $request->otp));
 
-        $otpRecord = DB::table('otp_verifications')
-            ->where('phone_number', $phoneNumber)
-            ->where('is_used', false)
-            ->orderByDesc('id')
-            ->first();
-
-        if (!$otpRecord || Carbon::parse($otpRecord->expires_at)->isPast()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid or expired OTP',
-                'code' => 'OTP_INVALID',
-            ], 401);
-        }
-
-        if ((int) $otpRecord->attempts >= $maxAttempts) {
-            DB::table('otp_verifications')->where('id', $otpRecord->id)->update(['is_used' => true]);
-
+        if (! $result['ok'] && $result['code'] === OtpService::ATTEMPTS_EXCEEDED) {
             return response()->json([
                 'success' => false,
                 'message' => 'Too many incorrect attempts. Please request a new code.',
@@ -137,37 +72,16 @@ class AuthController extends Controller
             ], 429);
         }
 
-        if (!hash_equals($otpRecord->otp_code, self::hashOtp($phoneNumber, $otpCode))) {
-            DB::table('otp_verifications')->where('id', $otpRecord->id)->increment('attempts');
-            $remaining = max(0, $maxAttempts - ((int) $otpRecord->attempts + 1));
-
-            return response()->json([
+        if (! $result['ok']) {
+            return response()->json(array_filter([
                 'success' => false,
                 'message' => 'Invalid or expired OTP',
                 'code' => 'OTP_INVALID',
-                'data' => ['attempts_remaining' => $remaining],
-            ], 401);
+                'data' => isset($result['attempts_remaining']) ? ['attempts_remaining' => $result['attempts_remaining']] : null,
+            ], fn ($v) => $v !== null), 401);
         }
 
-        // Mark OTP as used (atomically: a concurrent verify cannot reuse it).
-        $claimed = DB::table('otp_verifications')
-            ->where('id', $otpRecord->id)
-            ->where('is_used', false)
-            ->update(['is_used' => true]);
-        if ($claimed !== 1) {
-            return response()->json(['success' => false, 'message' => 'Invalid or expired OTP', 'code' => 'OTP_INVALID'], 401);
-        }
-
-        // Users are global identities (phone); wallets/points are per tenant.
-        $user = User::firstOrCreate(
-            ['phone_number' => $phoneNumber],
-            [
-                'name' => 'User ' . substr($phoneNumber, -4),
-                'email' => null,
-                'password' => Hash::make(Str::random(32)),
-                'phone_verified_at' => now()
-            ]
-        );
+        $user = $this->otp->userFor($phoneNumber);
 
         if ($request->device_token) {
             $user->device_token = $request->device_token;

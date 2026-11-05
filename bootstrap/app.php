@@ -86,6 +86,11 @@ return Application::configure(basePath: dirname(__DIR__))
                     'code' => 'TOO_MANY_REQUESTS',
                 ], 429, $e->getHeaders());
             }
+            // Event booking page forms: back to the page with a notice, not a bare 429.
+            if ($request->isMethod('post') && $request->routeIs('visitor.*') && $request->route('event')) {
+                return redirect()->route('visitor.event', array_filter(['event' => $request->route('event'), 'lang' => $request->input('lang')]))
+                    ->with('visitor_error', 'throttled')->withInput($request->only('phone_number'));
+            }
         });
 
         $exceptions->render(function (NotFoundHttpException $e, Request $request) use ($isApi) {

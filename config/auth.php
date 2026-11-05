@@ -40,6 +40,15 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        // Visitors signed in on the event booking page (/e/{event}, phone +
+        // OTP). Separate from `web` so it never opens the admin panel; it
+        // stays signed in for VISITOR_SESSION_DAYS through its remember
+        // cookie while the session itself keeps SESSION_LIFETIME.
+        'visitor' => [
+            'driver' => 'session',
+            'provider' => 'users',
+            'remember' => (int) env('VISITOR_SESSION_DAYS', 30) * 1440,
+        ],
     ],
 
     /*

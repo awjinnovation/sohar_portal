@@ -218,8 +218,9 @@ class CheckoutService
     /**
      * @param  array{event_id:int, booking_date?:string|null, quantity?:int, ticket_type?:string|null, items?: list<array{ticket_type_id:int, quantity:int}>,
      *               method:string, points_to_redeem?:int|null, idempotency_key?:string|null}  $input
+     * @param  array  $extraMeta  merged into the payment's metadata (e.g. `web_booking` for the event booking page)
      */
-    public function initialize(User $user, Tenant $tenant, array $input): Payment
+    public function initialize(User $user, Tenant $tenant, array $input, array $extraMeta = []): Payment
     {
         $key = $input['idempotency_key'] ?? null;
         if ($key && ($existing = $this->findByKey($user, $key))) {
@@ -236,7 +237,7 @@ class CheckoutService
 
         try {
             // attempts: complete() runs nested in here, so a deadlock is retried at this level.
-            return DB::transaction(function () use ($user, $tenant, $input, $method, $key) {
+            return DB::transaction(function () use ($user, $tenant, $input, $method, $key, $extraMeta) {
                 // Serialise capacity checks for this event.
                 Event::whereKey($input['event_id'])->lockForUpdate()->first();
 
@@ -246,7 +247,7 @@ class CheckoutService
                 $quote = $this->quoteItems($tenant, (int) $input['event_id'], $input['booking_date'] ?? null, $items,
                     (int) ($input['points_to_redeem'] ?? 0), $user);
 
-                $payment = $this->createPayment($user, $tenant, $quote, $quote['booking_date'], $method, $key);
+                $payment = $this->createPayment($user, $tenant, $quote, $quote['booking_date'], $method, $key, $extraMeta);
 
                 if ($quote['points_to_redeem'] > 0) {
                     $this->points->spend($user, $tenant, $quote['points_to_redeem'], $payment, "pay:{$payment->id}:points");

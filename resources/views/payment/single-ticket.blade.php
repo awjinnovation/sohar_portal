@@ -84,7 +84,7 @@ document.getElementById('saveTicket').addEventListener('click', function () {
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = @json(\Illuminate\Support\Str::slug($brand?->slug ?? 'event').'_ticket_'.$ticket->id.'.png');
+            a.download = @json(\Illuminate\Support\Str::slug($brand?->localizedName('en') ?: 'event').'_ticket_'.$ticket->id.'.png');
             document.body.appendChild(a); a.click(); a.remove();
             URL.revokeObjectURL(url);
         });

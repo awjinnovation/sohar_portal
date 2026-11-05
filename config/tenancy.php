@@ -88,6 +88,8 @@ return [
             'announcements' => true, 'favorites' => true, 'notifications' => true,
             'wallet' => true, 'topup' => true, 'deposits' => true, 'points' => true, 'refunds' => true,
             'ticket_transfer' => false, 'staff_scanner' => true,
+            // Event booking page /e/{event}: printed per-event QR → phone + OTP → card checkout, no app needed.
+            'web_booking' => true,
             // AI Experience (docs/ai_and_gate_contract.md §A2) — off unless enabled per tenant.
             'ai_assistant' => false, 'ai_plan' => false,
             // Places to visit + custom map, and content collections + pages

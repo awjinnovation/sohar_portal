@@ -35,6 +35,17 @@ Route::get('/pay/{token}', [\App\Http\Controllers\Web\BoxOfficePayController::cl
 Route::post('/pay/{token}/checkout', [\App\Http\Controllers\Web\BoxOfficePayController::class, 'checkout'])
     ->where('token', '[A-Za-z0-9]{32,64}')->middleware('throttle:pay-checkout')->name('box-office.pay.checkout');
 
+// Event booking page, opened from the event's printed QR: phone + OTP, then
+// card checkout; signed in on the `visitor` guard (Web\VisitorBookingController).
+Route::prefix('e/{event}')->whereNumber('event')->name('visitor.')->group(function () {
+    $c = \App\Http\Controllers\Web\VisitorBookingController::class;
+    Route::get('/', [$c, 'show'])->middleware('throttle:visitor-page')->name('event');
+    Route::post('/otp', [$c, 'sendOtp'])->middleware('throttle:otp-send')->name('otp.send');
+    Route::post('/verify', [$c, 'verifyOtp'])->middleware('throttle:otp-verify')->name('otp.verify');
+    Route::post('/checkout', [$c, 'checkout'])->middleware('throttle:visitor-checkout')->name('checkout');
+    Route::post('/logout', [$c, 'logout'])->name('logout');
+});
+
 // Fallback login route for Laravel's default auth middleware
 Route::get('/login', fn () => redirect('/admin/login'))->name('login');
 
@@ -75,6 +86,8 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         Route::middleware('can:manage events')->group(function () {
             Route::resource('categories', Admin\CategoryController::class, ['as' => 'admin']);
             Route::resource('events', Admin\EventController::class, ['as' => 'admin']);
+            // Printable booking QR of an event (→ /e/{event}); ?format=svg for the bare code.
+            Route::get('events/{event}/booking-qr', Admin\EventBookingQrController::class)->name('admin.events.booking-qr');
             // Ticket types of an event (docs/ticket_types_contract.md §3) — JSON for the event form.
             Route::prefix('events/{event}/ticket-types')->name('admin.events.ticket-types.')->group(function () {
                 Route::get('/', [Admin\EventTicketTypeController::class, 'index'])->name('index');

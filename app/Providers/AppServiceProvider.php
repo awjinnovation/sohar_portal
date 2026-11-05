@@ -77,7 +77,15 @@ class AppServiceProvider extends ServiceProvider
 
     protected function configureRateLimiting(): void
     {
-        $phone = fn (Request $r) => preg_replace('/\D/', '', (string) $r->input('phone_number'));
+        // Digits only; a bare 8-digit local number gets the 968 prefix, so the
+        // app (96891234567) and the event booking page (9123 4567) share one
+        // budget per phone.
+        $phone = function (Request $r) {
+            $digits = preg_replace('/\D/', '', (string) $r->input('phone_number'));
+            $digits = str_starts_with($digits, '00') ? substr($digits, 2) : $digits;
+
+            return strlen($digits) === 8 ? '968'.$digits : $digits;
+        };
 
         // The per-IP caps guard against SMS cost and code guessing. With a fixed
         // test code (staging / test servers: no SMS, the code is known) they
@@ -106,6 +114,11 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         RateLimiter::for('money', fn (Request $r) => Limit::perMinute(30)->by('money:'.($r->user()?->id ?: $r->ip())));
+        // Event booking page: generous per IP (a crowd at the venue shares
+        // mobile-carrier IPs); checkout per signed-in visitor.
+        RateLimiter::for('visitor-page', fn (Request $r) => Limit::perMinute(300)->by('visitor-page:'.$r->ip()));
+        RateLimiter::for('visitor-checkout', fn (Request $r) => Limit::perMinute(10)
+            ->by('visitor-checkout:'.(\Illuminate\Support\Facades\Auth::guard('visitor')->id() ?: $r->ip())));
         // Gateway webhooks: generous (bursts at peak), per source IP.
         RateLimiter::for('payment-webhooks', fn (Request $r) => Limit::perMinute(1200)->by('pay-webhook:'.$r->ip()));
     }

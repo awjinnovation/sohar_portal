@@ -34,12 +34,13 @@
         'wallet' => 'المحفظة', 'topup' => 'شحن الرصيد', 'deposits' => 'التأمينات', 'points' => 'النقاط',
         'refunds' => 'الاسترداد', 'ticket_transfer' => 'نقل التذاكر', 'staff_scanner' => 'ماسح الموظفين', 'ai_assistant' => 'ai.admin.module_ai_assistant', 'ai_plan' => 'ai.admin.module_ai_plan',
         'places' => 'الأماكن والخريطة المخصصة', 'content' => 'المجموعات والصفحات', 'radi' => 'راضي لقياس رضا الزوار',
+        'web_booking' => 'الحجز عبر رمز QR للفعالية',
     ];
     $moduleIcons = [
         'events' => 'calendar-event', 'tickets' => 'ticket-perforated', 'calendar' => 'calendar3', 'map' => 'map', 'vendors' => 'shop-window',
         'announcements' => 'megaphone', 'favorites' => 'heart', 'notifications' => 'bell', 'wallet' => 'wallet2', 'topup' => 'cash-coin',
         'deposits' => 'lock', 'points' => 'stars', 'refunds' => 'arrow-counterclockwise', 'ticket_transfer' => 'send', 'staff_scanner' => 'qr-code-scan', 'ai_assistant' => 'stars', 'ai_plan' => 'map',
-        'places' => 'pin-map', 'content' => 'collection', 'radi' => 'emoji-smile',
+        'places' => 'pin-map', 'content' => 'collection', 'radi' => 'emoji-smile', 'web_booking' => 'qr-code',
     ];
     $socialLabels = ['instagram' => 'إنستغرام', 'x' => 'X (تويتر)', 'tiktok' => 'تيك توك', 'youtube' => 'يوتيوب', 'facebook' => 'فيسبوك'];
     $gatewayLabels = ['merchant_id' => 'Merchant ID', 'access_code' => 'Access Code', 'working_key' => 'Working Key', 'gateway_url' => 'Gateway URL',

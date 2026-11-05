@@ -162,6 +162,25 @@
                 </div>
             </x-admin.card>
 
+            @php
+                $bookingUrl = \App\Http\Controllers\Web\VisitorBookingController::publicUrl($event);
+                $bookingOn = (bool) app(\App\Tenancy\TenantContext::class)->get()?->moduleEnabled('web_booking');
+            @endphp
+            <x-admin.card title="رمز الحجز (QR)" icon="qr-code" subtitle="يُطبع ويُعلّق عند الفعالية: يمسحه الزائر ويحجز برقم هاتفه دون التطبيق">
+                @if(! $bookingOn)
+                    <div class="alert alert-warning small mb-3">صفحة الحجز عبر رمز QR معطّلة لهذه المنظمة. فعّلها من إعدادات المنظمة ← الوحدات.</div>
+                @elseif(! $event->is_active)
+                    <div class="alert alert-warning small mb-3">الفعالية غير مفعّلة، فلن تفتح صفحة الحجز حتى تفعّلها.</div>
+                @endif
+                <div class="text-center mb-2" data-booking-qr>{!! QrCode::size(180)->margin(1)->errorCorrection('H')->generate($bookingUrl) !!}</div>
+                <div class="small text-muted text-center text-break mb-3" dir="ltr">{{ $bookingUrl }}</div>
+                <div class="d-grid gap-2">
+                    <a href="{{ route('admin.events.booking-qr', $event) }}" target="_blank" class="btn btn-primary"><i class="bi bi-printer"></i> طباعة ملصق الحجز</a>
+                    <a href="{{ route('admin.events.booking-qr', ['event' => $event, 'format' => 'svg']) }}" class="btn"><i class="bi bi-download"></i> تنزيل الرمز (SVG)</a>
+                    <a href="{{ $bookingUrl }}" target="_blank" rel="noopener" class="btn"><i class="bi bi-box-arrow-up-left"></i> فتح صفحة الحجز</a>
+                </div>
+            </x-admin.card>
+
             <x-admin.card title="التذاكر المباعة" icon="ticket-perforated" subtitle="آخر 10 تذاكر" :flush="true">
                 @if($event->tickets && $event->tickets->count() > 0)
                     <ul class="tx-list">

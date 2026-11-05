@@ -195,8 +195,8 @@ class PaymentController extends Controller
 
             return match ($result['status']) {
                 'completed' => $this->successView($payment),
-                'cancelled' => $this->boxOfficeRedirect($payment, ['payment' => 'cancelled']) ?? view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
-                default => $this->boxOfficeRedirect($payment, ['payment' => 'failed'])
+                'cancelled' => $this->returnRedirect($payment, ['payment' => 'cancelled']) ?? view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
+                default => $this->returnRedirect($payment, ['payment' => 'failed'])
                     ?? $this->errorView(self::ERR_PAYMENT_FAILED, $payment, ['status' => $result['response']['order_status'] ?? 'unknown']),
             };
         } catch (\Throwable $e) {
@@ -216,8 +216,8 @@ class PaymentController extends Controller
         return match (true) {
             $payment->status === 'completed' => $this->successView($payment),
             $payment->isPending() => $this->errorView(self::ERR_NOT_COMPLETED, $payment, ['retryUrl' => $request->fullUrl()]),
-            $payment->status === 'cancelled' => $this->boxOfficeRedirect($payment, ['payment' => 'cancelled']) ?? view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
-            default => $this->boxOfficeRedirect($payment, ['payment' => 'failed']) ?? $this->errorView(self::ERR_PAYMENT_FAILED, $payment),
+            $payment->status === 'cancelled' => $this->returnRedirect($payment, ['payment' => 'cancelled']) ?? view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
+            default => $this->returnRedirect($payment, ['payment' => 'failed']) ?? $this->errorView(self::ERR_PAYMENT_FAILED, $payment),
         };
     }
 
@@ -258,9 +258,28 @@ class PaymentController extends Controller
         return redirect()->route('box-office.pay', array_filter(['token' => $order->public_token, 'lang' => $lang] + $query));
     }
 
+    /** A payment made on the event booking page returns to /e/{event} (?payment= success | cancelled | failed). */
+    private function webBookingRedirect(?Payment $payment, array $query = [])
+    {
+        if (! ($payment?->metadata['web_booking'] ?? false)) {
+            return null;
+        }
+
+        return redirect()->route('visitor.event', array_filter([
+            'event' => $payment->metadata['event_id'] ?? $payment->payable_id,
+            'lang' => $payment->metadata['web_booking_lang'] ?? null,
+        ] + $query));
+    }
+
+    /** Box office link or event booking page the payment came from; null for the app's own checkout. */
+    private function returnRedirect(?Payment $payment, array $query = [])
+    {
+        return $this->boxOfficeRedirect($payment, $query) ?? $this->webBookingRedirect($payment, $query);
+    }
+
     private function successView(Payment $payment)
     {
-        if ($redirect = $this->boxOfficeRedirect($payment)) {
+        if ($redirect = $this->boxOfficeRedirect($payment) ?? $this->webBookingRedirect($payment, ['payment' => 'success'])) {
             return $redirect;
         }
         $isTicket = $payment->payment_type === Payment::TYPE_TICKET;
@@ -311,7 +330,7 @@ class PaymentController extends Controller
 
         if ($payment) {
             $this->context->set(Tenant::find($payment->tenant_id));
-            if ($redirect = $this->boxOfficeRedirect($payment, ['payment' => $payment->status === 'failed' ? 'failed' : 'cancelled'])) {
+            if ($redirect = $this->returnRedirect($payment, ['payment' => $payment->status === 'failed' ? 'failed' : 'cancelled'])) {
                 return $redirect;
             }
         }
