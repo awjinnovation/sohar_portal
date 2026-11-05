@@ -45,6 +45,7 @@ x-laravel-env: &laravel-env
   LOG_DEPRECATIONS_CHANNEL: "null"
   TRUSTED_PROXIES: ${TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1,::1,fd00::/8}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
+  CORS_MAX_AGE: ${CORS_MAX_AGE:-600}
   # --- Database ----------------------------------------------------------
   DB_CONNECTION: mysql
   DB_HOST: mysql
@@ -127,6 +128,11 @@ x-laravel-env: &laravel-env
   # --- Tenancy -----------------------------------------------------------
   TENANCY_DEFAULT_TENANT: ${TENANCY_DEFAULT_TENANT:-north-batinah}
   TENANCY_CONFIG_CACHE_TTL: ${TENANCY_CONFIG_CACHE_TTL:-300}
+  # --- Booking site (booking-web/, separate Coolify application) ----------
+  # Empty = the booking page on this server (/e/{event}) stays in use.
+  BOOKING_WEB_URL: ${BOOKING_WEB_URL:-}
+  VISITOR_SESSION_DAYS: ${VISITOR_SESSION_DAYS:-30}
+  BOOKING_CDN_MAX_AGE: ${BOOKING_CDN_MAX_AGE:-15}
   # --- serversideup/php --------------------------------------------------
   # OPcache: image defaults (256 MB, no timestamp checks; a deploy is a new
   # container). PHP-FPM sized for the 16:00–01:00 peak (docs/caching.md):

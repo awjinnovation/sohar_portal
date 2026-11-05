@@ -19,8 +19,12 @@
 | (docker/nginx/public-assets.conf).
 |
 | CORS_ALLOWED_ORIGINS: comma-separated origins of the web builds (e.g. the
-| gate web app and a visitor web build), or "*" (default). Native mobile
-| apps do not use CORS.
+| gate web app, a visitor web build, the booking site), or "*" (default).
+| Native mobile apps do not use CORS.
+|
+| CORS_MAX_AGE: seconds a browser keeps a preflight answer (default 600). A
+| call with a token or a JSON body is preflighted; 0 would mean one extra
+| OPTIONS round trip before every such call.
 |
 */
 
@@ -43,7 +47,7 @@ return [
 
     'exposed_headers' => ['ETag'],
 
-    'max_age' => 0,
+    'max_age' => (int) env('CORS_MAX_AGE', 600),
 
     'supports_credentials' => false,
 

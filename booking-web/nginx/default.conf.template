@@ -1,0 +1,76 @@
+# Booking site (React build). Rendered at container start by the nginx image's
+# envsubst step (/etc/nginx/templates -> /etc/nginx/conf.d); only variables set
+# in the environment are replaced, so nginx's own $uri etc. stay. API_ORIGIN and
+# CONTENT_SECURITY_POLICY come from /docker-entrypoint.d/15-booking-config.envsh.
+#
+# Included inside the stock nginx.conf `http {}` block.
+
+# Cache policy (README.md "Caching and CDN"), on "<status>:<uri>":
+#   /assets/*   file names carry a content hash (Vite): a year, immutable.
+#   index.html  and the app routes (/e/123): revalidate every time (ETag → 304),
+#               so a deploy is live at once without purging a CDN.
+#   errors      never stored: a 404 for an asset during a deploy must not stick
+#               in a CDN for a year.
+map "$status:$uri" $booking_cache_control {
+    default                         "no-cache";
+    "~^(200|206|304):/assets/"      "public, max-age=31536000, immutable";
+    "~^[45]"                        "no-store";
+    "~:/build-info\.json$"          "no-store";
+    "~:/healthz$"                   "no-store";
+}
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    server_tokens off;
+    charset utf-8;
+    charset_types text/css text/plain application/javascript application/json image/svg+xml;
+    absolute_redirect off;
+    etag on;
+
+    # gzip: precompressed *.gz from the build (gzip_static), on the fly for the rest.
+    gzip on;
+    gzip_static on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_min_length 512;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    # Headers for every response, set here only (an add_header inside a location
+    # would drop all of these for it).
+    add_header Cache-Control                $booking_cache_control always;
+    add_header Content-Security-Policy      "${CONTENT_SECURITY_POLICY}" always;
+    add_header X-Content-Type-Options       "nosniff" always;
+    add_header X-Frame-Options              "DENY" always;
+    # The address carries the event; never send it to the payment gateway or elsewhere.
+    add_header Referrer-Policy              "no-referrer" always;
+    add_header Permissions-Policy           "${PERMISSIONS_POLICY}" always;
+    add_header Cross-Origin-Opener-Policy   "same-origin" always;
+    add_header Strict-Transport-Security    "max-age=31536000" always;
+    add_header X-Robots-Tag                 "noindex" always;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Built files: a missing one is a 404, never the app (an HTML body served as
+    # JS or CSS only produces confusing errors, and must not be cached a year).
+    location ^~ /assets/ {
+        access_log off;
+        try_files $uri =404;
+    }
+    location ~* \.(?:js|mjs|css|map|json|png|jpe?g|gif|webp|svg|ico|woff2?|txt)$ {
+        try_files $uri =404;
+    }
+
+    # The app: /, /e/{event} and anything else (the app shows "not found").
+    location / {
+        try_files $uri /index.html;
+    }
+}

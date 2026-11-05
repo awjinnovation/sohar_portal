@@ -1,0 +1,45 @@
+#!/bin/sh
+# Sourced by the nginx image's /docker-entrypoint.sh before
+# 20-envsubst-on-templates.sh (".envsh" files are sourced, so the variables
+# exported here reach the nginx template). Fails the start on a bad value
+# rather than serving a site that cannot reach its API: `exit 1` here ends the
+# entrypoint's configuration loop with an error, so nginx never starts.
+#
+#   API_BASE_URL  required: https://mawsim.awj.om (no /api/v1, no query)
+#   HOME_URL      optional: where "/" redirects
+#
+# Writes both into index.html (<meta name="booking-api">, <meta name="booking-home">,
+# <link rel="preconnect">) from the pristine copy, and exports API_ORIGIN and the
+# default CONTENT_SECURITY_POLICY for nginx/default.conf.template.
+
+# No `set -u`: this file runs inside the entrypoint's shell (sourced).
+
+url_re='^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~/-]*)?$'
+
+API_BASE_URL="$(printf '%s' "${API_BASE_URL:-}" | sed -e 's#/*$##' -e 's#/api/v1$##')"
+if ! printf '%s' "$API_BASE_URL" | grep -Eq "$url_re"; then
+    echo "booking-web: API_BASE_URL must be the backend address, e.g. https://mawsim.awj.om (got '${API_BASE_URL}')" >&2
+    exit 1
+fi
+HOME_URL="$(printf '%s' "${HOME_URL:-}" | sed -e 's#/*$##')"
+if [ -n "$HOME_URL" ] && ! printf '%s' "$HOME_URL" | grep -Eq "$url_re"; then
+    echo "booking-web: HOME_URL must be an http(s) address (got '${HOME_URL}')" >&2
+    exit 1
+fi
+API_ORIGIN="$(printf '%s' "$API_BASE_URL" | sed -E 's#^(https?://[^/]+).*#\1#')"
+
+# Values were checked against url_re: no characters that need escaping for sed (#) or HTML.
+sed -e "s#__API_BASE_URL__#${API_BASE_URL}#g" \
+    -e "s#__API_ORIGIN__#${API_ORIGIN}#g" \
+    -e "s#__HOME_URL__#${HOME_URL}#g" \
+    /usr/share/nginx/index.template.html > /usr/share/nginx/html/index.html
+
+# Default CSP: scripts and styles from this site only (theme colours are set
+# through the CSSOM, so no 'unsafe-inline'); data from the API; tenant fonts
+# from Google Fonts; logos from the API or any https host (tenant asset URLs).
+if [ -z "${CONTENT_SECURITY_POLICY+set}" ]; then
+    CONTENT_SECURITY_POLICY="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https: ${API_ORIGIN}; connect-src 'self' ${API_ORIGIN}; manifest-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+fi
+
+export API_BASE_URL API_ORIGIN HOME_URL CONTENT_SECURITY_POLICY
+echo "booking-web: API ${API_BASE_URL}${HOME_URL:+, home ${HOME_URL}}"

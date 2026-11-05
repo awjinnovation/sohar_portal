@@ -258,17 +258,21 @@ class PaymentController extends Controller
         return redirect()->route('box-office.pay', array_filter(['token' => $order->public_token, 'lang' => $lang] + $query));
     }
 
-    /** A payment made on the event booking page returns to /e/{event} (?payment= success | cancelled | failed). */
+    /**
+     * A payment made on the event booking page returns to it (?payment=
+     * success | cancelled | failed): the booking site when BOOKING_WEB_URL is
+     * set, else /e/{event} on this server.
+     */
     private function webBookingRedirect(?Payment $payment, array $query = [])
     {
         if (! ($payment?->metadata['web_booking'] ?? false)) {
             return null;
         }
 
-        return redirect()->route('visitor.event', array_filter([
-            'event' => $payment->metadata['event_id'] ?? $payment->payable_id,
-            'lang' => $payment->metadata['web_booking_lang'] ?? null,
-        ] + $query));
+        return redirect()->away(\App\Http\Controllers\Web\VisitorBookingController::pageUrl(
+            (int) ($payment->metadata['event_id'] ?? $payment->payable_id),
+            ['lang' => $payment->metadata['web_booking_lang'] ?? null] + $query,
+        ));
     }
 
     /** Box office link or event booking page the payment came from; null for the app's own checkout. */

@@ -43,6 +43,7 @@ coverage
 
 # Docs, API examples and tooling not needed at runtime
 docs
+booking-web
 business-data
 scripts
 *.md

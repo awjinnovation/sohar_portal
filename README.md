@@ -231,7 +231,11 @@ The app runs on SQLite locally and MySQL 8.4 in production; the test suite passe
 | Variable | Default | Purpose |
 |---|---|---|
 | `TENANCY_DEFAULT_TENANT` | `north-batinah` | Tenant used when `X-Tenant` is absent (old app builds), and for public pages without `?tenant=`. |
-| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated web origins (gate web app, visitor web) for the API and the public image paths. |
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated web origins (gate web app, visitor web, booking site) for the API and the public image paths. |
+| `CORS_MAX_AGE` | `600` | Seconds a browser keeps a CORS preflight answer. |
+| `BOOKING_WEB_URL` | empty | Booking site (`booking-web/`) address, e.g. `https://book.mawsim.awj.om`. Set: the event QR points there, `/e/{event}` here redirects there, card payments return there. Empty: the page on this server. |
+| `VISITOR_SESSION_DAYS` | `30` | Days a visitor stays signed in on the booking page / site. |
+| `BOOKING_CDN_MAX_AGE` | `15` | `s-maxage` of the public `GET /api/v1/booking/events/{event}` (0 = no shared caching). |
 | `TRUSTED_PROXIES` | private ranges + localhost | Proxies whose `X-Forwarded-*` headers are trusted (`config/trustedproxy.php`); add Cloudflare's ranges behind its proxy. |
 | `TENANCY_CONFIG_CACHE_TTL` | `300` | Seconds `/tenant/config` is cached (busted on tenant save). |
 | `PAYMENT_DRIVER` | `bankmuscat` | `bankmuscat` or `fake`. |

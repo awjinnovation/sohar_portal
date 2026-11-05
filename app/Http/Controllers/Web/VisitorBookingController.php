@@ -47,20 +47,43 @@ class VisitorBookingController extends Controller
 
     public function __construct(private TenantContext $context, private OtpService $otp) {}
 
-    /** Absolute link printed in the event's QR (APP_URL / PAY_LINK_BASE_URL, like box office links). */
+    /** Absolute link printed in the event's QR: the booking site when BOOKING_WEB_URL is set, else this page. */
     public static function publicUrl(Event $event): string
     {
-        return rtrim(BoxOfficeService::publicBase(), '/').route('visitor.event', ['event' => $event->id], false);
+        return self::pageUrl($event->id);
+    }
+
+    /**
+     * The event's booking page: {BOOKING_WEB_URL}/e/{id} (booking-web/, its own
+     * domain) when configured, else /e/{id} on this server (APP_URL /
+     * PAY_LINK_BASE_URL, like box office links). Empty query values are dropped.
+     */
+    public static function pageUrl(int $eventId, array $query = []): string
+    {
+        $query = array_filter($query, fn ($v) => $v !== null && $v !== '');
+        $site = (string) config('booking.web_url');
+        $path = $site !== ''
+            ? $site.'/e/'.$eventId
+            : rtrim(BoxOfficeService::publicBase(), '/').route('visitor.event', ['event' => $eventId], false);
+
+        return $query ? $path.'?'.http_build_query($query) : $path;
     }
 
     public function show(Request $request, int $event)
     {
         [$event, $tenant] = $this->event($event);
         $lang = $this->lang($request, $tenant);
+        // The booking site replaces this page; QR codes printed earlier land here.
+        if (config('booking.web_url') !== '') {
+            return redirect()->away(self::pageUrl($event->id, [
+                'lang' => $request->query('lang'),
+                'payment' => in_array($request->query('payment'), ['success', 'cancelled', 'failed'], true) ? $request->query('payment') : null,
+            ]));
+        }
         $user = $this->visitor();
 
         $types = $event->sellableTicketTypes(EventTicketType::CHANNEL_APP);
-        $dates = $types->contains(fn (EventTicketType $t) => $t->isDated()) ? $this->dates($event, $tenant) : [];
+        $dates = $types->contains(fn (EventTicketType $t) => $t->isDated()) ? self::bookableDates($event, $tenant) : [];
         $tickets = $user
             ? Ticket::with('ticketType')->where('user_id', $user->id)->where('event_id', $event->id)->orderByDesc('id')->get()
             : collect();
@@ -70,9 +93,9 @@ class VisitorBookingController extends Controller
             'event' => $event,
             'lang' => $lang,
             'visitor' => $user,
-            'visitorPhone' => $user ? $this->masked($user->phone_number) : null,
+            'visitorPhone' => $user ? self::maskedPhone($user->phone_number) : null,
             'otpPhone' => $otpPhone,
-            'otpPhoneMasked' => $otpPhone ? $this->masked($otpPhone) : null,
+            'otpPhoneMasked' => $otpPhone ? self::maskedPhone($otpPhone) : null,
             'types' => $types,
             'dates' => $dates,
             'selectedDate' => old('booking_date', collect($dates)->firstWhere('available', '!=', 0)['date'] ?? null),
@@ -253,11 +276,12 @@ class VisitorBookingController extends Controller
 
     /**
      * Bookable days of a dated event, from today (tenant time) to its last
-     * day, at most MAX_DAYS. `available` is -1 for unlimited.
+     * day, at most MAX_DAYS. `available` is -1 for unlimited. Also used by
+     * the booking site API (Api\BookingController).
      *
      * @return list<array{date:string, available:int}>
      */
-    private function dates(Event $event, Tenant $tenant): array
+    public static function bookableDates(Event $event, Tenant $tenant): array
     {
         if (! $event->firstDay() || ! $event->lastDay()) {
             return [];
@@ -275,7 +299,7 @@ class VisitorBookingController extends Controller
     }
 
     /** 96891234567 → •••• 4567, isolated left-to-right so Arabic text keeps its order. */
-    private function masked(?string $phone): string
+    public static function maskedPhone(?string $phone): string
     {
         return "\u{2066}•••• ".substr((string) $phone, -4)."\u{2069}";
     }

@@ -281,3 +281,23 @@ Route::prefix('v1/satisfaction')->middleware('module:radi')->group(function () {
     Route::get('/survey', [\App\Http\Controllers\Api\SatisfactionController::class, 'survey'])->middleware('throttle:60,1');
     Route::post('/responses', [\App\Http\Controllers\Api\SatisfactionController::class, 'store'])->middleware('throttle:satisfaction');
 });
+
+// Event booking site (booking-web/, its own domain): docs in
+// Api\BookingController. The tenant comes from the event (ResolveBookingEvent
+// instead of ResolveTenant), so the public event URL alone decides the answer
+// and a CDN may cache it; sign-in is a Sanctum token kept in the browser.
+Route::prefix('v1/booking/events/{event}')->whereNumber('event')
+    ->withoutMiddleware(\App\Http\Middleware\ResolveTenant::class)
+    ->middleware(\App\Http\Middleware\ResolveBookingEvent::class)
+    ->name('api.booking.')
+    ->group(function () {
+        $c = \App\Http\Controllers\Api\BookingController::class;
+        Route::get('/', [$c, 'show'])->middleware(['throttle:visitor-page', 'cache.api:live'])->name('event');
+        Route::post('/otp', [$c, 'sendOtp'])->middleware('throttle:otp-send')->name('otp');
+        Route::post('/verify', [$c, 'verifyOtp'])->middleware('throttle:otp-verify')->name('verify');
+        Route::middleware('auth:sanctum')->group(function () use ($c) {
+            Route::get('/tickets', [$c, 'tickets'])->name('tickets');
+            Route::post('/checkout', [$c, 'checkout'])->middleware('throttle:money')->name('checkout');
+            Route::post('/logout', [$c, 'logout'])->name('logout');
+        });
+    });

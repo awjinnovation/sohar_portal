@@ -1,0 +1,9 @@
+# Build context: booking-web/ only (Coolify "Base Directory" /booking-web).
+node_modules
+dist
+.env*
+*.log
+**/.DS_Store
+Dockerfile
+.dockerignore
+README.md

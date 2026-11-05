@@ -243,13 +243,58 @@ class TenantTheme
     public static function vars(array $tokens, string $indent = '    '): string
     {
         $out = '';
-        foreach ($tokens as $name => $value) {
-            $out .= $indent.'--'.$name.': '.$value.";\n";
-            if (str_starts_with((string) $value, '#') && in_array($name, ['brand', 'accent', 'text', 'surface', 'bg', 'success', 'warning', 'error', 'info', 'header-start', 'header-end'], true)) {
-                $out .= $indent.'--'.$name.'-rgb: '.G::rgbString($value).";\n";
-            }
+        foreach (self::varMap($tokens) as $name => $value) {
+            $out .= $indent.$name.': '.$value.";\n";
         }
 
         return $out;
+    }
+
+    /** One token set as ['--name' => value], plus the `-rgb` triplets of the colors used in rgba(). */
+    public static function varMap(array $tokens): array
+    {
+        $map = [];
+        foreach ($tokens as $name => $value) {
+            $map['--'.$name] = (string) $value;
+            if (str_starts_with((string) $value, '#') && in_array($name, ['brand', 'accent', 'text', 'surface', 'bg', 'success', 'warning', 'error', 'info', 'header-start', 'header-end'], true)) {
+                $map['--'.$name.'-rgb'] = G::rgbString($value);
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Tokens for a client that applies them itself (the booking site,
+     * booking-web/): the same values partials/theme-tokens.blade.php prints.
+     *
+     * @return array{mode:string, root:array<string,string>, light:array<string,string>, dark:array<string,string>,
+     *               fonts_url:string, logo:?string, logo_chip:bool, icon:?string, header_image:?string, theme_color:string}
+     */
+    public static function clientTokens(?Tenant $tenant): array
+    {
+        $tt = self::for($tenant);
+        $root = $tt['shared'] + [
+            'r-sm' => $tt['radii']['sm'].'px', 'r-md' => $tt['radii']['md'].'px', 'r-lg' => $tt['radii']['lg'].'px',
+            'r-xl' => $tt['radii']['xl'].'px', 'r-sheet' => $tt['radii']['sheet'].'px', 'r-pill' => '999px',
+            'font-ar' => "'".$tt['fonts']['ar']."'", 'font-en' => "'".$tt['fonts']['en']."'", 'font-num' => "'".$tt['fonts']['numeric']."'",
+            'ar-size' => (string) $tt['fonts']['ar_size'], 'ar-height' => (string) $tt['fonts']['ar_height'],
+            'gutter' => $tt['density'] === 'compact' ? '12px' : '16px',
+            'section-gap' => $tt['density'] === 'compact' ? '20px' : '24px',
+        ];
+
+        return [
+            'mode' => $tt['mode'],
+            'root' => self::varMap($root),
+            'light' => self::varMap($tt['light']),
+            'dark' => self::varMap($tt['dark']),
+            'fonts_url' => $tt['fonts']['url'],
+            // Same choice as layouts/public.blade.php: the full logo on a white chip, else the on-primary logo.
+            'logo' => $tt['logo_needs_chip'] ? $tt['logo'] : $tt['logo_on_primary'],
+            'logo_chip' => (bool) $tt['logo_needs_chip'],
+            'icon' => $tt['icon'],
+            'header_image' => $tt['header_image'],
+            'theme_color' => $tt['shared']['header-start'],
+        ];
     }
 }

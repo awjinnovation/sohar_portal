@@ -37,6 +37,7 @@ At the DNS host of `awj.om` (TTL 300 while setting up):
 | `mawsim.awj.om` | `AAAA` | public IPv6 (only if the server has one) |
 | `gate.mawsim.awj.om` | `A` / `AAAA` | same server (gate web app, separate resource) |
 | `app.mawsim.awj.om` | `A` / `AAAA` | same server (visitor web app, separate resource) |
+| `book.mawsim.awj.om` | `A` / `AAAA` | same server (booking site, separate resource; or a CDN, see `booking-web/README.md`) |
 | `awj.om` (optional) | `CAA` | `0 issue "letsencrypt.org"` |
 
 Mail records (SPF, DKIM, DMARC) are in [§8](#8-smtp-spf-dkim-dmarc). Coolify
@@ -97,7 +98,8 @@ existing MySQL volume.
 | `PAYMENT_DRIVER` | `thawani` (default). [§9](#9-thawani-pay). |
 | `THAWANI_MODE`, `THAWANI_SECRET_KEY`, `THAWANI_PUBLISHABLE_KEY`, `THAWANI_WEBHOOK_SECRET` | Platform fallback; a tenant can instead have its own (encrypted) in *Admin → Tenants*. `THAWANI_MODE=uat` until go-live, then `production`. |
 | `BANK_MUSCAT_*` | Only if a tenant uses Bank Muscat ([§9b](#9b-bank-muscat-optional)). |
-| `CORS_ALLOWED_ORIGINS` | The web apps, comma-separated: `https://gate.mawsim.awj.om,https://app.mawsim.awj.om`. Default `*`. |
+| `CORS_ALLOWED_ORIGINS` | The web apps, comma-separated: `https://gate.mawsim.awj.om,https://app.mawsim.awj.om,https://book.mawsim.awj.om`. Default `*`. |
+| `BOOKING_WEB_URL` | The booking site, `https://book.mawsim.awj.om` ([§13](#13-gate-and-visitor-web-apps-separate-resources)). Empty = the booking page on this server. |
 
 **Optional**: `OPENAI_API_KEY` (empty = AI features off), `OPENAI_MODEL_FAST/SMART`,
 `AI_CHAT_RATE_*`, `PAY_LINK_BASE_URL`, `DEMO_REQUEST_CC`, `LOG_LEVEL` (`info`),
@@ -358,6 +360,17 @@ the same Dockerfile from the same repository as a second resource, with the
 build variables `APP=visitor` and `PUBLIC_URL=https://app.mawsim.awj.om`, on
 `https://app.mawsim.awj.om`. Add that origin to `CORS_ALLOWED_ORIGINS` as well.
 Steps: `deploy/gate-web/README.md` → "Visitor web app" in the app repository.
+
+The **booking site** (`booking-web/` in this repository: the page a printed event
+QR opens, phone + code, card checkout, tickets) is a static React build in its
+own nginx image. Create it as a third resource: *Application* from this
+repository, build pack **Dockerfile**, **Base Directory `/booking-web`**,
+runtime variable `API_BASE_URL=https://mawsim.awj.om`, port `80`, domain
+`https://book.mawsim.awj.om`, health check `/healthz`. Then, on this resource,
+set `BOOKING_WEB_URL=https://book.mawsim.awj.om` and add that origin to
+`CORS_ALLOWED_ORIGINS`, and redeploy. Set *Watch Paths* so each resource only
+rebuilds for its own files (`booking-web/**` there, `!booking-web/**` here).
+Steps, CDN set-up and checks: `booking-web/README.md`.
 
 ## 14. Test the stack locally
 
