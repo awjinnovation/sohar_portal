@@ -216,6 +216,7 @@ Production runs as one Docker Compose resource on Coolify: `Dockerfile` (servers
 ```bash
 php artisan db:seed --force                                    # once, by hand (never automatic)
 php artisan platform:create-admin ops@awj.om --lock-seeded     # real super-admin; locks the seeded password123 accounts
+php artisan tenant:wipe-test-data north-batinah --dry-run       # test servers: what a reset would delete (see below)
 ```
 
 The app runs on SQLite locally and MySQL 8.4 in production; the test suite passes on both (MySQL run: docs/DEPLOY_COOLIFY.md §14).
@@ -255,6 +256,20 @@ The app runs on SQLite locally and MySQL 8.4 in production; the test suite passe
 Scheduler (`php artisan schedule:work` / cron `schedule:run`): `points:expire` daily 02:00, `wallet:expire-promo` daily 02:15 (promo credit older than `wallet.promo_expiry_days`, FIFO lots in `wallet_promo_lots`; no-op while the setting is null), `payments:expire-pending` hourly (cancels abandoned gateway checkouts and returns reserved points), `box-office:expire` every minute (unpaid gate box office orders expire and release their seats).
 
 Seeding is idempotent: `php artisan db:seed` can be re-run on an already-seeded database (natural-key `updateOrCreate` / `firstOrCreate`; content edited in the admin is not overwritten). The generic terms / privacy texts are filled from the tenant's settings (name, `tenant.organization`, `tenant.support.email|phone`).
+
+### Resetting a test tenant
+
+`php artisan tenant:wipe-test-data <slug>` removes what testers generated in **one** tenant and keeps
+its set-up, so a testing guide written against it stays valid: the tenant and its settings, every
+account that holds a role (admin panel users, gate staff, vendor staff) and the super-admins, events,
+ticket types, categories, tags, map locations, gates, vendors, places, content, announcements, legal
+pages and public notifications. Deleted: visitor accounts (no role anywhere, and no data in another
+tenant), tickets, payments and gateway records, wallets with transactions / top-ups / promo lots /
+deposits / refund requests / pay tokens, points, box office orders, paired gate devices and their
+tokens, pairing codes, scans, survey answers, AI conversations, personal notifications, favourites,
+interests, OTP codes, the visitors' API tokens and the audit log (one `tenant.test_data_wiped` entry
+is written). Other tenants are not touched. `--dry-run` prints the counts; without `--force` the
+command asks you to type the slug. Take a database backup first (`docs/DEPLOY_COOLIFY.md` §10).
 
 ### Syncing the Arabic seed texts
 
