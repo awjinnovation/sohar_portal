@@ -8,6 +8,7 @@ use App\Models\AiMessage;
 use App\Models\BoxOfficeOrder;
 use App\Models\Category;
 use App\Models\Event;
+use App\Models\EventTag;
 use App\Models\Gate;
 use App\Models\GateDevice;
 use App\Models\GateScan;
@@ -184,5 +185,40 @@ class WipeTenantTestDataTest extends GateTestCase
         $this->assertNotNull(User::find($this->visitor->id));
 
         $this->artisan('tenant:wipe-test-data', ['tenant' => 'no-such-tenant'])->assertFailed();
+    }
+
+    #[Test]
+    public function keep_event_removes_every_other_event_of_the_tenant_only(): void
+    {
+        $otherEvent = $this->makeEvent(null, ['title' => 'Old show', 'title_ar' => 'عرض قديم']);
+        $this->inTenant($this->tenant, fn () => EventTag::create(['event_id' => $otherEvent->id, 'tag' => 'music', 'tag_ar' => 'موسيقى']));
+        $foreignEvents = Event::withoutTenantScope()->where('tenant_id', $this->other->id)->count();
+        $this->assertSame(2, DB::table('event_ticket_types')->where('tenant_id', $this->tenant->id)->count(), 'each event gets a default type');
+
+        $this->artisan('tenant:wipe-test-data', ['tenant' => $this->tenant->slug, '--force' => true, '--keep-event' => (string) $this->event->id])
+            ->expectsOutputToContain('Events kept: #'.$this->event->id.' حفل')
+            ->expectsOutputToContain('Events deleted (1): #'.$otherEvent->id.' عرض قديم')
+            ->assertSuccessful();
+
+        $this->assertTrue(Event::withoutTenantScope()->whereKey($this->event->id)->exists());
+        $this->assertFalse(Event::withoutTenantScope()->whereKey($otherEvent->id)->exists());
+        $this->assertSame([$this->event->id], DB::table('event_ticket_types')->where('tenant_id', $this->tenant->id)->pluck('event_id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame(0, DB::table('event_tags')->where('event_id', $otherEvent->id)->count());
+        $this->assertSame($foreignEvents, Event::withoutTenantScope()->where('tenant_id', $this->other->id)->count());
+        $this->assertNull(User::find($this->visitor->id));
+    }
+
+    #[Test]
+    public function keep_event_refuses_ids_that_are_not_events_of_the_tenant(): void
+    {
+        $foreign = $this->makeEvent($this->other);
+        $events = Event::withoutTenantScope()->count();
+
+        $this->artisan('tenant:wipe-test-data', ['tenant' => $this->tenant->slug, '--force' => true, '--keep-event' => (string) $foreign->id])
+            ->expectsOutputToContain('Not an event of this tenant: #'.$foreign->id)
+            ->assertFailed();
+
+        $this->assertSame($events, Event::withoutTenantScope()->count());
+        $this->assertNotNull(User::find($this->visitor->id));
     }
 }

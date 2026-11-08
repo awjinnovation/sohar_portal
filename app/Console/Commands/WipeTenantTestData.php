@@ -3,13 +3,17 @@
 namespace App\Console\Commands;
 
 use App\Models\AuditLog;
+use App\Models\Event;
 use App\Models\GateDevice;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\PublicApiCache;
+use App\Tenancy\TenantContext;
 use Illuminate\Console\Command;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Removes everything testers generated in ONE tenant and keeps its set-up.
@@ -29,6 +33,10 @@ use Illuminate\Support\Facades\DB;
  *   php artisan tenant:wipe-test-data north-batinah --dry-run   # counts only
  *   php artisan tenant:wipe-test-data north-batinah             # asks to type the slug
  *   php artisan tenant:wipe-test-data north-batinah --force     # no question (scripts)
+ *   php artisan tenant:wipe-test-data north-batinah --keep-event=1   # + delete every other event
+ *
+ * --keep-event also removes the tenant's other events (with their ticket
+ * types, tags, legacy pricing and images); only the listed ids stay.
  *
  * Other tenants are never touched: a visitor who also has data in another
  * tenant keeps the account, only this tenant's rows go. Nothing here resets
@@ -39,7 +47,8 @@ class WipeTenantTestData extends Command
     protected $signature = 'tenant:wipe-test-data
         {tenant : Tenant slug, e.g. north-batinah}
         {--dry-run : Show what would be deleted and stop}
-        {--force : Delete without asking for confirmation}';
+        {--force : Delete without asking for confirmation}
+        {--keep-event= : Also delete every other event of the tenant; comma-separated ids of the events to keep (e.g. 1)}';
 
     protected $description = 'Delete the test data of one tenant (visitors, tickets, payments, wallets, scans…) and keep its events, staff and settings';
 
@@ -81,11 +90,21 @@ class WipeTenantTestData extends Command
 
         $this->line(sprintf('Environment <comment>%s</comment>   URL <comment>%s</comment>', app()->environment(), config('app.url')));
         $this->line(sprintf('Tenant <comment>%s</comment> (#%d, %s)', $tenant->slug, $tenant->id, $tenant->name['en'] ?? ''));
+
+        $keep = $this->keptEvents($tenant);
+        if ($keep === false) {
+            return self::FAILURE;
+        }
+        if ($keep !== null) {
+            $doomed = $this->eventsToDelete($tenant, $keep);
+            $this->line('Events kept: '.$keep->map(fn (Event $e) => $this->describeEvent($e))->implode(', '));
+            $this->line(sprintf('Events deleted (%d): %s', $doomed->count(), $doomed->map(fn (Event $e) => $this->describeEvent($e))->implode(', ') ?: 'none'));
+        }
         $this->newLine();
 
-        $plan = $this->plan($tenant);
+        $plan = $this->plan($tenant, $keep);
         $this->table(['Data', 'Rows'], collect($plan)->map(fn ($n, $label) => [$label, number_format($n)])->values()->all());
-        $this->line('Kept: tenant settings, accounts with a role, events, ticket types, categories, gates, vendors, places, content, announcements, legal pages, public notifications.');
+        $this->line('Kept: tenant settings, accounts with a role, '.($keep === null ? 'events, ticket types' : 'the events above with their ticket types').', categories, gates, vendors, places, content, announcements, legal pages, public notifications.');
         $this->newLine();
 
         if ($this->option('dry-run')) {
@@ -107,7 +126,7 @@ class WipeTenantTestData extends Command
             }
         }
 
-        $deleted = DB::transaction(fn () => $this->wipe($tenant));
+        $deleted = DB::transaction(fn () => $this->wipe($tenant, $keep));
         PublicApiCache::bump($tenant->id);
 
         $this->table(['Data', 'Deleted'], collect($deleted)->map(fn ($n, $label) => [$label, number_format($n)])->values()->all());
@@ -116,13 +135,19 @@ class WipeTenantTestData extends Command
         return self::SUCCESS;
     }
 
-    /** @return array<string, int> label => rows that would be deleted */
-    private function plan(Tenant $tenant): array
+    /**
+     * @param  Collection<int, Event>|null  $keep  events to keep (null = events are not touched)
+     * @return array<string, int> label => rows that would be deleted
+     */
+    private function plan(Tenant $tenant, ?Collection $keep): array
     {
         $users = $this->visitorIds($tenant);
         $counts = [];
         foreach (self::TENANT_TABLES as $table) {
             $counts[$table] = $this->tenantRows($table, $tenant)->count();
+        }
+        if ($keep !== null) {
+            $counts += $this->eventChildCounts($this->eventsToDelete($tenant, $keep));
         }
         $counts['box_office_order_lines'] = $this->orderLines($tenant)->count();
         $counts['notifications (personal)'] = $this->personalNotifications($tenant)->count();
@@ -134,8 +159,11 @@ class WipeTenantTestData extends Command
         return array_filter($counts, fn ($n) => $n > 0) ?: ['nothing' => 0];
     }
 
-    /** @return array<string, int> */
-    private function wipe(Tenant $tenant): array
+    /**
+     * @param  Collection<int, Event>|null  $keep
+     * @return array<string, int>
+     */
+    private function wipe(Tenant $tenant, ?Collection $keep): array
     {
         $users = $this->visitorIds($tenant);
         $phones = User::whereIn('id', $users)->whereNotNull('phone_number')->pluck('phone_number')->all();
@@ -145,6 +173,14 @@ class WipeTenantTestData extends Command
         $deleted['box_office_order_lines'] = $this->orderLines($tenant)->delete();
         foreach (self::TENANT_TABLES as $table) {
             $deleted[$table] = $this->tenantRows($table, $tenant)->delete();
+        }
+        if ($keep !== null) {
+            // Tickets, orders and scans of every event are already gone; ticket
+            // types, tags, pricing and places links cascade, images are removed
+            // by the media library when the model is deleted.
+            $doomed = $this->eventsToDelete($tenant, $keep);
+            $deleted += $this->eventChildCounts($doomed);
+            app(TenantContext::class)->run($tenant, fn () => $doomed->each(fn (Event $e) => $e->delete()));
         }
         $deleted['notifications (personal)'] = $this->personalNotifications($tenant)->delete();
         $deleted['otp_verifications'] = $this->otps($users, $phones)->delete();
@@ -162,6 +198,65 @@ class WipeTenantTestData extends Command
         ]);
 
         return array_filter($deleted, fn ($n) => $n > 0) ?: ['nothing' => 0];
+    }
+
+    /**
+     * Events named by --keep-event: null when the option is absent, false
+     * (after an error message) when an id is not an event of this tenant.
+     *
+     * @return Collection<int, Event>|null|false
+     */
+    private function keptEvents(Tenant $tenant): Collection|null|false
+    {
+        $raw = trim((string) $this->option('keep-event'));
+        if ($raw === '') {
+            return null;
+        }
+        $ids = collect(explode(',', $raw))->map(fn ($v) => (int) trim($v))->filter()->unique()->values();
+        if ($ids->isEmpty()) {
+            $this->error('--keep-event needs at least one event id.');
+
+            return false;
+        }
+        $events = Event::withoutTenantScope()->where('tenant_id', $tenant->id)->whereIn('id', $ids)->get()->keyBy('id');
+        $missing = $ids->reject(fn ($id) => $events->has($id));
+        if ($missing->isNotEmpty()) {
+            $this->error('Not an event of this tenant: #'.$missing->implode(', #'));
+
+            return false;
+        }
+
+        return $events->values();
+    }
+
+    /** @return Collection<int, Event> */
+    private function eventsToDelete(Tenant $tenant, Collection $keep): Collection
+    {
+        return Event::withoutTenantScope()->where('tenant_id', $tenant->id)->whereNotIn('id', $keep->pluck('id'))->orderBy('id')->get();
+    }
+
+    /** @return array<string, int> rows that go with these events */
+    private function eventChildCounts(Collection $events): array
+    {
+        $ids = $events->pluck('id')->all() ?: [0];
+        $counts = ['events' => count($events)];
+        // Legacy tables (ticket_pricing) may have been dropped by a later migration.
+        foreach (['event_ticket_types', 'event_tags', 'ticket_pricing', 'event_place'] as $table) {
+            if (Schema::hasTable($table)) {
+                $counts[$table] = DB::table($table)->whereIn('event_id', $ids)->count();
+            }
+        }
+        $counts['media (event images)'] = DB::table('media')->where('model_type', (new Event)->getMorphClass())->whereIn('model_id', $ids)->count();
+
+        return $counts;
+    }
+
+    private function describeEvent(Event $event): string
+    {
+        $day = fn ($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : (string) $v;
+        $title = $event->title_ar ?: $event->title;
+
+        return sprintf('#%d %s (%s → %s)', $event->id, $title, $day($event->start_time), $day($event->end_time));
     }
 
     private function tenantRows(string $table, Tenant $tenant): Builder

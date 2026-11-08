@@ -216,7 +216,7 @@ Production runs as one Docker Compose resource on Coolify: `Dockerfile` (servers
 ```bash
 php artisan db:seed --force                                    # once, by hand (never automatic)
 php artisan platform:create-admin ops@awj.om --lock-seeded     # real super-admin; locks the seeded password123 accounts
-php artisan tenant:wipe-test-data north-batinah --dry-run       # test servers: what a reset would delete (see below)
+php artisan tenant:wipe-test-data north-batinah --keep-event=1 --dry-run   # test servers: what a reset would delete (see below)
 ```
 
 The app runs on SQLite locally and MySQL 8.4 in production; the test suite passes on both (MySQL run: docs/DEPLOY_COOLIFY.md §14).
@@ -268,8 +268,11 @@ tenant), tickets, payments and gateway records, wallets with transactions / top-
 deposits / refund requests / pay tokens, points, box office orders, paired gate devices and their
 tokens, pairing codes, scans, survey answers, AI conversations, personal notifications, favourites,
 interests, OTP codes, the visitors' API tokens and the audit log (one `tenant.test_data_wiped` entry
-is written). Other tenants are not touched. `--dry-run` prints the counts; without `--force` the
-command asks you to type the slug. Take a database backup first (`docs/DEPLOY_COOLIFY.md` §10).
+is written). Other tenants are not touched. `--keep-event=1` (comma-separated ids) also deletes every
+other event of the tenant, with its ticket types, tags, legacy pricing, places links and images, and
+keeps only the listed ones; the output names the kept and the deleted events. `--dry-run` prints the
+counts; without `--force` the command asks you to type the slug. Take a database backup first
+(`docs/DEPLOY_COOLIFY.md` §10).
 
 ### Syncing the Arabic seed texts
 
