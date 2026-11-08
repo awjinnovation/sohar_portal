@@ -3,8 +3,12 @@
 namespace App\Console\Commands;
 
 use App\Models\AuditLog;
+use App\Models\ContentItem;
+use App\Models\ContentPage;
 use App\Models\Event;
 use App\Models\GateDevice;
+use App\Models\Place;
+use App\Models\Restaurant;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\PublicApiCache;
@@ -36,7 +40,11 @@ use Illuminate\Support\Facades\Schema;
  *   php artisan tenant:wipe-test-data north-batinah --keep-event=1   # + delete every other event
  *
  * --keep-event also removes the tenant's other events (with their ticket
- * types, tags, legacy pricing and images); only the listed ids stay.
+ * types, tags, legacy pricing and images) and, unless --keep-content is
+ * given, every piece of content the kept events do not use: other event
+ * categories and map locations, places not linked to them (and their
+ * unused place categories), Discover collections / items / pages,
+ * announcements, public notifications, restaurants and vendors.
  *
  * Other tenants are never touched: a visitor who also has data in another
  * tenant keeps the account, only this tenant's rows go. Nothing here resets
@@ -48,7 +56,8 @@ class WipeTenantTestData extends Command
         {tenant : Tenant slug, e.g. north-batinah}
         {--dry-run : Show what would be deleted and stop}
         {--force : Delete without asking for confirmation}
-        {--keep-event= : Also delete every other event of the tenant; comma-separated ids of the events to keep (e.g. 1)}';
+        {--keep-event= : Also delete every other event of the tenant; comma-separated ids of the events to keep (e.g. 1)}
+        {--keep-content : With --keep-event, leave categories, map locations, places, Discover content, announcements, restaurants and vendors alone}';
 
     protected $description = 'Delete the test data of one tenant (visitors, tickets, payments, wallets, scans…) and keep its events, staff and settings';
 
@@ -99,12 +108,17 @@ class WipeTenantTestData extends Command
             $doomed = $this->eventsToDelete($tenant, $keep);
             $this->line('Events kept: '.$keep->map(fn (Event $e) => $this->describeEvent($e))->implode(', '));
             $this->line(sprintf('Events deleted (%d): %s', $doomed->count(), $doomed->map(fn (Event $e) => $this->describeEvent($e))->implode(', ') ?: 'none'));
+            $this->line($this->wipesContent($keep)
+                ? 'Content: only what the kept events use stays (their category, map location and linked places); other categories, map locations, places, Discover content, announcements, public notifications, restaurants and vendors are deleted.'
+                : 'Content: kept (--keep-content).');
         }
         $this->newLine();
 
         $plan = $this->plan($tenant, $keep);
         $this->table(['Data', 'Rows'], collect($plan)->map(fn ($n, $label) => [$label, number_format($n)])->values()->all());
-        $this->line('Kept: tenant settings, accounts with a role, '.($keep === null ? 'events, ticket types' : 'the events above with their ticket types').', categories, gates, vendors, places, content, announcements, legal pages, public notifications.');
+        $this->line($this->wipesContent($keep)
+            ? 'Kept: tenant settings, accounts with a role, the events above with their ticket types and the content they use, gates, legal pages.'
+            : 'Kept: tenant settings, accounts with a role, '.($keep === null ? 'events, ticket types' : 'the events above with their ticket types').', categories, gates, vendors, places, content, announcements, legal pages, public notifications.');
         $this->newLine();
 
         if ($this->option('dry-run')) {
@@ -149,6 +163,11 @@ class WipeTenantTestData extends Command
         if ($keep !== null) {
             $counts += $this->eventChildCounts($this->eventsToDelete($tenant, $keep));
         }
+        if ($this->wipesContent($keep)) {
+            foreach ($this->contentQueries($tenant, $keep) as $label => $query) {
+                $counts[$label] = $query->count();
+            }
+        }
         $counts['box_office_order_lines'] = $this->orderLines($tenant)->count();
         $counts['notifications (personal)'] = $this->personalNotifications($tenant)->count();
         $counts['gate device tokens'] = $this->deviceTokens($tenant)->count();
@@ -181,6 +200,9 @@ class WipeTenantTestData extends Command
             $doomed = $this->eventsToDelete($tenant, $keep);
             $deleted += $this->eventChildCounts($doomed);
             app(TenantContext::class)->run($tenant, fn () => $doomed->each(fn (Event $e) => $e->delete()));
+        }
+        if ($this->wipesContent($keep)) {
+            $deleted += $this->wipeContent($tenant, $keep);
         }
         $deleted['notifications (personal)'] = $this->personalNotifications($tenant)->delete();
         $deleted['otp_verifications'] = $this->otps($users, $phones)->delete();
@@ -249,6 +271,66 @@ class WipeTenantTestData extends Command
         $counts['media (event images)'] = DB::table('media')->where('model_type', (new Event)->getMorphClass())->whereIn('model_id', $ids)->count();
 
         return $counts;
+    }
+
+    private function wipesContent(?Collection $keep): bool
+    {
+        return $keep !== null && ! $this->option('keep-content');
+    }
+
+    /**
+     * Content the kept events do not use, in deletion order (children first).
+     * Place and Discover rows with images are deleted through their models in
+     * wipeContent() so the media library removes the files.
+     *
+     * @param  Collection<int, Event>  $keep
+     * @return array<string, Builder>
+     */
+    private function contentQueries(Tenant $tenant, Collection $keep): array
+    {
+        $keptEventIds = $keep->pluck('id')->all() ?: [0];
+        $keptCategoryIds = $keep->pluck('category_id')->filter()->unique()->values()->all() ?: [0];
+        $keptMapLocationIds = $keep->pluck('map_location_id')->filter()->unique()->values()->all() ?: [0];
+        $keptPlaceIds = DB::table('event_place')->whereIn('event_id', $keptEventIds)->pluck('place_id')->all() ?: [0];
+        $keptPlaceCategoryIds = DB::table('places')->whereIn('id', $keptPlaceIds)->whereNotNull('category_id')->pluck('category_id')->all() ?: [0];
+
+        return [
+            'announcements' => $this->tenantRows('announcements', $tenant),
+            'notifications (public)' => $this->tenantRows('notifications', $tenant)->whereNull('user_id'),
+            'content_items' => $this->tenantRows('content_items', $tenant),
+            'content_collections' => $this->tenantRows('content_collections', $tenant),
+            'content_pages' => $this->tenantRows('content_pages', $tenant),
+            'places' => $this->tenantRows('places', $tenant)->whereNotIn('id', $keptPlaceIds),
+            'place_categories' => $this->tenantRows('place_categories', $tenant)->whereNotIn('id', $keptPlaceCategoryIds),
+            'restaurants' => $this->tenantRows('restaurants', $tenant),
+            'vendors' => $this->tenantRows('vendors', $tenant),
+            'map_locations' => $this->tenantRows('map_locations', $tenant)->whereNotIn('id', $keptMapLocationIds),
+            'categories' => $this->tenantRows('categories', $tenant)->whereNotIn('id', $keptCategoryIds),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, Event>  $keep
+     * @return array<string, int>
+     */
+    private function wipeContent(Tenant $tenant, Collection $keep): array
+    {
+        $withMedia = ['content_items' => ContentItem::class, 'content_pages' => ContentPage::class, 'places' => Place::class, 'restaurants' => Restaurant::class];
+        $deleted = [];
+
+        app(TenantContext::class)->run($tenant, function () use ($tenant, $keep, $withMedia, &$deleted) {
+            foreach ($this->contentQueries($tenant, $keep) as $label => $query) {
+                if (isset($withMedia[$label])) {
+                    $ids = $query->pluck('id')->all();
+                    $withMedia[$label]::withoutTenantScope()->whereIn('id', $ids)->get()->each(fn ($model) => $model->delete());
+                    $deleted[$label] = count($ids);
+                } else {
+                    $deleted[$label] = $query->delete();
+                }
+            }
+        });
+
+        return $deleted;
     }
 
     private function describeEvent(Event $event): string

@@ -270,9 +270,12 @@ tokens, pairing codes, scans, survey answers, AI conversations, personal notific
 interests, OTP codes, the visitors' API tokens and the audit log (one `tenant.test_data_wiped` entry
 is written). Other tenants are not touched. `--keep-event=1` (comma-separated ids) also deletes every
 other event of the tenant, with its ticket types, tags, legacy pricing, places links and images, and
-keeps only the listed ones; the output names the kept and the deleted events. `--dry-run` prints the
-counts; without `--force` the command asks you to type the slug. Take a database backup first
-(`docs/DEPLOY_COOLIFY.md` §10).
+every piece of content the kept events do not use: other event categories and map locations, places
+not linked to them (and their unused place categories), Discover collections / items / pages,
+announcements, public notifications, restaurants and vendors — so only the listed events and what they
+need remain (`--keep-content` leaves the content alone). The output names the kept and the deleted
+events. `--dry-run` prints the counts; without `--force` the command asks you to type the slug. Take a
+database backup first (`docs/DEPLOY_COOLIFY.md` §10).
 
 ### Syncing the Arabic seed texts
 

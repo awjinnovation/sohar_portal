@@ -5,6 +5,7 @@ namespace Tests\Feature\Platform;
 use App\Console\Commands\WipeTenantTestData;
 use App\Models\AiConversation;
 use App\Models\AiMessage;
+use App\Models\Announcement;
 use App\Models\BoxOfficeOrder;
 use App\Models\Category;
 use App\Models\Event;
@@ -12,13 +13,18 @@ use App\Models\EventTag;
 use App\Models\Gate;
 use App\Models\GateDevice;
 use App\Models\GateScan;
+use App\Models\MapLocation;
 use App\Models\Notification;
 use App\Models\Payment;
+use App\Models\Place;
+use App\Models\Restaurant;
 use App\Models\SatisfactionResponse;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Models\Vendor;
 use App\Models\Wallet;
+use Database\Seeders\PlacesContentSeeder;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Gate\GateTestCase;
@@ -187,25 +193,86 @@ class WipeTenantTestDataTest extends GateTestCase
         $this->artisan('tenant:wipe-test-data', ['tenant' => 'no-such-tenant'])->assertFailed();
     }
 
+    /** Seeded Discover content plus one of everything else; the festival is linked to one place and one map location. */
+    private function seedContent(): array
+    {
+        $t = $this->tenant->id;
+        $this->inTenant($this->tenant, fn () => $this->seed(PlacesContentSeeder::class));
+        $venue = Place::withoutTenantScope()->where('tenant_id', $t)->where('slug', 'sohar-entertainment-centre')->firstOrFail();
+        DB::table('event_place')->insert(['event_id' => $this->event->id, 'place_id' => $venue->id]);
+
+        return $this->inTenant($this->tenant, function () use ($venue) {
+            $grounds = MapLocation::create(['type' => 'venue', 'name' => 'Festival grounds', 'name_ar' => 'أرض المهرجان', 'description' => 'd', 'description_ar' => 'د', 'icon' => 'stadium', 'color' => 0xFF314F99, 'latitude' => 24.34, 'longitude' => 56.68, 'is_active' => true]);
+            MapLocation::create(['type' => 'parking', 'name' => 'P1', 'name_ar' => 'موقف', 'description' => 'd', 'description_ar' => 'د', 'icon' => 'local_parking', 'color' => 0xFF607D8B, 'latitude' => 24, 'longitude' => 56, 'is_active' => true]);
+            $this->event->forceFill(['map_location_id' => $grounds->id])->save();
+            Announcement::create(['title' => 'Parking full', 'title_ar' => 'المواقف ممتلئة', 'content' => 'c', 'content_ar' => 'ج', 'type' => 'warning', 'priority' => 1, 'is_active' => true, 'created_by' => $this->admin->id, 'start_datetime' => now()->subHour(), 'end_datetime' => now()->addHour()]);
+            Restaurant::create(['name' => 'Karak House', 'name_ar' => 'بيت الكرك', 'description' => 'd', 'description_ar' => 'د', 'cuisine' => 'Cafe', 'cuisine_ar' => 'مقهى', 'location' => 'Sohar', 'location_ar' => 'صحار', 'latitude' => 24.35, 'longitude' => 56.7, 'price_range' => '$$', 'rating' => 4.5, 'total_ratings' => 10, 'is_active' => true]);
+            Vendor::create(['name' => ['en' => 'Karak House', 'ar' => 'بيت الكرك'], 'is_active' => true]);
+
+            return ['venue' => $venue, 'grounds' => $grounds];
+        });
+    }
+
     #[Test]
-    public function keep_event_removes_every_other_event_of_the_tenant_only(): void
+    public function keep_event_removes_every_other_event_and_the_content_they_do_not_use(): void
     {
         $otherEvent = $this->makeEvent(null, ['title' => 'Old show', 'title_ar' => 'عرض قديم']);
         $this->inTenant($this->tenant, fn () => EventTag::create(['event_id' => $otherEvent->id, 'tag' => 'music', 'tag_ar' => 'موسيقى']));
+        ['venue' => $venue, 'grounds' => $grounds] = $this->seedContent();
         $foreignEvents = Event::withoutTenantScope()->where('tenant_id', $this->other->id)->count();
-        $this->assertSame(2, DB::table('event_ticket_types')->where('tenant_id', $this->tenant->id)->count(), 'each event gets a default type');
+        $t = $this->tenant->id;
+        $this->assertSame(2, DB::table('event_ticket_types')->where('tenant_id', $t)->count(), 'each event gets a default type');
+        $this->assertSame(2, DB::table('categories')->where('tenant_id', $t)->count(), 'one category per event');
+        $this->assertGreaterThan(5, DB::table('places')->where('tenant_id', $t)->count(), 'seeded places');
+        $this->assertGreaterThan(0, DB::table('content_items')->where('tenant_id', $t)->count());
 
         $this->artisan('tenant:wipe-test-data', ['tenant' => $this->tenant->slug, '--force' => true, '--keep-event' => (string) $this->event->id])
             ->expectsOutputToContain('Events kept: #'.$this->event->id.' حفل')
             ->expectsOutputToContain('Events deleted (1): #'.$otherEvent->id.' عرض قديم')
+            ->expectsOutputToContain('Content: only what the kept events use stays')
             ->assertSuccessful();
 
+        // Events: only the kept one, with its ticket types.
         $this->assertTrue(Event::withoutTenantScope()->whereKey($this->event->id)->exists());
         $this->assertFalse(Event::withoutTenantScope()->whereKey($otherEvent->id)->exists());
-        $this->assertSame([$this->event->id], DB::table('event_ticket_types')->where('tenant_id', $this->tenant->id)->pluck('event_id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame([$this->event->id], DB::table('event_ticket_types')->where('tenant_id', $t)->pluck('event_id')->map(fn ($id) => (int) $id)->all());
         $this->assertSame(0, DB::table('event_tags')->where('event_id', $otherEvent->id)->count());
+
+        // Content: only what the kept event uses.
+        $this->assertSame([$this->event->fresh()->category_id], DB::table('categories')->where('tenant_id', $t)->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame([$grounds->id], DB::table('map_locations')->where('tenant_id', $t)->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame([$venue->id], DB::table('places')->where('tenant_id', $t)->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame([$venue->category_id], DB::table('place_categories')->where('tenant_id', $t)->pluck('id')->map(fn ($id) => (int) $id)->all());
+        foreach (['content_items', 'content_collections', 'content_pages', 'announcements', 'restaurants', 'vendors'] as $table) {
+            $this->assertSame(0, DB::table($table)->where('tenant_id', $t)->count(), $table);
+        }
+        $this->assertSame(0, DB::table('notifications')->where('tenant_id', $t)->count(), 'public notifications go with the content');
+        $this->assertSame(0, DB::table('media')->where('model_type', (new Place)->getMorphClass())->where('model_id', '!=', $venue->id)->count());
+
+        // Everything else as before.
         $this->assertSame($foreignEvents, Event::withoutTenantScope()->where('tenant_id', $this->other->id)->count());
+        $this->assertTrue(Gate::withoutTenantScope()->whereKey($this->gate->id)->exists());
+        $this->assertTrue($this->admin->fresh()->hasRole('admin'));
         $this->assertNull(User::find($this->visitor->id));
+    }
+
+    #[Test]
+    public function keep_content_leaves_the_content_alone(): void
+    {
+        $this->makeEvent(null, ['title' => 'Old show', 'title_ar' => 'عرض قديم']);
+        $this->seedContent();
+        $t = $this->tenant->id;
+        $before = collect(['categories', 'map_locations', 'places', 'place_categories', 'content_items', 'content_collections', 'content_pages', 'announcements', 'restaurants', 'vendors'])
+            ->mapWithKeys(fn ($table) => [$table => DB::table($table)->where('tenant_id', $t)->count()]);
+
+        $this->artisan('tenant:wipe-test-data', ['tenant' => $this->tenant->slug, '--force' => true, '--keep-event' => (string) $this->event->id, '--keep-content' => true])
+            ->expectsOutputToContain('Content: kept (--keep-content).')
+            ->assertSuccessful();
+
+        $this->assertSame(1, Event::withoutTenantScope()->where('tenant_id', $t)->count());
+        foreach ($before as $table => $count) {
+            $this->assertSame($count, DB::table($table)->where('tenant_id', $t)->count(), $table);
+        }
     }
 
     #[Test]
