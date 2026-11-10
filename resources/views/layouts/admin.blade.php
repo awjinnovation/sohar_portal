@@ -27,6 +27,18 @@
         }
     } catch (\Throwable $e) { $newDemoRequests = 0; }
 
+    // Pages of a module the tenant switched off (Branding & settings →
+    // Modules) are left out of the menu, like the app leaves them out.
+    $menuModules = [
+        'admin.satisfaction.index' => 'radi',
+        'admin.wallets.index' => 'wallet', 'admin.refund-requests.index' => 'refunds', 'admin.deposits.index' => 'deposits',
+        'admin.vendors.index' => 'vendors', 'admin.points.index' => 'points', 'admin.restaurants.index' => 'vendors',
+        'admin.places.index' => 'places', 'admin.place-categories.index' => 'places', 'admin.places.map' => 'places',
+        'admin.content-collections.index' => 'content', 'admin.content-pages.index' => 'content',
+        'admin.announcements.index' => 'announcements', 'admin.notifications.index' => 'notifications', 'admin.map-locations.index' => 'map',
+    ];
+    $moduleOn = fn (string $route) => ! isset($menuModules[$route]) || ! $brand || $brand->moduleEnabled($menuModules[$route]);
+
     // [route, active pattern, icon, label, permission (null = any panel user), badge]
     $menuSections = [
         ['title' => 'نظرة عامة', 'items' => [
@@ -46,7 +58,7 @@
             ['admin.gates.scans.index', 'admin.gates.scans.*', 'list-check', 'سجل المسح', 'manage gates'],
             ['admin.gates.sales.index', 'admin.gates.sales.*', 'cart-check', 'مبيعات البوابات', 'manage gates', $boxOfficeRefunds],
         ]],
-        ['title' => 'المحفظة والمدفوعات', 'items' => [
+        ['title' => ! $brand || $brand->moduleEnabled('wallet') ? 'المحفظة والمدفوعات' : 'المدفوعات', 'items' => [
             ['admin.wallets.index', 'admin.wallets.*', 'wallet2', 'المحافظ', 'manage wallets'],
             ['admin.payments.index', 'admin.payments.*', 'credit-card-2-front', 'المدفوعات', 'view payments'],
             ['admin.refund-requests.index', 'admin.refund-requests.*', 'arrow-counterclockwise', 'طلبات الاسترداد', 'manage refunds', $pendingRefunds],
@@ -153,8 +165,8 @@
         <nav class="sidebar-nav">
             @foreach($menuSections as $menuSection)
                 @php
-                    $menuItems = array_values(array_filter($menuSection['items'], function ($item) use ($user) {
-                        if (! \Illuminate\Support\Facades\Route::has($item[0])) return false;
+                    $menuItems = array_values(array_filter($menuSection['items'], function ($item) use ($user, $moduleOn) {
+                        if (! \Illuminate\Support\Facades\Route::has($item[0]) || ! $moduleOn($item[0])) return false;
                         return $item[4] === null || ($user && $user->can($item[4]));
                     }));
                 @endphp

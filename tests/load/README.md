@@ -92,3 +92,36 @@ k6 run -e BASE=… -e TOKENS=tokens.json -e USERS=300 -e BOOK=0.2 -e PAY=mixed v
 
 Never point card bookings at Thawani (UAT or production): it would load-test
 their service. Check a real Thawani payment by hand instead (docs/payments_thawani.md).
+
+## Booking site (`booking.js`)
+
+Visitors of the booking site (`booking-web/`): a printed QR opens the page,
+which loads the event (`GET /api/v1/booking/events/{id}`, cached); the visitor
+reads, and with `TOKENS` signs in (their tickets load), and with `BOOK` books
+one ticket by card through the fake gateway and gets the tickets. Each
+iteration is one new visitor. Ramps to `USERS` in three steps over 6 minutes,
+then holds for `HOLD` (default 10m).
+
+```bash
+# Page loads only (no accounts, no writes)
+k6 run -e BASE=https://v2-mawsim.awj.om -e USERS=300 booking.js
+
+# Signed in and booking (staging with PAYMENT_DRIVER=fake; tokens as above)
+k6 run -e BASE=https://v2-mawsim.awj.om -e TOKENS=tokens.json -e USERS=300 -e BOOK=0.3 booking.js
+
+# Also the site itself (index.html + JS/CSS for every visitor)
+k6 run -e BASE=… -e SITE=https://book.mawsim.awj.om -e USERS=300 booking.js
+
+# Smoke test; K6_WEB_DASHBOARD_EXPORT writes an HTML report with charts
+K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_EXPORT=report.html k6 run --vus 1 --iterations 2 -e THINK=0 booking.js
+```
+
+- **No SMS step.** Signing in by code is left out: on a server without
+  `OTP_TEST_CODE` it would text real numbers. The accounts come from
+  `loadtest:users` (968 00…, not a mobile range) instead.
+- **Payments.** Before the run, one order checks that card payments open the
+  fake gateway's page; anything else (Thawani, Bank Muscat) stops the test.
+- **One machine = one IP.** The page allows 300 loads a minute per IP. With
+  `OTP_TEST_CODE` set (staging), that cap and the OTP caps are lifted, so the
+  test measures the server, not the limit. 429s are counted as `rate_limited`.
+- Bookings that find a day sold out are counted (`bookings_sold_out`), not errors.

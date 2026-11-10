@@ -18,6 +18,9 @@
     ];
     $can = fn ($ability) => $user?->can($ability);
     $link = fn ($route) => \Illuminate\Support\Facades\Route::has($route) ? route($route) : null;
+    // Modules switched off in Branding & settings drop their tiles and cards.
+    $on = fn ($module) => ! $brand || $brand->moduleEnabled($module);
+    $walletOn = $on('wallet');
 @endphp
 @section('page-subtitle', __(':greeting، :name. هذا ملخص نشاط :tenant اليوم.', ['greeting' => $greeting, 'name' => $user->name ?? '', 'tenant' => $brand?->localizedName(app()->getLocale()) ?? config('app.name')]))
 @section('page-actions')
@@ -38,30 +41,38 @@
             @if($revDelta !== null)
                 <span class="pill pill-sm {{ $revDelta >= 0 ? 'pill-success' : 'pill-neutral' }}"><i class="bi bi-arrow-{{ $revDelta >= 0 ? 'up' : 'down' }}"></i><span class="num">{{ abs($revDelta) }}%</span></span> {{ __('مقارنة بالأمس') }}
             @else
-                {{ __('مدفوعات مكتملة (تذاكر وشحن)') }}
+                {{ $walletOn && $on('topup') ? __('مدفوعات مكتملة (تذاكر وشحن)') : __('مدفوعات التذاكر المكتملة') }}
             @endif
         </x-admin.stat-tile>
         <x-admin.stat-tile label="التذاكر المباعة اليوم" :value="$m['tickets_today']" icon="ticket-perforated" tone="accent" :href="$can('manage tickets') ? $link('admin.tickets.index') : null"
             :hint="__('الإجمالي :total · مستخدمة :used', ['total' => number_format($m['tickets_total']), 'used' => number_format($m['tickets_used'])])" />
+        @if($walletOn && $on('topup'))
         <x-admin.stat-tile label="شحن المحافظ اليوم" :money="$m['topups_today']" icon="wallet2" tone="success" :href="$can('manage wallets') ? $link('admin.wallets.index') : null"
             :hint="__('عمليات الشحن: :count', ['count' => number_format($m['topups_count_today'])])" />
+        @endif
+        @if($walletOn && $on('refunds'))
         <x-admin.stat-tile label="طلبات استرداد معلّقة" :value="$m['refunds_pending']" icon="arrow-counterclockwise" :tone="$m['refunds_pending'] ? 'warning' : 'neutral'" :href="$can('manage refunds') ? $link('admin.refund-requests.index') : null">
             <x-admin.money :minor="$m['refunds_pending_minor']" tone="muted" /> {{ __('بانتظار المراجعة') }}
         </x-admin.stat-tile>
+        @endif
+        @if($on('vendors'))
         <x-admin.stat-tile label="التجار النشطون" :value="$m['vendors_active']" icon="shop-window" tone="info" :href="$can('manage vendors') ? $link('admin.vendors.index') : null"
             :hint="__('من أصل :count', ['count' => number_format($m['vendors_total'])])" />
+        @endif
     </div>
 
     @include('admin.ai._briefing-card')
 
     <div class="row g-4">
         {{-- Trends --}}
-        <div class="col-xl-8">
+        <div class="{{ $walletOn ? 'col-xl-8' : 'col-12' }}">
             <x-admin.card title="النشاط خلال 14 يومًا" icon="bar-chart" subtitle="المدفوعات المكتملة يوميًا بتوقيت المنظمة">
                 <x-slot:actions>
                     <div class="segmented" role="tablist" data-chart-switch>
                         <button type="button" class="active" data-series="ticket_revenue">{{ __('مبيعات التذاكر') }}</button>
+                        @if($walletOn && $on('topup'))
                         <button type="button" data-series="topups">{{ __('شحن المحافظ') }}</button>
+                        @endif
                         <button type="button" data-series="tickets">{{ __('عدد التذاكر') }}</button>
                     </div>
                 </x-slot:actions>
@@ -83,6 +94,7 @@
         </div>
 
         {{-- Wallet overview --}}
+        @if($walletOn)
         <div class="col-xl-4">
             <div class="wallet-card mb-4">
                 <div class="d-flex align-items-center justify-content-between">
@@ -123,8 +135,10 @@
                 @endif
             </x-admin.card>
         </div>
+        @endif
 
         {{-- Recent wallet activity --}}
+        @if($walletOn)
         <div class="col-xl-7">
             <x-admin.card title="أحدث حركات المحافظ" icon="clock-history" :flush="true">
                 @if($can('manage wallets') && $link('admin.wallets.index'))
@@ -164,9 +178,10 @@
                 @endif
             </x-admin.card>
         </div>
+        @endif
 
         {{-- Recent payments + content shortcuts --}}
-        <div class="col-xl-5">
+        <div class="{{ $walletOn ? 'col-xl-5' : 'col-12' }}">
             @if($can('view payments'))
                 <x-admin.card title="أحدث المدفوعات" icon="credit-card-2-front" :flush="true">
                     @if($link('admin.payments.index'))
@@ -200,7 +215,7 @@
                         ['admin.events.index', 'calendar-event', 'الفعاليات', $stats['main']['events'] ?? 0, 'manage events'],
                         ['admin.categories.index', 'grid', 'الفئات', $stats['catalog']['categories'], 'manage events'],
                         ['admin.event-tags.index', 'tags', 'الوسوم', $stats['catalog']['event_tags'], 'manage events'],
-                        ['admin.restaurants.index', 'cup-hot', 'المطاعم', $stats['catalog']['restaurants'], 'manage restaurants'],
+                        ...($on('vendors') ? [['admin.restaurants.index', 'cup-hot', 'المطاعم', $stats['catalog']['restaurants'], 'manage restaurants']] : []),
                         ['admin.map-locations.index', 'geo-alt', 'مواقع الخريطة', $stats['locations']['all_locations'] ?? 0, 'manage locations'],
                         ['admin.announcements.index', 'megaphone', 'الإعلانات', $stats['communication']['announcements'] ?? 0, 'manage announcements'],
                         ['admin.users.index', 'people', 'المستخدمون', $stats['main']['users'] ?? 0, 'manage users'],

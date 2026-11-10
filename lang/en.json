@@ -1550,5 +1550,15 @@
     "تعذّر خصم النقاط مجددًا": "Could not take the points again",
     "دُفع المبلغ مرتين عبر جلستين": "Paid twice through two sessions",
     "تعذّر التحقق من جلسة الدفع لدى البوابة": "The gateway session could not be verified",
-    "دُفع بعد الإلغاء ولم يكفِ رصيد النقاط لخصمها مجددًا": "Paid after cancellation, and the points balance no longer covers the redeemed points"
+    "دُفع بعد الإلغاء ولم يكفِ رصيد النقاط لخصمها مجددًا": "Paid after cancellation, and the points balance no longer covers the redeemed points",
+    "مدفوعات التذاكر المكتملة": "Completed ticket payments",
+    "لاستعمال النظام للتذاكر وحدها عطّل المحفظة وشحن الرصيد والتأمينات والنقاط والاسترداد والمطاعم والتجار، وأبقِ ماسح الموظفين مفعّلًا لمسح التذاكر.": "To use the system for tickets only, switch off the wallet, top-up, deposits, points, refunds and restaurants & vendors, and keep the staff scanner on to scan tickets.",
+    "المطاعم والتجار": "Restaurants & vendors",
+    "رصيد الزائر وزر الدفع بالرمز لدى التجار": "The visitor's balance and the pay-with-code button at vendors",
+    "إضافة الرصيد إلى المحفظة بالبطاقة": "Adding balance to the wallet by card",
+    "مبالغ التأمين المحجوزة من المحفظة": "Deposits held from the wallet",
+    "نقاط المكافآت واستبدالها برصيد": "Reward points and redeeming them for balance",
+    "طلبات استرداد رصيد المحفظة": "Wallet balance refund requests",
+    "المطاعم والأكشاك ودليل التجار والدفع لديهم": "Restaurants, kiosks, the vendor directory and paying at vendors",
+    "مسح التذاكر عند البوابات ومن حسابات الموظفين": "Ticket scanning at the gates and from staff accounts"
 }

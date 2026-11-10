@@ -109,7 +109,10 @@ export const options = {
 
 const bookingsCompleted = new Counter('bookings_completed');
 const bookingsSoldOut = new Counter('bookings_sold_out');
-const headers = { 'X-Tenant': TENANT, Accept: 'application/json', 'Accept-Language': 'ar' };
+// gzip like the app (Dart's HttpClient asks for it); k6 does not by default,
+// and plain JSON is ~8x larger (the events list: 98 KB vs 8 KB), so the test
+// would measure the line instead of the server.
+const headers = { 'X-Tenant': TENANT, Accept: 'application/json', 'Accept-Language': 'ar', 'Accept-Encoding': 'gzip' };
 
 // Event ids and the server's own images (logo, covers…), read once.
 export function setup() {

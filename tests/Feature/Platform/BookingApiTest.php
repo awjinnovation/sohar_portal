@@ -219,4 +219,21 @@ class BookingApiTest extends TestCase
         $this->assertStringStartsNotWith(self::SITE, VisitorBookingController::publicUrl($event));
         $this->get("/e/{$event->id}")->assertOk();
     }
+
+    #[Test]
+    public function the_per_ip_page_limit_is_lifted_only_with_a_test_code_outside_production(): void
+    {
+        $limit = fn () => \Illuminate\Support\Facades\RateLimiter::limiter('visitor-page')(\Illuminate\Http\Request::create('/'));
+
+        config(['auth.otp.test_code' => '123456']);
+        $this->app['env'] = 'staging';
+        $this->assertSame(PHP_INT_MAX, $limit()->maxAttempts);
+
+        $this->app['env'] = 'production';
+        $this->assertSame(300, $limit()->maxAttempts);
+
+        $this->app['env'] = 'staging';
+        config(['auth.otp.test_code' => null]);
+        $this->assertSame(300, $limit()->maxAttempts);
+    }
 }

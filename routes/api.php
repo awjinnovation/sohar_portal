@@ -66,13 +66,15 @@ Route::prefix('v1')->group(function () {
     Route::get('/categories', [CategoryController::class, 'index'])->middleware('cache.api:static');
     Route::get('/categories/{id}', [CategoryController::class, 'show'])->middleware('cache.api:static');
 
-    // Restaurants (listings)
-    Route::get('/restaurants', [RestaurantController::class, 'index'])->middleware('cache.api:catalog');
-    Route::get('/restaurants/featured', [RestaurantController::class, 'featured'])->middleware('cache.api:catalog');
-    Route::get('/restaurants/open-now', [RestaurantController::class, 'openNow'])->middleware('cache.api:live');
-    Route::get('/restaurants/search', [RestaurantController::class, 'search'])->middleware('cache.api:catalog');
-    Route::get('/restaurants/by-cuisine', [RestaurantController::class, 'byCuisine'])->middleware('cache.api:catalog');
-    Route::get('/restaurants/{id}', [RestaurantController::class, 'show'])->middleware('cache.api:catalog');
+    // Restaurants (listings): part of the vendors module, like in the apps.
+    Route::prefix('restaurants')->middleware('module:vendors')->group(function () {
+        Route::get('/', [RestaurantController::class, 'index'])->middleware('cache.api:catalog');
+        Route::get('/featured', [RestaurantController::class, 'featured'])->middleware('cache.api:catalog');
+        Route::get('/open-now', [RestaurantController::class, 'openNow'])->middleware('cache.api:live');
+        Route::get('/search', [RestaurantController::class, 'search'])->middleware('cache.api:catalog');
+        Route::get('/by-cuisine', [RestaurantController::class, 'byCuisine'])->middleware('cache.api:catalog');
+        Route::get('/{id}', [RestaurantController::class, 'show'])->middleware('cache.api:catalog');
+    });
 
     // Map Locations (for events and venues)
     Route::get('/map-locations/types', [MapLocationController::class, 'types'])->middleware('cache.api:static');

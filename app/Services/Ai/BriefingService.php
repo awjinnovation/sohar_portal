@@ -19,8 +19,9 @@ use Throwable;
 
 /**
  * Daily briefing card on the admin dashboard (contract §A5): aggregates of
- * yesterday + today (sales, top events, top-ups, pending refunds, vendor
- * totals, gate flow) summarised by the fast model. Cached per tenant, day
+ * yesterday + today (sales, top events, gate flow, and top-ups, pending
+ * refunds and vendor totals when those modules are on) summarised by the
+ * fast model. Cached per tenant, day
  * and admin language; "Regenerate" forces a fresh one. Only aggregates
  * (no names of visitors, phones or e-mails) are sent. Arabic briefings
  * go through ArabicTextFixer.
@@ -107,6 +108,12 @@ class BriefingService
         };
 
         $out = ['organizer' => $tenant->localizedName('en'), 'today' => TenantTime::today($tenant), 'weekday' => Carbon::now($tz)->englishDayOfWeek];
+        // Figures of switched-off modules are left out, so the briefing never
+        // reports on top-ups, vendors or refunds the organizer does not run.
+        $wallet = $tenant->moduleEnabled('wallet');
+        $topups = $wallet && $tenant->moduleEnabled('topup');
+        $vendors = $tenant->moduleEnabled('vendors');
+        $refunds = $wallet && $tenant->moduleEnabled('refunds');
         foreach ($periods as $name => [$from, $to]) {
             $p = [];
             $p['ticket_sales'] = $safe(fn () => $money((int) Payment::where('tenant_id', $tenant->id)->where('status', 'completed')->where('payment_type', Payment::TYPE_TICKET)->whereBetween('created_at', [$from, $to])->sum('amount_minor')), '0');
@@ -114,26 +121,32 @@ class BriefingService
             $p['top_events'] = $safe(fn () => Ticket::where('tenant_id', $tenant->id)->whereBetween('created_at', [$from, $to])
                 ->selectRaw('event_id, SUM(quantity) as q')->groupBy('event_id')->orderByDesc('q')->limit(3)->get()
                 ->map(fn ($r) => ['event' => Event::withoutTenantScope()->where('tenant_id', $tenant->id)->find($r->event_id)?->title ?? ('#'.$r->event_id), 'tickets' => (int) $r->q])->all(), []);
-            $p['topups'] = $safe(fn () => [
-                'count' => WalletTransaction::where('tenant_id', $tenant->id)->where('type', 'topup')->where('direction', 'credit')->where('status', 'completed')->whereBetween('created_at', [$from, $to])->count(),
-                'total' => $money((int) WalletTransaction::where('tenant_id', $tenant->id)->where('type', 'topup')->where('direction', 'credit')->where('status', 'completed')->whereBetween('created_at', [$from, $to])->sum('amount_minor')),
-            ], []);
-            $p['vendor_sales'] = $safe(function () use ($tenant, $from, $to, $money) {
-                if (! Schema::hasColumn('wallet_transactions', 'vendor_id')) {
-                    return [];
-                }
+            if ($topups) {
+                $p['topups'] = $safe(fn () => [
+                    'count' => WalletTransaction::where('tenant_id', $tenant->id)->where('type', 'topup')->where('direction', 'credit')->where('status', 'completed')->whereBetween('created_at', [$from, $to])->count(),
+                    'total' => $money((int) WalletTransaction::where('tenant_id', $tenant->id)->where('type', 'topup')->where('direction', 'credit')->where('status', 'completed')->whereBetween('created_at', [$from, $to])->sum('amount_minor')),
+                ], []);
+            }
+            if ($vendors) {
+                $p['vendor_sales'] = $safe(function () use ($tenant, $from, $to, $money) {
+                    if (! Schema::hasColumn('wallet_transactions', 'vendor_id')) {
+                        return [];
+                    }
 
-                return WalletTransaction::where('tenant_id', $tenant->id)->where('type', 'vendor_payment')->where('direction', 'debit')->whereBetween('created_at', [$from, $to])
-                    ->selectRaw('vendor_id, SUM(amount_minor) as s, COUNT(*) as n')->groupBy('vendor_id')->orderByDesc('s')->limit(5)->get()
-                    ->map(fn ($r) => ['vendor' => Vendor::withoutTenantScope()->find($r->vendor_id)?->localizedName('en') ?? ('#'.$r->vendor_id), 'sales' => $money((int) $r->s), 'payments' => (int) $r->n])->all();
-            }, []);
+                    return WalletTransaction::where('tenant_id', $tenant->id)->where('type', 'vendor_payment')->where('direction', 'debit')->whereBetween('created_at', [$from, $to])
+                        ->selectRaw('vendor_id, SUM(amount_minor) as s, COUNT(*) as n')->groupBy('vendor_id')->orderByDesc('s')->limit(5)->get()
+                        ->map(fn ($r) => ['vendor' => Vendor::withoutTenantScope()->find($r->vendor_id)?->localizedName('en') ?? ('#'.$r->vendor_id), 'sales' => $money((int) $r->s), 'payments' => (int) $r->n])->all();
+                }, []);
+            }
             $p['gate'] = $safe(fn () => $this->gateFlow($tenant, $from, $to), null);
             $out[$name] = $p;
         }
-        $out['refunds_pending'] = $safe(fn () => [
-            'count' => RefundRequest::where('tenant_id', $tenant->id)->where('status', 'pending')->count(),
-            'total' => $money((int) RefundRequest::where('tenant_id', $tenant->id)->where('status', 'pending')->sum('amount_minor')),
-        ], []);
+        if ($refunds) {
+            $out['refunds_pending'] = $safe(fn () => [
+                'count' => RefundRequest::where('tenant_id', $tenant->id)->where('status', 'pending')->count(),
+                'total' => $money((int) RefundRequest::where('tenant_id', $tenant->id)->where('status', 'pending')->sum('amount_minor')),
+            ], []);
+        }
         $out['events_running_today'] = $safe(fn () => Event::where('tenant_id', $tenant->id)->where('is_active', true)
             ->where('start_time', '<=', TenantTime::today($tenant).' 23:59:59')->where('end_time', '>=', TenantTime::today($tenant).' 00:00:00')->count(), 0);
 

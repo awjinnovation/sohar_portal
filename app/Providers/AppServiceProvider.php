@@ -115,8 +115,10 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('money', fn (Request $r) => Limit::perMinute(30)->by('money:'.($r->user()?->id ?: $r->ip())));
         // Event booking page: generous per IP (a crowd at the venue shares
-        // mobile-carrier IPs); checkout per signed-in visitor.
-        RateLimiter::for('visitor-page', fn (Request $r) => Limit::perMinute(300)->by('visitor-page:'.$r->ip()));
+        // mobile-carrier IPs); checkout per signed-in visitor. Lifted with a
+        // test code like the OTP caps, so tests/load/booking.js can run from
+        // one machine.
+        RateLimiter::for('visitor-page', fn (Request $r) => $perIp(Limit::perMinute(300)->by('visitor-page:'.$r->ip())) ?? Limit::none());
         RateLimiter::for('visitor-checkout', fn (Request $r) => Limit::perMinute(10)
             ->by('visitor-checkout:'.(\Illuminate\Support\Facades\Auth::guard('visitor')->id() ?: $r->ip())));
         // Gateway webhooks: generous (bursts at peak), per source IP.

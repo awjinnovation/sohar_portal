@@ -30,11 +30,21 @@
     $extraColorKeys = array_values(array_diff($colorKeys, $groupedKeys));
     $moduleLabels = [
         'events' => 'الفعاليات', 'tickets' => 'التذاكر', 'calendar' => 'التقويم', 'map' => 'الخريطة',
-        'vendors' => 'التجار', 'announcements' => 'الإعلانات', 'favorites' => 'المفضلة', 'notifications' => 'الإشعارات',
+        'vendors' => 'المطاعم والتجار', 'announcements' => 'الإعلانات', 'favorites' => 'المفضلة', 'notifications' => 'الإشعارات',
         'wallet' => 'المحفظة', 'topup' => 'شحن الرصيد', 'deposits' => 'التأمينات', 'points' => 'النقاط',
         'refunds' => 'الاسترداد', 'ticket_transfer' => 'نقل التذاكر', 'staff_scanner' => 'ماسح الموظفين', 'ai_assistant' => 'ai.admin.module_ai_assistant', 'ai_plan' => 'ai.admin.module_ai_plan',
         'places' => 'الأماكن والخريطة المخصصة', 'content' => 'المجموعات والصفحات', 'radi' => 'راضي لقياس رضا الزوار',
         'web_booking' => 'الحجز عبر رمز QR للفعالية',
+    ];
+    // What switching a module off hides, in the apps and in this panel's menu.
+    $moduleDescriptions = [
+        'wallet' => 'رصيد الزائر وزر الدفع بالرمز لدى التجار',
+        'topup' => 'إضافة الرصيد إلى المحفظة بالبطاقة',
+        'deposits' => 'مبالغ التأمين المحجوزة من المحفظة',
+        'points' => 'نقاط المكافآت واستبدالها برصيد',
+        'refunds' => 'طلبات استرداد رصيد المحفظة',
+        'vendors' => 'المطاعم والأكشاك ودليل التجار والدفع لديهم',
+        'staff_scanner' => 'مسح التذاكر عند البوابات ومن حسابات الموظفين',
     ];
     $moduleIcons = [
         'events' => 'calendar-event', 'tickets' => 'ticket-perforated', 'calendar' => 'calendar3', 'map' => 'map', 'vendors' => 'shop-window',
@@ -316,9 +326,10 @@
 
                 {{-- Modules & navigation --}}
                 <x-admin.card id="sec-modules" title="الوحدات والتنقل" icon="toggles" subtitle="تختفي الوحدة المعطّلة من التطبيق كليًّا، فلا تظهر لها أزرار رمادية">
+                    <p class="form-text mt-0">{{ __('لاستعمال النظام للتذاكر وحدها عطّل المحفظة وشحن الرصيد والتأمينات والنقاط والاسترداد والمطاعم والتجار، وأبقِ ماسح الموظفين مفعّلًا لمسح التذاكر.') }}</p>
                     <div class="row">
                         @foreach($moduleKeys as $mk)
-                            @include('admin.tenants._toggle', ['key' => 'modules.'.$mk, 'label' => $moduleLabels[$mk] ?? $mk, 'code' => $mk])
+                            @include('admin.tenants._toggle', ['key' => 'modules.'.$mk, 'label' => $moduleLabels[$mk] ?? $mk, 'code' => $mk, 'description' => $moduleDescriptions[$mk] ?? null])
                         @endforeach
                     </div>
                     <div class="row">

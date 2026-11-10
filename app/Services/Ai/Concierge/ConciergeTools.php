@@ -110,7 +110,9 @@ class ConciergeTools
 
         if ($this->user) {
             $tools[] = $tool('my_tickets', 'The signed-in visitor\'s own tickets (summary).');
-            $tools[] = $tool('my_wallet', 'The signed-in visitor\'s own wallet balance and points (summary).');
+            if ($this->tenant->moduleEnabled('wallet')) {
+                $tools[] = $tool('my_wallet', 'The signed-in visitor\'s own wallet balance and points (summary).');
+            }
         }
 
         return $tools;
@@ -131,7 +133,8 @@ class ConciergeTools
                 'find_places' => $this->tenant->moduleEnabled('places') ? $this->findPlaces($args) : ['error' => 'module_disabled'],
                 'search_content' => $this->tenant->moduleEnabled('content') ? $this->searchContent($args) : ['error' => 'module_disabled'],
                 'my_tickets' => $this->user ? $this->myTickets() : ['error' => 'not_signed_in'],
-                'my_wallet' => $this->user ? $this->myWallet() : ['error' => 'not_signed_in'],
+                'my_wallet' => ! $this->tenant->moduleEnabled('wallet') ? ['error' => 'module_disabled']
+                    : ($this->user ? $this->myWallet() : ['error' => 'not_signed_in']),
                 default => ['error' => 'unknown_tool'],
             };
         } catch (Throwable $e) {
