@@ -57,9 +57,10 @@ only if more than half of the requests fail.
 
 ### Signed-in visitors (staging / test server only)
 
-OTP sign-in allows 20 codes and 30 checks per hour per IP, so a test from
-one machine cannot log in hundreds of users. Create ready accounts with API
-tokens on the server instead (`loadtest:users` refuses `APP_ENV=production`):
+OTP sign-in texts a real code to every number (limits are per phone: 1 code
+per 2 minutes, 5 per hour), so a load test should not sign in through it.
+Create ready accounts with API tokens on the server instead (`loadtest:users`
+refuses `APP_ENV=production`):
 
 ```bash
 # On the server: 300 users 96800000000… with 5.000 OMR wallet credit each
@@ -121,7 +122,7 @@ K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_EXPORT=report.html k6 run --vus 1 --itera
   `loadtest:users` (968 00…, not a mobile range) instead.
 - **Payments.** Before the run, one order checks that card payments open the
   fake gateway's page; anything else (Thawani, Bank Muscat) stops the test.
-- **One machine = one IP.** The page allows 300 loads a minute per IP. With
-  `OTP_TEST_CODE` set (staging), that cap and the OTP caps are lifted, so the
-  test measures the server, not the limit. 429s are counted as `rate_limited`.
+- **One machine = one IP.** The page has no per-IP cap (a crowd shares
+  addresses), so the test measures the server, not a limit. Any 429s are
+  counted as `rate_limited`.
 - Bookings that find a day sold out are counted (`bookings_sold_out`), not errors.

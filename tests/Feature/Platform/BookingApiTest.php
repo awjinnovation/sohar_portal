@@ -221,19 +221,14 @@ class BookingApiTest extends TestCase
     }
 
     #[Test]
-    public function the_per_ip_page_limit_is_lifted_only_with_a_test_code_outside_production(): void
+    public function the_booking_page_has_no_per_ip_limit(): void
     {
         $limit = fn () => \Illuminate\Support\Facades\RateLimiter::limiter('visitor-page')(\Illuminate\Http\Request::create('/'));
 
-        config(['auth.otp.test_code' => '123456']);
-        $this->app['env'] = 'staging';
-        $this->assertSame(PHP_INT_MAX, $limit()->maxAttempts);
-
-        $this->app['env'] = 'production';
-        $this->assertSame(300, $limit()->maxAttempts);
-
-        $this->app['env'] = 'staging';
-        config(['auth.otp.test_code' => null]);
-        $this->assertSame(300, $limit()->maxAttempts);
+        foreach (['production', 'staging'] as $env) {
+            $this->app['env'] = $env;
+            config(['auth.otp.test_code' => null]);
+            $this->assertSame(PHP_INT_MAX, $limit()->maxAttempts);
+        }
     }
 }

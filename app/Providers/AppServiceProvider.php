@@ -87,23 +87,17 @@ class AppServiceProvider extends ServiceProvider
             return strlen($digits) === 8 ? '968'.$digits : $digits;
         };
 
-        // The per-IP caps guard against SMS cost and code guessing. With a fixed
-        // test code (staging / test servers: no SMS, the code is known) they
-        // are lifted, so a load test can sign in many accounts from one machine.
-        $perIp = fn (Limit $limit) => (! app()->environment('production') && config('auth.otp.test_code')) ? null : $limit;
-
-        // send-otp: 1 per 2 minutes and 5 per hour per phone, 20 per hour per IP.
-        RateLimiter::for('otp-send', fn (Request $r) => array_values(array_filter([
+        // Sign-in codes are limited per phone only: visitors come in crowds that
+        // share one address (venue Wi-Fi, mobile-carrier NAT, the proxy in front
+        // of the app), so a per-IP cap would lock everyone out at once.
+        // send-otp: 1 per 2 minutes and 5 per hour per phone.
+        RateLimiter::for('otp-send', fn (Request $r) => [
             Limit::perMinutes(2, 1)->by('otp-send-min:'.$phone($r)),
             Limit::perHour(5)->by('otp-send-hour:'.$phone($r)),
-            $perIp(Limit::perHour(20)->by('otp-send-ip:'.$r->ip())),
-        ])));
+        ]);
 
-        // verify-otp: 10 per 10 minutes per phone, 30 per hour per IP.
-        RateLimiter::for('otp-verify', fn (Request $r) => array_values(array_filter([
-            Limit::perMinutes(10, 10)->by('otp-verify:'.$phone($r)),
-            $perIp(Limit::perHour(30)->by('otp-verify-ip:'.$r->ip())),
-        ])));
+        // verify-otp: 10 per 10 minutes per phone.
+        RateLimiter::for('otp-verify', fn (Request $r) => Limit::perMinutes(10, 10)->by('otp-verify:'.$phone($r)));
 
         // Landing-page demo form: 5 per hour and 20 per day per IP.
         RateLimiter::for('demo-requests', fn (Request $r) => [
@@ -114,11 +108,9 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         RateLimiter::for('money', fn (Request $r) => Limit::perMinute(30)->by('money:'.($r->user()?->id ?: $r->ip())));
-        // Event booking page: generous per IP (a crowd at the venue shares
-        // mobile-carrier IPs); checkout per signed-in visitor. Lifted with a
-        // test code like the OTP caps, so tests/load/booking.js can run from
-        // one machine.
-        RateLimiter::for('visitor-page', fn (Request $r) => $perIp(Limit::perMinute(300)->by('visitor-page:'.$r->ip())) ?? Limit::none());
+        // Event booking page: no per-IP cap, for the same reason as the sign-in
+        // codes (Cloudflare in front absorbs floods); checkout per signed-in visitor.
+        RateLimiter::for('visitor-page', fn (Request $r) => Limit::none());
         RateLimiter::for('visitor-checkout', fn (Request $r) => Limit::perMinute(10)
             ->by('visitor-checkout:'.(\Illuminate\Support\Facades\Auth::guard('visitor')->id() ?: $r->ip())));
         // Gateway webhooks: generous (bursts at peak), per source IP.

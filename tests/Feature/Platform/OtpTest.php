@@ -122,22 +122,19 @@ class OtpTest extends TestCase
     }
 
     #[Test]
-    public function the_per_ip_limit_is_lifted_only_with_a_test_code_outside_production(): void
+    public function sign_in_codes_are_limited_per_phone_not_per_ip(): void
     {
-        $this->app['env'] = 'staging';
-        config(['auth.otp.test_code' => '123456']);
-        for ($i = 0; $i < 25; $i++) {
-            $phone = '968000001'.str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+        $this->app['env'] = 'production';
+
+        // One address, many phones (a crowd on venue Wi-Fi): nobody is locked out.
+        for ($i = 0; $i < 30; $i++) {
+            $phone = '968000002'.str_pad((string) $i, 2, '0', STR_PAD_LEFT);
             $this->postJson('/api/v1/auth/send-otp', ['phone_number' => $phone])->assertOk();
-            $this->postJson('/api/v1/auth/verify-otp', ['phone_number' => $phone, 'otp' => '123456'])->assertOk();
+            $this->assertNotSame(429, $this->postJson('/api/v1/auth/verify-otp', ['phone_number' => $phone, 'otp' => '000000'])->status());
         }
 
-        // Production ignores the test code and keeps 20 sends per hour per IP.
-        $this->app['env'] = 'production';
-        for ($i = 0; $i < 20; $i++) {
-            $this->postJson('/api/v1/auth/send-otp', ['phone_number' => '968000002'.str_pad((string) $i, 2, '0', STR_PAD_LEFT)])->assertOk();
-        }
-        $this->postJson('/api/v1/auth/send-otp', ['phone_number' => '96800000399'])->assertStatus(429);
+        // The same phone again within two minutes is still refused.
+        $this->postJson('/api/v1/auth/send-otp', ['phone_number' => '96800000200'])->assertStatus(429);
     }
 
     #[Test]
