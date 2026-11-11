@@ -52,15 +52,18 @@ class OpenAiClient
         ], $body), fn ($v) => $v !== null);
     }
 
-    /** Non-streaming call. */
-    public function create(array $payload, AiCall $call): OpenAiResponse
+    /**
+     * Non-streaming call. $options: `timeout` (seconds) and `retries` override
+     * services.openai for this call (e.g. a gate waiting for a receipt check).
+     */
+    public function create(array $payload, AiCall $call, array $options = []): OpenAiResponse
     {
         $this->assertConfigured($call);
         $payload['stream'] = false;
         $started = microtime(true);
 
         try {
-            $response = $this->send($payload, false);
+            $response = $this->send($payload, false, $options);
             $data = $response->json();
             if (! is_array($data)) {
                 throw AiException::unavailable('invalid_json', $response->status());
@@ -159,14 +162,14 @@ class OpenAiClient
      * POST /responses with retries. Returns a 2xx response or throws
      * AiException (without the upstream message).
      */
-    private function send(array $payload, bool $stream): Response
+    private function send(array $payload, bool $stream, array $options = []): Response
     {
-        $attempts = 1 + max(0, (int) config('services.openai.retries', 2));
+        $attempts = 1 + max(0, (int) ($options['retries'] ?? config('services.openai.retries', 2)));
         $lastStatus = null;
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             try {
-                $response = $this->http($stream)->post('/responses', $payload);
+                $response = $this->http($stream, $options)->post('/responses', $payload);
             } catch (ConnectionException $e) {
                 $timeout = str_contains(strtolower($e->getMessage()), 'timed out') || str_contains(strtolower($e->getMessage()), 'timeout');
                 if ($attempt < $attempts) {
@@ -196,13 +199,13 @@ class OpenAiClient
         throw AiException::unavailable('retries_exhausted', $lastStatus);
     }
 
-    private function http(bool $stream): PendingRequest
+    private function http(bool $stream, array $options = []): PendingRequest
     {
         $request = Http::baseUrl((string) config('services.openai.base_url', 'https://api.openai.com/v1'))
             ->withToken((string) config('services.openai.key'))
             ->acceptJson()
             ->asJson()
-            ->timeout(max(5, (int) config('services.openai.timeout', 45)))
+            ->timeout(max(5, (int) ($options['timeout'] ?? config('services.openai.timeout', 45))))
             ->connectTimeout(max(2, (int) config('services.openai.connect_timeout', 8)));
 
         if ($org = config('services.openai.organization')) {

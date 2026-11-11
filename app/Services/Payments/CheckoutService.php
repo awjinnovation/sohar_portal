@@ -304,6 +304,16 @@ class CheckoutService
         return $this->createPayment($user, $tenant, $quote, $bookingDate, Payment::METHOD_GATEWAY, $key, $extraMeta);
     }
 
+    /**
+     * A ticket payment taken on the organizer's card terminal at a gate
+     * (box office §9). Completed right away by the caller; never seen by the
+     * gateway jobs, which only select METHOD_GATEWAY.
+     */
+    public function createPosPayment(User $user, Tenant $tenant, array $quote, ?string $bookingDate, ?string $key, array $extraMeta = []): Payment
+    {
+        return $this->createPayment($user, $tenant, $quote, $bookingDate, Payment::METHOD_POS, $key, $extraMeta);
+    }
+
     public function paymentUrl(Payment $payment): ?string
     {
         return $payment->status === 'pending' && $payment->method === Payment::METHOD_GATEWAY

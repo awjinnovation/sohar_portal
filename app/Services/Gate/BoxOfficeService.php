@@ -76,7 +76,22 @@ class BoxOfficeService
             'send_sms' => (bool) ($s['send_sms'] ?? true),
             'max_quantity' => max(1, min(100, (int) ($s['max_quantity'] ?? 10))),
             'allow_future_dates' => (bool) ($s['allow_future_dates'] ?? false),
+            // Card terminal payments (§9).
+            'pos_enabled' => (bool) ($s['pos_enabled'] ?? false),
+            'pos_accept_unverified' => (bool) ($s['pos_accept_unverified'] ?? true),
+            'pos_terminal_ids' => self::terminalIds($s['pos_terminal_ids'] ?? ''),
         ];
+    }
+
+    /** "TID 1234, 5678" → ['1234', '5678'] (upper case, letters and digits only). */
+    public static function terminalIds(mixed $value): array
+    {
+        $parts = is_array($value) ? $value : preg_split('/[\s,;]+/', (string) $value);
+
+        return array_values(array_unique(array_filter(array_map(
+            fn ($v) => strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $v)),
+            $parts ?: []
+        ), fn ($v) => $v !== '')));
     }
 
     public static function canSell(User $user): bool
@@ -109,11 +124,12 @@ class BoxOfficeService
     {
         $denial = $this->denial($tenant, $device);
 
-        return self::settings($tenant) + [
+        return \Illuminate\Support\Arr::except(self::settings($tenant), ['pos_terminal_ids']) + [
             'can_sell' => (bool) $device->gate?->can_sell,
             'available' => $denial === null,
             'unavailable_code' => $denial?->errorCode,
             'max_sms' => self::MAX_SMS,
+            'pos_max_attempts' => CardTerminalService::MAX_ATTEMPTS,
         ];
     }
 
@@ -253,9 +269,13 @@ class BoxOfficeService
         $date = $this->resolveDate($tenant, $input['booking_date'] ?? null);
         $settings = self::settings($tenant);
         $locale = in_array($input['locale'] ?? null, ['ar', 'en'], true) ? $input['locale'] : app()->getLocale();
+        $method = ($input['payment_method'] ?? null) === BoxOfficeOrder::METHOD_POS ? BoxOfficeOrder::METHOD_POS : BoxOfficeOrder::METHOD_LINK;
+        if ($method === BoxOfficeOrder::METHOD_POS && ! $settings['pos_enabled']) {
+            throw new ApiException('POS_DISABLED', __('box_office.errors.pos_disabled'), 403);
+        }
 
         try {
-            $order = DB::transaction(function () use ($tenant, $device, $staff, $gate, $input, $items, $date, $settings, $locale, $phone, $key) {
+            $order = DB::transaction(function () use ($tenant, $device, $staff, $gate, $input, $items, $date, $settings, $locale, $phone, $key, $method) {
                 // Serialise capacity checks for this event (holds are counted inside the quote).
                 Event::whereKey($input['event_id'])->lockForUpdate()->first();
                 $q = $this->quote($tenant, $gate, (int) $input['event_id'], $items, $date);
@@ -279,6 +299,7 @@ class BoxOfficeService
                     'total_minor' => $q['total_minor'],
                     'currency' => $tenant->currency(),
                     'status' => BoxOfficeOrder::STATUS_PENDING,
+                    'payment_method' => $method,
                     'public_token' => Str::random(32),
                     'locale' => $locale,
                     'expires_at' => now()->addMinutes($settings['link_ttl_minutes']),
@@ -316,7 +337,8 @@ class BoxOfficeService
         }
 
         $sendSms = array_key_exists('send_sms', $input) && $input['send_sms'] !== null ? (bool) $input['send_sms'] : $settings['send_sms'];
-        if ($sendSms) {
+        // A card terminal order has no payment link to send.
+        if ($sendSms && $method === BoxOfficeOrder::METHOD_LINK) {
             $this->dispatchSms($order, $tenant);
         }
 
@@ -438,6 +460,10 @@ class BoxOfficeService
             if (! $locked->isPending() || $locked->isDue()) {
                 return null;
             }
+            // Paid on the gate's card terminal (§9), never through the link; free orders still complete here.
+            if ($locked->isCardTerminal() && $locked->total_minor > 0) {
+                return null;
+            }
             $current = $locked->payment_id ? Payment::withoutTenantScope()->find($locked->payment_id) : null;
             if ($current && $current->status === 'pending') {
                 if ($lang && ($current->metadata['box_office_lang'] ?? null) !== $lang) {
@@ -448,38 +474,11 @@ class BoxOfficeService
                 return $current;
             }
 
-            $tenant = Tenant::findOrFail($locked->tenant_id);
-            $event = Event::withoutTenantScope()->findOrFail($locked->event_id);
-            $buyer = User::findOrFail($locked->buyer_user_id);
-            $lines = $locked->lines->map(fn (BoxOfficeOrderLine $l) => [
-                'ticket_type_id' => $l->ticket_type_id, 'key' => $l->key, 'name' => $l->name, 'quantity' => $l->quantity,
-                'unit_price_minor' => $l->unit_price_minor, 'line_total_minor' => $l->line_total_minor, 'admits' => $l->admits,
-                'validity' => EventTicketType::normalizeValidity($l->validity),
-            ])->all();
             $attempt = (int) ($locked->meta['payment_attempts'] ?? 0) + 1;
-            // The day applies to the dated lines only (docs/ticket_types_contract.md §7).
-            $bookingDate = $locked->lines->contains(fn (BoxOfficeOrderLine $l) => $l->isDated()) ? $locked->booking_date->toDateString() : null;
+            [$buyer, $tenant, $quote, $bookingDate, $meta] = $this->paymentInput($locked);
 
-            $payment = $this->checkout->createGatewayPayment($buyer, $tenant, [
-                'event' => $event,
-                'quantity' => $locked->quantity,
-                'ticket_type' => count($lines) === 1 ? $lines[0]['key'] : null,
-                'unit_price_minor' => $locked->unit_price_minor,
-                'lines' => $lines,
-                'subtotal_minor' => $locked->subtotal_minor,
-                'points_to_redeem' => 0,
-                'points_discount_minor' => 0,
-                'deposit_per_ticket_minor' => (int) ($locked->meta['deposit_per_ticket_minor'] ?? 0),
-                'deposit_minor' => $locked->deposit_minor,
-                'tickets_minor' => $locked->subtotal_minor,
-                'total_minor' => $locked->total_minor,
-            ], $bookingDate, "box_office:{$locked->id}:{$attempt}", [
-                'box_office_order_id' => $locked->id,
-                'box_office_reference' => $locked->reference,
-                'box_office_lang' => $lang ?? $locked->locale,
-                'gate_id' => $locked->gate_id,
-                'sold_by' => $locked->staff_user_id,
-            ]);
+            $payment = $this->checkout->createGatewayPayment($buyer, $tenant, $quote, $bookingDate, "box_office:{$locked->id}:{$attempt}",
+                $meta + ['box_office_lang' => $lang ?? $locked->locale]);
 
             $locked->payment_id = $payment->id;
             $locked->meta = array_merge($locked->meta ?? [], ['payment_attempts' => $attempt]);
@@ -487,6 +486,49 @@ class BoxOfficeService
 
             return $payment;
         });
+    }
+
+    /**
+     * What a payment for this (locked) order is created from: buyer, tenant,
+     * the checkout quote built from the order lines, the booking date (dated
+     * lines only, docs/ticket_types_contract.md §7) and the box office metadata.
+     *
+     * @return array{0: User, 1: Tenant, 2: array, 3: ?string, 4: array}
+     */
+    public function paymentInput(BoxOfficeOrder $locked): array
+    {
+        $locked->loadMissing('lines');
+        $tenant = Tenant::findOrFail($locked->tenant_id);
+        $event = Event::withoutTenantScope()->findOrFail($locked->event_id);
+        $buyer = User::findOrFail($locked->buyer_user_id);
+        $lines = $locked->lines->map(fn (BoxOfficeOrderLine $l) => [
+            'ticket_type_id' => $l->ticket_type_id, 'key' => $l->key, 'name' => $l->name, 'quantity' => $l->quantity,
+            'unit_price_minor' => $l->unit_price_minor, 'line_total_minor' => $l->line_total_minor, 'admits' => $l->admits,
+            'validity' => EventTicketType::normalizeValidity($l->validity),
+        ])->all();
+        $bookingDate = $locked->lines->contains(fn (BoxOfficeOrderLine $l) => $l->isDated()) ? $locked->booking_date->toDateString() : null;
+
+        $quote = [
+            'event' => $event,
+            'quantity' => $locked->quantity,
+            'ticket_type' => count($lines) === 1 ? $lines[0]['key'] : null,
+            'unit_price_minor' => $locked->unit_price_minor,
+            'lines' => $lines,
+            'subtotal_minor' => $locked->subtotal_minor,
+            'points_to_redeem' => 0,
+            'points_discount_minor' => 0,
+            'deposit_per_ticket_minor' => (int) ($locked->meta['deposit_per_ticket_minor'] ?? 0),
+            'deposit_minor' => $locked->deposit_minor,
+            'tickets_minor' => $locked->subtotal_minor,
+            'total_minor' => $locked->total_minor,
+        ];
+
+        return [$buyer, $tenant, $quote, $bookingDate, [
+            'box_office_order_id' => $locked->id,
+            'box_office_reference' => $locked->reference,
+            'gate_id' => $locked->gate_id,
+            'sold_by' => $locked->staff_user_id,
+        ]];
     }
 
     /**
@@ -708,7 +750,9 @@ class BoxOfficeService
         $locale = app()->getLocale();
         $order->loadMissing(['event', 'lines', 'gate', 'staff']);
         $event = $order->event;
-        $url = $this->paymentUrl($order);
+        // A card terminal order has no payment link (§9).
+        $url = $order->isCardTerminal() ? null : $this->paymentUrl($order);
+        $receipt = $order->isCardTerminal() ? $order->latestReceipt() : null;
         $lines = $order->lines->map(fn (BoxOfficeOrderLine $l) => $l->toApi() + [
             'unit_price' => $tenant->formatMoney($l->unit_price_minor),
             'line_total' => $tenant->formatMoney($l->line_total_minor),
@@ -759,6 +803,13 @@ class BoxOfficeService
             'staff' => $order->staff ? ['id' => $order->staff->id, 'name' => $order->staff->name] : null,
             'created_at' => TenantTime::iso($order->created_at, $tenant),
             'paid_at' => TenantTime::iso($order->paid_at, $tenant),
+            // Card terminal payments (§9).
+            'payment_method' => $order->payment_method ?: BoxOfficeOrder::METHOD_LINK,
+            'payment_method_text' => __('box_office.methods.'.($order->payment_method ?: BoxOfficeOrder::METHOD_LINK)),
+            'needs_review' => (bool) $order->needs_review,
+            'receipt' => $receipt?->toApi($tenant),
+            'receipt_attempts' => $order->isCardTerminal() ? $order->receipts()->count() : 0,
+            'receipt_attempts_max' => $order->isCardTerminal() ? CardTerminalService::MAX_ATTEMPTS : 0,
         ];
     }
 

@@ -25,6 +25,12 @@
             <span>{{ __('بيع التذاكر عند البوابات غير مفعّل لدى هذه المنظمة. فعّله من الهوية والإعدادات، ثم اختر البوابات التي تبيع التذاكر.') }}</span></div>
     @endunless
 
+    @if($reviewDue > 0)
+        <div class="alert alert-warning d-flex gap-2 align-items-center" data-review-due="{{ $reviewDue }}"><i class="bi bi-receipt-cutoff"></i>
+            <span class="flex-grow-1">{{ __('مبيعات بجهاز البطاقة صدرت تذاكرها بإيصال لم يُفحص كاملًا، وتنتظر مراجعة المشرف: :count.', ['count' => $reviewDue]) }}</span>
+            <a href="{{ route('admin.gates.sales.index', ['date' => 'all', 'review' => 1]) }}" class="btn btn-sm btn-outline-warning">{{ __('مراجعة الإيصالات') }}</a></div>
+    @endif
+
     @if($refundDue > 0)
         <div class="alert alert-danger d-flex gap-2 align-items-center" data-refund-due="{{ $refundDue }}"><i class="bi bi-exclamation-octagon-fill"></i>
             <span class="flex-grow-1">{{ __('طلبات دُفعت بعد انتهاء صلاحيتها ونفدت تذاكرها، فلم تصدر لها تذاكر: :count. استردّ مبالغها.', ['count' => $refundDue]) }}</span>
@@ -87,6 +93,11 @@
                     <option value="{{ $s->id }}" @selected((string) request('staff') === (string) $s->id)>{{ $s->name }}</option>
                 @endforeach
             </select>
+            <select name="method" class="form-select" aria-label="{{ __('طريقة الدفع') }}">
+                <option value="">{{ __('كل طرق الدفع') }}</option>
+                <option value="link" @selected(request('method') === 'link')>{{ __('رابط الدفع') }}</option>
+                <option value="pos" @selected(request('method') === 'pos')>{{ __('جهاز البطاقة') }}</option>
+            </select>
             <select name="status" class="form-select" aria-label="{{ __('الحالة') }}">
                 <option value="">{{ __('كل الحالات') }}</option>
                 @foreach($statusLabel as $sk => $sl)
@@ -125,8 +136,10 @@
                 </td>
                 <td class="small"><span class="text-nowrap">{{ $order->gate ? $order->gate->localizedName() : '—' }}</span>
                     <div class="cell-sub">{{ $order->staff?->name }}</div></td>
-                <td><x-admin.money :minor="(int) $order->total_minor" class="fw-bold" /></td>
-                <td><x-admin.status-pill :variant="$statusVariant[$order->status] ?? 'neutral'" :label="$statusLabel[$order->status] ?? $order->status" /></td>
+                <td><x-admin.money :minor="(int) $order->total_minor" class="fw-bold" />
+                    <div class="cell-sub text-nowrap" data-method="{{ $order->payment_method }}"><i class="bi {{ $order->isCardTerminal() ? 'bi-credit-card' : 'bi-qr-code' }}"></i> {{ $order->isCardTerminal() ? __('جهاز البطاقة') : __('رابط الدفع') }}</div></td>
+                <td><x-admin.status-pill :variant="$statusVariant[$order->status] ?? 'neutral'" :label="$statusLabel[$order->status] ?? $order->status" />
+                    @if($order->needs_review)<div class="mt-1"><x-admin.status-pill variant="warning" :label="__('بحاجة إلى مراجعة')" size="sm" /></div>@endif</td>
                 <td class="num small text-muted text-nowrap"><span class="ltr">{{ $order->created_at->copy()->setTimezone($tz)->format('Y-m-d H:i') }}</span></td>
                 <td class="text-end">
                     <div class="row-actions">

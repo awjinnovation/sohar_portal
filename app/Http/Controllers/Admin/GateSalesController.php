@@ -6,12 +6,15 @@ use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\BoxOfficeOrder;
+use App\Models\BoxOfficeReceipt;
 use App\Models\Gate;
 use App\Models\User;
 use App\Services\Gate\BoxOfficeService;
+use App\Services\Gate\CardTerminalService;
 use App\Services\Gate\GateDay;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Admin → Gates → Gate sales (docs/gate_sales_contract.md §7): box office
@@ -39,7 +42,9 @@ class GateSalesController extends Controller
                 $query->where('created_at', '>=', $from)->where('created_at', '<', $to);
             })
             ->when($request->filled('gate'), fn ($query) => $query->where('gate_id', (int) $request->input('gate')))
-            ->when($request->filled('staff'), fn ($query) => $query->where('staff_user_id', (int) $request->input('staff')));
+            ->when($request->filled('staff'), fn ($query) => $query->where('staff_user_id', (int) $request->input('staff')))
+            ->when(in_array($request->input('method'), BoxOfficeOrder::METHODS, true), fn ($query) => $query->where('payment_method', $request->input('method')))
+            ->when($request->boolean('review'), fn ($query) => $query->where('needs_review', true));
 
         $filtered = (clone $base)
             ->when($status, fn ($query) => $query->where('status', $status))
@@ -62,6 +67,8 @@ class GateSalesController extends Controller
         ];
         // Paid without tickets (late capture, seats gone), any day: refund needed.
         $refundDue = BoxOfficeOrder::where('status', BoxOfficeOrder::STATUS_PAID_UNFULFILLED)->count();
+        // Card terminal sales accepted with a receipt that could not be fully checked, any day.
+        $reviewDue = BoxOfficeOrder::where('needs_review', true)->count();
         $group = fn (string $column) => (clone $base)->toBase()
             ->selectRaw("$column as k, count(*) as orders, sum(case when status = 'paid' then 1 else 0 end) as paid, sum(case when status = 'paid' then total_minor else 0 end) as paid_minor, sum(case when status = 'paid' then quantity else 0 end) as tickets")
             ->groupBy($column)->orderByDesc('paid_minor')->get();
@@ -81,19 +88,20 @@ class GateSalesController extends Controller
             'q' => $q,
             'settings' => BoxOfficeService::settings($tenant),
             'refundDue' => $refundDue,
+            'reviewDue' => $reviewDue,
         ]);
     }
 
     public function show(BoxOfficeOrder $order)
     {
         $order = $this->boxOffice->expireIfDue($order);
-        $order->load(['event', 'gate', 'device', 'staff', 'buyer', 'payment', 'lines']);
+        $order->load(['event', 'gate', 'device', 'staff', 'buyer', 'payment', 'lines', 'receipts.staff', 'receipts.decider', 'receipts.duplicateOf']);
         $tickets = $order->issuedTickets()->load('ticketType');
 
         return view('admin.gates.sales-show', [
             'order' => $order,
             'tickets' => $tickets,
-            'paymentUrl' => $this->boxOffice->paymentUrl($order),
+            'paymentUrl' => $order->isCardTerminal() ? null : $this->boxOffice->paymentUrl($order),
             'smsRetryAfter' => $order->isPending() ? $this->boxOffice->smsRetryAfter($order) : null,
         ]);
     }
@@ -116,7 +124,67 @@ class GateSalesController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('admin.gates.sales.show', $order)->with('success', 'سُجِّلت الدفعة مستردة. أكمل الاسترداد عبر بوابة الدفع.');
+        return redirect()->route('admin.gates.sales.show', $order)->with('success', $payment->method === \App\Models\Payment::METHOD_POS
+            ? 'سُجِّلت الدفعة مستردة. أعد المبلغ للزائر على جهاز البطاقة.'
+            : 'سُجِّلت الدفعة مستردة. أكمل الاسترداد عبر بوابة الدفع.');
+    }
+
+    /** The receipt photo, from the private disk (docs/gate_sales_contract.md §9). */
+    public function receiptImage(BoxOfficeOrder $order, BoxOfficeReceipt $receipt)
+    {
+        abort_unless((int) $receipt->order_id === (int) $order->id, 404);
+        $disk = Storage::disk($receipt->disk);
+        abort_unless($disk->exists($receipt->path), 404);
+
+        return response($disk->get($receipt->path), 200, [
+            'Content-Type' => $receipt->mime,
+            'Content-Disposition' => 'inline',
+            'Cache-Control' => 'private, max-age=3600',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /** Accept a receipt the checks did not accept: the order is paid and its tickets issued. */
+    public function approveReceipt(Request $request, BoxOfficeOrder $order, BoxOfficeReceipt $receipt, CardTerminalService $terminal)
+    {
+        $data = $request->validate(['note' => ['nullable', 'string', 'max:500']]);
+        try {
+            $order = $terminal->approve($order, $receipt, $request->user(), $data['note'] ?? null);
+        } catch (ApiException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        AuditLog::record('box_office.receipt_approved', $order, ['reference' => $order->reference, 'receipt_id' => $receipt->id, 'verdict' => $receipt->verdict]);
+
+        return redirect()->route('admin.gates.sales.show', $order)->with('success', __('اعتُمد الإيصال وصدرت التذاكر.'));
+    }
+
+    /** The sale was paid with a receipt that needed review: a supervisor keeps it. */
+    public function clearReview(Request $request, BoxOfficeOrder $order, CardTerminalService $terminal)
+    {
+        $data = $request->validate(['note' => ['nullable', 'string', 'max:500']]);
+        try {
+            $order = $terminal->clearReview($order, $request->user(), $data['note'] ?? null);
+        } catch (ApiException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        AuditLog::record('box_office.receipt_cleared', $order, ['reference' => $order->reference]);
+
+        return redirect()->route('admin.gates.sales.show', $order)->with('success', __('سُجّلت مراجعة الإيصال.'));
+    }
+
+    /** Cancel a card terminal sale: tickets cancelled, payment and order refunded. */
+    public function voidSale(Request $request, BoxOfficeOrder $order, CardTerminalService $terminal, \App\Services\Wallet\WalletAdminService $admins)
+    {
+        abort_unless($request->user()->can('refund payments'), 403);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:500']]);
+        try {
+            $order = $terminal->void($order, $request->user(), $data['reason'], $admins);
+        } catch (ApiException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+        AuditLog::record('box_office.card_sale_voided', $order, ['reference' => $order->reference, 'reason' => $data['reason']]);
+
+        return redirect()->route('admin.gates.sales.show', $order)->with('success', __('أُلغيت العملية وأُلغيت تذاكرها. أعد المبلغ على جهاز البطاقة إن كان قد خُصم.'));
     }
 
     public function cancel(Request $request, BoxOfficeOrder $order)

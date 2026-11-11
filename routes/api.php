@@ -258,6 +258,8 @@ Route::prefix('v1/gate')->group(function () {
                 Route::post('/orders/{id}/sms', [$c, 'sms'])->whereNumber('id');
                 Route::post('/orders/{id}/cancel', [$c, 'cancel'])->whereNumber('id');
                 Route::post('/orders/{id}/admit', [$c, 'admit'])->whereNumber('id');
+                // Card terminal receipt photo (docs/gate_sales_contract.md §9).
+                Route::post('/orders/{id}/receipt', [$c, 'receipt'])->whereNumber('id');
             });
         });
     });

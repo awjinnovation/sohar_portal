@@ -257,6 +257,20 @@ Scheduler (`php artisan schedule:work` / cron `schedule:run`): `points:expire` d
 
 Seeding is idempotent: `php artisan db:seed` can be re-run on an already-seeded database (natural-key `updateOrCreate` / `firstOrCreate`; content edited in the admin is not overwritten). The generic terms / privacy texts are filled from the tenant's settings (name, `tenant.organization`, `tenant.support.email|phone`).
 
+### Card terminal payments at the gate
+
+Gate staff can take the payment on the organizer's own card terminal instead of the payment link
+(`gate_sales.pos_enabled`, Admin → Branding & settings → Gate sales). They photograph the terminal receipt
+in the gate app; `App\Services\Ai\ReceiptReader` transcribes it with the vision model (`ai.receipt`,
+`OPENAI_API_KEY`, tier `AI_RECEIPT_TIER`), and `App\Services\Gate\CardTerminalService` compares amount,
+currency, date, terminal and status with the order and blocks a slip already used for another order (same
+image, same RRN, or same approval code + terminal + amount + date). Verified receipts issue the tickets at
+once; receipts that cannot be fully checked are accepted and flagged for review (or held, with
+`pos_accept_unverified` off); contradicting ones are rejected with the reasons. Contract and API:
+[`../docs/gate_sales_contract.md`](../docs/gate_sales_contract.md) §9. Photos live on the private `local`
+disk (`storage/app/private/box-office-receipts`, the `app-storage` volume). Tests:
+`tests/Feature/Gate/BoxOfficeCardTerminalTest.php`.
+
 ### Resetting a test tenant
 
 `php artisan tenant:wipe-test-data <slug>` removes what testers generated in **one** tenant and keeps

@@ -21,6 +21,9 @@ class Payment extends Model
     public const METHOD_GATEWAY = 'gateway';
     public const METHOD_WALLET = 'wallet';
 
+    /** Charged on the organizer's own card terminal at a gate (box office §9): no gateway, no online refund. */
+    public const METHOD_POS = 'pos';
+
     protected $fillable = [
         'user_id',
         'transaction_id',

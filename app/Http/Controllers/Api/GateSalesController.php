@@ -8,6 +8,7 @@ use App\Models\BoxOfficeOrder;
 use App\Models\GateDevice;
 use App\Models\User;
 use App\Services\Gate\BoxOfficeService;
+use App\Services\Gate\CardTerminalService;
 use App\Services\Gate\GateDay;
 use App\Services\Gate\ScanPresenter;
 use App\Tenancy\TenantContext;
@@ -56,6 +57,7 @@ class GateSalesController extends Controller
             'send_sms' => ['nullable', 'boolean'],
             'locale' => ['nullable', 'in:ar,en'],
             'idempotency_key' => ['required', 'string', 'max:100'],
+            'payment_method' => ['nullable', 'in:'.implode(',', BoxOfficeOrder::METHODS)],
         ]);
         $data['items'] = $this->items($data);
 
@@ -91,6 +93,7 @@ class GateSalesController extends Controller
                 'expired_count' => $orders->where('status', BoxOfficeOrder::STATUS_EXPIRED)->count(),
                 'cancelled_count' => $orders->where('status', BoxOfficeOrder::STATUS_CANCELLED)->count(),
                 'refund_due_count' => $orders->where('status', BoxOfficeOrder::STATUS_PAID_UNFULFILLED)->count(),
+                'review_count' => $orders->where('needs_review', true)->count(),
                 'tickets_paid' => (int) $paid->sum('quantity'),
                 'currency' => $tenant->currency(),
             ],
@@ -117,6 +120,27 @@ class GateSalesController extends Controller
         $order = $this->boxOffice->cancel($this->order($request, $id), $this->staff($request), 'gate');
 
         return $this->ok(['order' => $this->boxOffice->toApi($order)]);
+    }
+
+    /**
+     * POST /orders/{id}/receipt (multipart: image, idempotency_key) — photo of
+     * the card terminal receipt of a `pos` order (§9). 201 with the verdict;
+     * 200 when the same key (or the same photo) was already sent.
+     */
+    public function receipt(Request $request, int $id, CardTerminalService $terminal): JsonResponse
+    {
+        $data = $request->validate([
+            'image' => ['required', 'file', 'mimetypes:'.implode(',', array_keys(CardTerminalService::MIMES)), 'max:'.CardTerminalService::MAX_IMAGE_KB],
+            'idempotency_key' => ['required', 'string', 'max:100'],
+        ]);
+        $tenant = $this->context->get();
+
+        [$order, $receipt, $created] = $terminal->submit($tenant, $this->order($request, $id), $this->device($request), $this->staff($request), $data['image'], $data['idempotency_key']);
+
+        return $this->ok([
+            'order' => $this->boxOffice->toApi($order, $tenant),
+            'receipt' => $receipt->toApi($tenant),
+        ], $created ? 201 : 200);
     }
 
     /** POST /orders/{id}/admit {ticket_ids?: [int], entries?: int, idempotency_key?} */
