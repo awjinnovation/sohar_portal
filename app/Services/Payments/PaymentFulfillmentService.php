@@ -171,8 +171,8 @@ class PaymentFulfillmentService
             $event = Event::withoutTenantScope()->find($meta['event_id'] ?? $payment->payable_id);
             $total = $depositPer * $tickets->count();
 
-            if ($payment->method === Payment::METHOD_GATEWAY) {
-                // The deposit was paid by card: fund the wallet, then hold it.
+            if (in_array($payment->method, [Payment::METHOD_GATEWAY, Payment::METHOD_POS], true)) {
+                // The deposit was paid by card (online or on a gate terminal): fund the wallet, then hold it.
                 $this->wallets->credit($wallet, $total, 'topup', [
                     'idempotency_key' => "pay:{$payment->id}:deposit_funding",
                     'reference' => $payment,

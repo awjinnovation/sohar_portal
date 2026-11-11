@@ -77,6 +77,8 @@ class BoxOfficePayController extends Controller
     private function order(string $token): BoxOfficeOrder
     {
         $order = BoxOfficeOrder::withoutTenantScope()->where('public_token', $token)->firstOrFail();
+        // Paid on the gate's card terminal (§9): there is no payment link.
+        abort_if($order->isCardTerminal() && $order->total_minor > 0, 404);
         $tenant = Tenant::findOrFail($order->tenant_id);
         $this->context->set($tenant);
         view()->share('brand', $tenant);

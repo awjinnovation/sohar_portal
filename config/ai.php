@@ -41,6 +41,18 @@ return [
         'regenerate_rate' => ['max' => 6, 'minutes' => 60],
     ],
 
+    // Gate box office: reading card terminal receipts (docs/gate_sales_contract.md §9).
+    // The gate waits for the answer, so the call is short and retried once.
+    'receipt' => [
+        'tier' => env('AI_RECEIPT_TIER', 'smart'),   // fast | smart (config/services.php openai)
+        'max_output_tokens' => 900,
+        'timeout' => (int) env('AI_RECEIPT_TIMEOUT', 30),
+        'retries' => 1,
+        'image_detail' => 'high',
+        // Photos are scaled down to this long side before they are sent.
+        'max_image_side' => 2000,
+    ],
+
     'conversation_ttl_days' => 30,
     'plan_ttl_days' => 90,
 

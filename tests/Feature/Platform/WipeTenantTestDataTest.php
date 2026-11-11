@@ -91,6 +91,12 @@ class WipeTenantTestDataTest extends GateTestCase
                 'order_id' => $order->id, 'ticket_type_id' => null, 'key' => 'general', 'name' => json_encode(['en' => 'General', 'ar' => 'عامة']),
                 'quantity' => 1, 'unit_price_minor' => 500, 'line_total_minor' => 500, 'admits' => 1, 'created_at' => now(), 'updated_at' => now(),
             ]);
+            \Illuminate\Support\Facades\Storage::fake('local')->put('box-office-receipts/r1.jpg', 'jpeg');
+            DB::table('box_office_receipts')->insert([
+                'tenant_id' => $this->tenant->id, 'order_id' => $order->id, 'idempotency_key' => 'r1', 'disk' => 'local', 'path' => 'box-office-receipts/r1.jpg',
+                'sha256' => str_repeat('a', 64), 'mime' => 'image/jpeg', 'size' => 4, 'verdict' => 'verified', 'ai_status' => 'ok', 'accepted' => true,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
             GateScan::create([
                 'gate_id' => $this->gate->id, 'device_id' => $device->id, 'ticket_id' => $ticket->id, 'code_hash' => hash('sha256', 'x'),
                 'result' => 'admitted', 'direction' => 'entry', 'source' => 'camera', 'scanned_at' => now(), 'received_at' => now(), 'idempotency_key' => 'scan-1',
@@ -140,6 +146,8 @@ class WipeTenantTestDataTest extends GateTestCase
             $this->assertSame(0, DB::table($table)->where('tenant_id', $t)->count(), $table);
         }
         $this->assertSame(0, DB::table('box_office_order_lines')->count());
+        $this->assertSame(0, DB::table('box_office_receipts')->count());
+        \Illuminate\Support\Facades\Storage::disk('local')->assertMissing('box-office-receipts/r1.jpg');
         $this->assertSame(0, DB::table('personal_access_tokens')->where('tokenable_type', (new GateDevice)->getMorphClass())->count());
         $this->assertSame(0, DB::table('otp_verifications')->where('phone_number', '91234567')->count());
         $this->assertSame(1, DB::table('otp_verifications')->where('phone_number', '91110002')->count(), 'only the expired staff OTP goes');

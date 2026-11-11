@@ -35,11 +35,19 @@ class BoxOfficeOrder extends Model
     public const STATUSES = [self::STATUS_PENDING, self::STATUS_PAID, self::STATUS_EXPIRED, self::STATUS_CANCELLED,
         self::STATUS_PAID_UNFULFILLED, self::STATUS_REFUNDED];
 
+    /** The visitor pays on their phone through the payment link (§3–§4). */
+    public const METHOD_LINK = 'link';
+
+    /** Staff charge the card on the organizer's terminal and photograph the receipt (§9). */
+    public const METHOD_POS = 'pos';
+
+    public const METHODS = [self::METHOD_LINK, self::METHOD_POS];
+
     protected $fillable = [
         'gate_id', 'device_id', 'staff_user_id', 'buyer_user_id', 'reference', 'buyer_phone', 'buyer_name',
         'event_id', 'booking_date', 'ticket_type', 'quantity', 'unit_price_minor', 'subtotal_minor', 'deposit_minor',
         'total_minor', 'currency', 'status', 'payment_id', 'public_token', 'locale', 'expires_at', 'paid_at',
-        'cancelled_at', 'sms_sent_at', 'sms_count', 'idempotency_key', 'meta',
+        'cancelled_at', 'sms_sent_at', 'sms_count', 'idempotency_key', 'meta', 'payment_method', 'needs_review',
     ];
 
     protected $hidden = ['public_token'];
@@ -57,6 +65,12 @@ class BoxOfficeOrder extends Model
         'cancelled_at' => 'datetime',
         'sms_sent_at' => 'datetime',
         'meta' => 'array',
+        'needs_review' => 'boolean',
+    ];
+
+    protected $attributes = [
+        'payment_method' => self::METHOD_LINK,
+        'needs_review' => false,
     ];
 
     public function gate()
@@ -92,6 +106,22 @@ class BoxOfficeOrder extends Model
     public function lines()
     {
         return $this->hasMany(BoxOfficeOrderLine::class, 'order_id')->orderBy('id');
+    }
+
+    /** Card terminal receipts sent for this order, oldest first (§9). */
+    public function receipts()
+    {
+        return $this->hasMany(BoxOfficeReceipt::class, 'order_id')->orderBy('id');
+    }
+
+    public function latestReceipt(): ?BoxOfficeReceipt
+    {
+        return $this->receipts()->reorder('id', 'desc')->first();
+    }
+
+    public function isCardTerminal(): bool
+    {
+        return $this->payment_method === self::METHOD_POS;
     }
 
     /** Tickets issued for the paying payment (empty until paid; none for paid_unfulfilled). */

@@ -30,7 +30,8 @@ use Illuminate\Support\Facades\Schema;
  * Deleted (this tenant only): visitors (accounts without any role), tickets,
  * payments and gateway records, wallets with their transactions / top-ups /
  * promo lots / deposits / refund requests / pay tokens, points, box office
- * orders, paired gate devices with their tokens, pairing codes and scans,
+ * orders and card terminal receipts (rows and photos), paired gate devices
+ * with their tokens, pairing codes and scans,
  * survey answers, AI conversations, personal notifications, favourites and
  * interests, OTP codes, the visitors' API tokens and the audit log.
  *
@@ -68,7 +69,7 @@ class WipeTenantTestData extends Command
     /** Tables whose rows of this tenant are deleted wholesale, children first. */
     private const TENANT_TABLES = [
         'gate_scans', 'gate_pairing_codes', 'gate_devices',
-        'box_office_orders',
+        'box_office_receipts', 'box_office_orders',
         'satisfaction_responses',
         'ai_messages', 'ai_plans', 'ai_conversations', 'ai_requests',
         'tickets',
@@ -140,7 +141,10 @@ class WipeTenantTestData extends Command
             }
         }
 
+        // Card terminal receipt photos (box office §9) go once their rows are gone.
+        $receiptFiles = DB::table('box_office_receipts')->where('tenant_id', $tenant->id)->get(['disk', 'path']);
         $deleted = DB::transaction(fn () => $this->wipe($tenant, $keep));
+        $receiptFiles->each(fn ($f) => \Illuminate\Support\Facades\Storage::disk($f->disk)->delete($f->path));
         PublicApiCache::bump($tenant->id);
 
         $this->table(['Data', 'Deleted'], collect($deleted)->map(fn ($n, $label) => [$label, number_format($n)])->values()->all());

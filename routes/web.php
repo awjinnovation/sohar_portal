@@ -114,6 +114,11 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
             Route::get('sales/{order}', [Admin\GateSalesController::class, 'show'])->whereNumber('order')->name('sales.show');
             Route::post('sales/{order}/cancel', [Admin\GateSalesController::class, 'cancel'])->whereNumber('order')->name('sales.cancel');
             Route::post('sales/{order}/refund', [Admin\GateSalesController::class, 'refund'])->whereNumber('order')->name('sales.refund');
+            // Card terminal receipts (docs/gate_sales_contract.md §9)
+            Route::get('sales/{order}/receipts/{receipt}/image', [Admin\GateSalesController::class, 'receiptImage'])->whereNumber(['order', 'receipt'])->name('sales.receipt-image');
+            Route::post('sales/{order}/receipts/{receipt}/approve', [Admin\GateSalesController::class, 'approveReceipt'])->whereNumber(['order', 'receipt'])->name('sales.receipt-approve');
+            Route::post('sales/{order}/review', [Admin\GateSalesController::class, 'clearReview'])->whereNumber('order')->name('sales.review');
+            Route::post('sales/{order}/void', [Admin\GateSalesController::class, 'voidSale'])->whereNumber('order')->name('sales.void');
         });
         Route::resource('gates', Admin\GateController::class, ['as' => 'admin'])->except(['show'])->middleware('can:manage gates');
 

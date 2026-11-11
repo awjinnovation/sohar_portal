@@ -209,6 +209,11 @@ return [
             'send_sms' => true,           // default of POST /gate/sales/orders send_sms
             'max_quantity' => 10,         // tickets per order
             'allow_future_dates' => false, // true = staff may sell for a later day of the event
+            // Card terminal payments (docs/gate_sales_contract.md §9): staff charge the card on
+            // the organizer's own POS terminal and photograph the receipt; the server checks it.
+            'pos_enabled' => false,
+            'pos_accept_unverified' => true, // a receipt that cannot be fully checked: true = issue + flag for review, false = hold for a supervisor
+            'pos_terminal_ids' => '',        // comma-separated TIDs of the organizer's terminals; empty = any terminal
         ],
 
         'messages' => [

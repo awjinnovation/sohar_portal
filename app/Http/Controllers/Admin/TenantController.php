@@ -452,6 +452,9 @@ class TenantController extends Controller
         $f['gate_sales.send_sms'] = ['bool', 'boolean'];
         $f['gate_sales.max_quantity'] = ['int', 'required|integer|between:1,50'];
         $f['gate_sales.allow_future_dates'] = ['bool', 'boolean'];
+        $f['gate_sales.pos_enabled'] = ['bool', 'boolean'];
+        $f['gate_sales.pos_accept_unverified'] = ['bool', 'boolean'];
+        $f['gate_sales.pos_terminal_ids'] = ['string', 'nullable|string|max:500|regex:/^[A-Za-z0-9,;\s]*$/'];
         foreach (['en', 'ar'] as $l) {
             $f["messages.box_office_sms.$l"] = ['string', 'nullable|string|max:500'];
         }
