@@ -5,7 +5,7 @@ namespace App\Jobs;
 use App\Models\Payment;
 use App\Models\PaymentRefund;
 use App\Services\Payments\PaymentRecorder;
-use App\Services\Payments\ThawaniCheckout;
+use App\Services\Payments\GatewayCheckouts;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -43,11 +43,11 @@ class ProcessGatewayRefund implements ShouldBeUnique, ShouldQueue
         return [30, 60, 180, 600, 1800];
     }
 
-    public function handle(ThawaniCheckout $thawani): void
+    public function handle(): void
     {
         $refund = PaymentRefund::find($this->refundId);
         if ($refund) {
-            $thawani->refund($refund);
+            GatewayCheckouts::for($refund->gateway)?->refund($refund);
         }
     }
 
@@ -59,7 +59,7 @@ class ProcessGatewayRefund implements ShouldBeUnique, ShouldQueue
         }
         if ($refund->data['in_flight'] ?? false) {
             // Killed (timeout / crash) while the request was out: unknown outcome.
-            app(ThawaniCheckout::class)->refundNeedsReview($refund, 'Stopped while the request was out ('.($e?->getMessage() ?: 'timeout').'); check the Thawani portal before retrying');
+            GatewayCheckouts::for($refund->gateway)?->refundNeedsReview($refund, 'Stopped while the request was out ('.($e?->getMessage() ?: 'timeout').'); check the gateway portal before retrying');
 
             return;
         }

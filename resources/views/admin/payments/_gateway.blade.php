@@ -3,7 +3,7 @@
      Expects $payment and $gateway (events, sessions, calls, webhooks, refund). --}}
 @use('App\Support\AdminLabels')
 @php
-    $isThawani = $payment->gateway === 'thawani';
+    $isThawani = in_array($payment->gateway, \App\Services\Payments\GatewayCheckouts::RECONCILED, true); // checked through the gateway API
     $json = fn ($v) => json_encode($v, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $errorTypes = ['failed', 'amount_mismatch', 'gateway_refund_failed', 'gateway_refund_needs_review', 'late_capture', 'duplicate_capture', 'points_retake_failed'];
     $mutedTypes = ['gateway_checked', 'checkout_opened', 'webhook_received', 'check_requested'];

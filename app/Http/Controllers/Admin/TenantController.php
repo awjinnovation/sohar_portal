@@ -31,6 +31,7 @@ class TenantController extends Controller
 
     public const GATEWAY_FIELDS = [
         'thawani' => ['secret_key', 'publishable_key', 'webhook_secret'],
+        'amwal' => ['merchant_id', 'terminal_id', 'secure_key'],
         'bank_muscat' => ['merchant_id', 'access_code', 'working_key', 'gateway_url'],
     ];
 
@@ -273,10 +274,15 @@ class TenantController extends Controller
         $rules = [
             'payments_driver' => ['nullable', Rule::in($drivers)],
             'thawani_mode' => ['nullable', Rule::in(\App\Services\Payments\Gateway\ThawaniConfig::MODES)],
+            'amwal_mode' => ['nullable', Rule::in(\App\Services\Payments\Gateway\AmwalConfig::MODES)],
+            // The secure hash key is hex (it is hex-decoded before signing).
+            'gateway.amwal.secure_key' => ['nullable', 'string', 'max:1000', 'regex:/^\s*([0-9A-Fa-f]{2})+\s*$/'],
+            'gateway.amwal.merchant_id' => ['nullable', 'string', 'max:30', 'regex:/^\s*\d+\s*$/'],
+            'gateway.amwal.terminal_id' => ['nullable', 'string', 'max:30', 'regex:/^\s*\d+\s*$/'],
         ];
         foreach (self::GATEWAY_FIELDS as $provider => $fields) {
             foreach ($fields as $field) {
-                $rules["gateway.$provider.$field"] = ['nullable', 'string', 'max:1000'];
+                $rules["gateway.$provider.$field"] ??= ['nullable', 'string', 'max:1000'];
             }
         }
 
@@ -301,8 +307,8 @@ class TenantController extends Controller
             $tenant->gateway_credentials = $credentials;
         }
 
-        // Driver and Thawani mode are plain settings (blank = platform default, key removed).
-        foreach (['payments_driver' => 'payments.driver', 'thawani_mode' => 'payments.thawani.mode'] as $input => $key) {
+        // Driver and gateway modes are plain settings (blank = platform default, key removed).
+        foreach (['payments_driver' => 'payments.driver', 'thawani_mode' => 'payments.thawani.mode', 'amwal_mode' => 'payments.amwal.mode'] as $input => $key) {
             if (! $request->has($input)) {
                 continue;
             }
@@ -316,9 +322,12 @@ class TenantController extends Controller
         }
     }
 
-    /** POST tenants/{tenant}/gateway-check — read-only Thawani key check (recorded like any call). */
-    public function gatewayCheck(Tenant $tenant, \App\Services\Payments\Gateway\ThawaniGateway $thawani)
+    /** POST tenants/{tenant}/gateway-check[?gateway=amwal] — read-only key check (recorded like any call). */
+    public function gatewayCheck(Request $request, Tenant $tenant, \App\Services\Payments\Gateway\ThawaniGateway $thawani)
     {
+        if ($request->input('gateway') === 'amwal') {
+            return $this->amwalCheck($tenant);
+        }
         $config = \App\Services\Payments\Gateway\ThawaniConfig::forTenant($tenant);
         if (! $config->isConfigured()) {
             return back()->with('error', __('أدخل مفتاحَي ثواني السري والعام أولًا.'));
@@ -331,6 +340,23 @@ class TenantController extends Controller
             $result['ok']
                 ? __('قبلت ثواني المفاتيح (:mode).', ['mode' => $config->mode])
                 : __('رفضت ثواني الاتصال: :message', ['message' => trim(($result['status'] ? $result['status'].' · ' : '').$result['message'])])
+        );
+    }
+
+    private function amwalCheck(Tenant $tenant)
+    {
+        $config = \App\Services\Payments\Gateway\AmwalConfig::forTenant($tenant);
+        if (! $config->isConfigured()) {
+            return back()->with('error', __('أدخل رقم التاجر ورقم الطرفية ومفتاح التوقيع (Secure hash) لأموال أولًا.'));
+        }
+        $result = app(\App\Services\Payments\Gateway\AmwalGateway::class)->ping($config, ['tenant_id' => $tenant->id]);
+        AuditLog::record('tenant.gateway_check', $tenant, ['gateway' => 'amwal', 'mode' => $config->mode, 'ok' => $result['ok'], 'status' => $result['status']]);
+
+        return back()->with(
+            $result['ok'] ? 'success' : 'error',
+            $result['ok']
+                ? __('قبلت أموال بيانات التاجر (:mode).', ['mode' => $config->mode])
+                : __('رفضت أموال الاتصال: :message', ['message' => trim(($result['status'] ? $result['status'].' · ' : '').$result['message'])])
         );
     }
 

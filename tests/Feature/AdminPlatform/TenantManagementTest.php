@@ -239,6 +239,40 @@ class TenantManagementTest extends AdminPlatformTestCase
         $this->assertNull(data_get($tenant->fresh()->settings, 'payments'));
     }
 
+    public function test_platform_admin_sets_amwal_per_tenant_and_tests_the_connection(): void
+    {
+        $key = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['success' => true, 'responseCode' => '00', 'message' => 'Success', 'errorList' => [], 'data' => []])]);
+        $super = $this->superAdmin();
+        $tenant = $this->otherTenant('amwal-org');
+
+        $html = $this->actingAs($super)->get(route('admin.tenants.edit', $tenant))->assertOk()
+            ->assertSee('Amwal Pay')
+            ->assertSee(route('payments.webhooks.amwal', ['tenant' => 'amwal-org']))
+            ->getContent();
+        $data = $this->formData($html, 'tenantForm');
+
+        $bad = $data;
+        $bad['gateway']['amwal'] = ['merchant_id' => 'M1', 'terminal_id' => '2', 'secure_key' => 'not-hex'];
+        $this->actingAs($super)->put(route('admin.tenants.update', $tenant), $bad)
+            ->assertSessionHasErrors(['gateway.amwal.secure_key', 'gateway.amwal.merchant_id']);
+
+        $data['payments_driver'] = 'amwal';
+        $data['amwal_mode'] = 'uat';
+        $data['gateway']['amwal'] = ['merchant_id' => '777001', 'terminal_id' => '888002', 'secure_key' => $key];
+        $this->actingAs($super)->put(route('admin.tenants.update', $tenant), $data)->assertSessionHasNoErrors();
+
+        $tenant->refresh();
+        $this->assertSame(['amwal', 'uat'], [$tenant->setting('payments.driver'), $tenant->setting('payments.amwal.mode')]);
+        $config = \App\Services\Payments\Gateway\AmwalConfig::forTenant($tenant);
+        $this->assertSame(['777001', '888002', $key, true], [$config->merchantId, $config->terminalId, $config->secureKey, $config->isConfigured()]);
+        $this->assertStringNotContainsString($key, (string) \DB::table('tenants')->where('id', $tenant->id)->value('gateway_credentials'));
+
+        $this->actingAs($super)->post(route('admin.tenants.gateway-check', $tenant), ['gateway' => 'amwal'])->assertSessionHas('success');
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r->url() === 'https://test.amwalpg.com:14443/Transaction/GetByMerchantReference'
+            && $r['merchantId'] === 777001 && strlen($r['secureHashValue']) === 64);
+    }
+
     private function formData(string $html, string $formId): array
     {
         $dom = new \DOMDocument();

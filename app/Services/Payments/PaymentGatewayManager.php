@@ -14,12 +14,13 @@ use RuntimeException;
  * payment gateway), else config('payments.driver'); a payment keeps the
  * driver it was created with. The URL is a temporary *signed* link to our
  * own redirect page, which opens a Thawani session and redirects there,
+ * renders the Amwal SmartBox page,
  * auto-posts to Bank Muscat, or — with the fake driver — shows "Simulate
  * success / failure" buttons.
  */
 class PaymentGatewayManager
 {
-    public const DRIVERS = ['thawani', 'bankmuscat', 'fake'];
+    public const DRIVERS = ['thawani', 'amwal', 'bankmuscat', 'fake'];
 
     public function driver(?Tenant $tenant = null): string
     {

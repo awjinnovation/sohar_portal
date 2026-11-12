@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\PaymentWebhookEvent;
-use App\Services\Payments\ThawaniCheckout;
+use App\Services\Payments\GatewayCheckouts;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -41,7 +41,7 @@ class ProcessPaymentWebhook implements ShouldBeUnique, ShouldQueue
         return [5, 15, 30, 60, 120, 300, 600];
     }
 
-    public function handle(ThawaniCheckout $thawani): void
+    public function handle(): void
     {
         $event = PaymentWebhookEvent::find($this->eventId);
         if (! $event || in_array($event->status, [PaymentWebhookEvent::PROCESSED, PaymentWebhookEvent::IGNORED, PaymentWebhookEvent::REJECTED], true)) {
@@ -51,7 +51,13 @@ class ProcessPaymentWebhook implements ShouldBeUnique, ShouldQueue
         $event->forceFill(['attempts' => $event->attempts + 1])->save();
 
         try {
-            $thawani->handleWebhook($event);
+            $flow = GatewayCheckouts::for($event->gateway);
+            if (! $flow) {
+                $event->forceFill(['status' => PaymentWebhookEvent::IGNORED, 'last_error' => 'Unknown gateway', 'processed_at' => now()])->save();
+
+                return;
+            }
+            $flow->handleWebhook($event);
         } catch (\Throwable $e) {
             $event->forceFill(['last_error' => mb_substr($e->getMessage(), 0, 2000)])->save();
 

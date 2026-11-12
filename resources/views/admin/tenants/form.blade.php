@@ -54,9 +54,10 @@
     ];
     $socialLabels = ['instagram' => 'إنستغرام', 'x' => 'X (تويتر)', 'tiktok' => 'تيك توك', 'youtube' => 'يوتيوب', 'facebook' => 'فيسبوك'];
     $gatewayLabels = ['merchant_id' => 'Merchant ID', 'access_code' => 'Access Code', 'working_key' => 'Working Key', 'gateway_url' => 'Gateway URL',
-        'secret_key' => 'Secret key', 'publishable_key' => 'Publishable key', 'webhook_secret' => 'Webhook secret'];
-    $gatewayTitles = ['thawani' => ['ثواني', 'Thawani Pay'], 'bank_muscat' => ['بنك مسقط', 'Bank Muscat']];
-    $driverLabels = ['thawani' => 'ثواني', 'bankmuscat' => 'بنك مسقط', 'fake' => 'بوابة محلية للتجربة'];
+        'secret_key' => 'Secret key', 'publishable_key' => 'Publishable key', 'webhook_secret' => 'Webhook secret',
+        'terminal_id' => 'Terminal ID (TID)', 'secure_key' => 'Secure hash key'];
+    $gatewayTitles = ['thawani' => ['ثواني', 'Thawani Pay'], 'amwal' => ['أموال', 'Amwal Pay · SmartBox'], 'bank_muscat' => ['بنك مسقط', 'Bank Muscat']];
+    $driverLabels = ['thawani' => 'ثواني', 'amwal' => 'أموال', 'bankmuscat' => 'بنك مسقط', 'fake' => 'بوابة محلية للتجربة'];
     $selectedMethods = array_filter((array) old('s.wallet.refunds.methods', $tenant->setting('wallet.refunds.methods', [])));
     $logoPreview = \App\Models\Tenant::assetUrl($tenant->setting('branding.logo_url'));
     $theme = $tenant->exists ? \App\View\TenantTheme::for($tenant) : \App\View\TenantTheme::for(null);
@@ -433,6 +434,7 @@
                         @php
                             $currentDriver = old('payments_driver', data_get($tenant->settings ?? [], 'payments.driver'));
                             $currentMode = old('thawani_mode', data_get($tenant->settings ?? [], 'payments.thawani.mode'));
+                            $currentAmwalMode = old('amwal_mode', data_get($tenant->settings ?? [], 'payments.amwal.mode'));
                             $platformDriver = config('payments.driver');
                         @endphp
                         <div class="row">
@@ -458,18 +460,32 @@
                                 <div class="form-text ltr text-start">uatcheckout.thawani.om · checkout.thawani.om</div>
                                 @error('thawani_mode')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
+                            <div class="col-md-6 field">
+                                <label class="form-label" for="amwal_mode">{{ __('بيئة أموال') }}</label>
+                                <select name="amwal_mode" id="amwal_mode" class="form-select @error('amwal_mode') is-invalid @enderror">
+                                    <option value="">{{ __('افتراضي المنصة (:mode)', ['mode' => config('services.amwal.mode', 'uat')]) }}</option>
+                                    <option value="uat" @selected($currentAmwalMode === 'uat')>{{ __('تجريبية') }} · UAT</option>
+                                    <option value="production" @selected($currentAmwalMode === 'production')>{{ __('التشغيل الفعلي') }} · Production</option>
+                                </select>
+                                <div class="form-text ltr text-start">test.amwalpg.com · checkout.amwalpg.com</div>
+                                @error('amwal_mode')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
                         @if($tenant->exists)
                             <div class="kv mb-3">
                                 <div class="k">{{ __('رابط الإشعارات لإضافته في بوابة تجار ثواني') }} <span class="ltr">· Webhook URL</span></div>
                                 <div class="v font-monospace small ltr text-start" style="word-break: break-all">{{ route('payments.webhooks.thawani', ['tenant' => $tenant->slug]) }}</div>
                             </div>
+                            <div class="kv mb-3">
+                                <div class="k">{{ __('رابط إشعارات أموال (Cloud notification) لإرساله إلى أموال') }} <span class="ltr">· Notification URL</span></div>
+                                <div class="v font-monospace small ltr text-start" style="word-break: break-all">{{ route('payments.webhooks.amwal', ['tenant' => $tenant->slug]) }}</div>
+                            </div>
                         @endif
                         @foreach($gatewayFields as $provider => $gFields)
                             <div class="d-flex align-items-center justify-content-between gap-2 mt-2">
                                 <h3 class="h6 fw-bold mb-0">{{ $gatewayTitles[$provider][0] ?? $provider }} <span class="text-muted fw-normal small ltr">{{ $gatewayTitles[$provider][1] ?? '' }}</span></h3>
-                                @if($provider === 'thawani' && $tenant->exists)
-                                    <button type="submit" form="gwCheckForm" class="btn btn-sm" data-busy><i class="bi bi-plug"></i> {{ __('اختبر الاتصال') }}</button>
+                                @if(in_array($provider, ['thawani', 'amwal'], true) && $tenant->exists)
+                                    <button type="submit" form="gwCheckForm" name="gateway" value="{{ $provider }}" class="btn btn-sm" data-busy><i class="bi bi-plug"></i> {{ __('اختبر الاتصال') }}</button>
                                 @endif
                             </div>
                             <div class="row">
@@ -479,7 +495,7 @@
                                         <label class="form-label d-flex align-items-center gap-2" for="gw_{{ $provider }}_{{ $gf }}">{{ $gatewayLabels[$gf] ?? $gf }}
                                             @if($gSet)<span class="pill pill-sm pill-success"><span class="dot"></span>{{ __('محفوظ') }}</span>@else<span class="pill pill-sm pill-neutral">{{ __('غير مُعيّن') }}</span>@endif
                                         </label>
-                                        <input type="{{ $gf === 'gateway_url' ? 'text' : 'password' }}" name="gateway[{{ $provider }}][{{ $gf }}]" id="gw_{{ $provider }}_{{ $gf }}" dir="ltr"
+                                        <input type="{{ in_array($gf, ['gateway_url', 'terminal_id'], true) || ($provider === 'amwal' && $gf === 'merchant_id') ? 'text' : 'password' }}" name="gateway[{{ $provider }}][{{ $gf }}]" id="gw_{{ $provider }}_{{ $gf }}" dir="ltr"
                                                autocomplete="new-password" class="form-control @error('gateway.'.$provider.'.'.$gf) is-invalid @enderror"
                                                placeholder="{{ $gSet ? __('•••••• (اتركه فارغًا لتبقى القيمة)') : '' }}">
                                         @error('gateway.'.$provider.'.'.$gf)<div class="invalid-feedback">{{ $message }}</div>@enderror

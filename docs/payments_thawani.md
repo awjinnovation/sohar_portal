@@ -201,4 +201,4 @@ Run a queue worker on `payments` (the compose `worker` does:
 `--queue=payments,default`) and the scheduler. With several app servers the
 cache must be shared (Redis) for the circuit breaker, locks and unique jobs.
 
-Go-live: [DEPLOY_COOLIFY.md §9](DEPLOY_COOLIFY.md#9-thawani-pay).
+Go-live: [DEPLOY_COOLIFY.md §9](DEPLOY_COOLIFY.md#9-thawani-pay). Amwal Pay SmartBox: [payments_amwal.md](payments_amwal.md).

@@ -9,6 +9,8 @@ use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Services\BankMuscatPaymentService;
 use App\Services\Payments\BankMuscatCallbackHandler;
+use App\Services\Payments\AmwalCheckout;
+use App\Services\Payments\Gateway\AmwalGateway;
 use App\Services\Payments\Gateway\GatewayException;
 use App\Services\Payments\Gateway\ThawaniGateway;
 use App\Services\Payments\PaymentFulfillmentService;
@@ -23,12 +25,15 @@ use Illuminate\Support\Facades\URL;
  * Browser-facing payment pages (opened by the app's web view).
  *
  * - /payment/redirect/{tx}  signed link: redirects to a Thawani session,
+ *                           renders the Amwal SmartBox page,
  *                           auto-posts to Bank Muscat, or shows the fake
  *                           gateway page (driver fake).
  * - /payment/success|cancel gateway returns here; state only changes when an
  *                           encrypted gateway response verifies (Bank Muscat)
  *                           or Thawani's API confirms it (the return URL
- *                           carries a token; ThawaniCheckout::returnToken()).
+ *                           carries a token; ThawaniCheckout::returnToken()),
+ *                           or an Amwal callback signed with the merchant key
+ *                           (AmwalCheckout::returnToken() + secure hash).
  */
 class PaymentController extends Controller
 {
@@ -61,11 +66,12 @@ class PaymentController extends Controller
         return $payment;
     }
 
+    /** A Thawani or Amwal payment named by ?transaction_id= (gateways confirmed through their API). */
     private function thawaniPayment(Request $request): ?Payment
     {
         $transactionId = (string) $request->query('transaction_id', '');
         $payment = $transactionId !== '' ? Payment::withoutTenantScope()->where('transaction_id', $transactionId)->first() : null;
-        if (! $payment || $payment->gateway !== ThawaniGateway::NAME) {
+        if (! $payment || ! in_array($payment->gateway, [ThawaniGateway::NAME, AmwalGateway::NAME], true)) {
             return null;
         }
         $this->context->set(Tenant::find($payment->tenant_id));
@@ -103,6 +109,10 @@ class PaymentController extends Controller
                     'retryUrl' => $notConfigured ? null : $request->fullUrl(),
                 ]);
             }
+        }
+
+        if ($payment->gateway === AmwalGateway::NAME) {
+            return $this->amwalPage($request, $payment);
         }
 
         if ($payment->gateway === 'fake') {
@@ -208,14 +218,25 @@ class PaymentController extends Controller
         }
     }
 
-    /** Thawani return page: ask Thawani (throttled per payment), then show the result. */
+    /**
+     * Thawani / Amwal return page: ask the gateway (throttled per payment),
+     * then show the result. Amwal's SmartBox callback (relayed by our page,
+     * with its token) is verified and applied first.
+     */
     private function thawaniResult(Request $request, Payment $payment)
     {
-        $payment = $this->thawaniCheck($payment);
+        $payment = $payment->gateway === AmwalGateway::NAME && $payment->isPending()
+            && hash_equals(AmwalCheckout::returnToken($payment->transaction_id), (string) $request->query('t', ''))
+            && $request->filled('merchantReference')
+            ? app(AmwalCheckout::class)->handleReturn($payment, $request->query())
+            : $this->thawaniCheck($payment);
 
         return match (true) {
             $payment->status === 'completed' => $this->successView($payment),
-            $payment->isPending() => $this->errorView(self::ERR_NOT_COMPLETED, $payment, ['retryUrl' => $request->fullUrl()]),
+            // Amwal: a declined attempt can be paid again from a new SmartBox page.
+            $payment->isPending() => $this->errorView(self::ERR_NOT_COMPLETED, $payment, ['retryUrl' => $payment->gateway === AmwalGateway::NAME
+                ? app(\App\Services\Payments\PaymentGatewayManager::class)->paymentUrl($payment, array_filter(['lang' => $request->query('lang')]))
+                : $request->fullUrl()]),
             $payment->status === 'cancelled' => $this->returnRedirect($payment, ['payment' => 'cancelled']) ?? view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
             default => $this->returnRedirect($payment, ['payment' => 'failed']) ?? $this->errorView(self::ERR_PAYMENT_FAILED, $payment),
         };
@@ -224,16 +245,52 @@ class PaymentController extends Controller
     /** Throttled per payment (repeated reloads don't multiply gateway calls); never throws. */
     private function thawaniCheck(Payment $payment): Payment
     {
-        return app(ThawaniCheckout::class)->checkIfStale($payment, 'redirect');
+        return \App\Services\Payments\GatewayCheckouts::checkIfStale($payment, 'redirect');
     }
 
     private function thawaniCancel(Payment $payment): Payment
     {
         try {
-            return app(ThawaniCheckout::class)->cancel($payment, 'redirect', 'visitor_cancelled');
+            return \App\Services\Payments\GatewayCheckouts::for($payment)->cancel($payment, 'redirect', 'visitor_cancelled');
         } catch (LockTimeoutException) {
             return $payment->fresh();
         }
+    }
+
+    /** Amwal: our page loads SmartBox.js with a server-signed configuration (a new attempt per open). */
+    private function amwalPage(Request $request, Payment $payment)
+    {
+        $locale = in_array($request->query('lang'), ['ar', 'en'], true)
+            ? $request->query('lang')
+            : ($payment->metadata['box_office_lang'] ?? $payment->metadata['web_booking_lang'] ?? app()->getLocale());
+
+        try {
+            $checkout = app(AmwalCheckout::class)->start($payment, $locale === 'en' ? 'en' : 'ar');
+        } catch (GatewayException|LockTimeoutException $e) {
+            Log::warning('Amwal checkout could not start', ['transaction_id' => $payment->transaction_id, 'error' => $e->getMessage()]);
+            $notConfigured = $e instanceof GatewayException && $e->kind === 'config';
+
+            return $this->errorView($notConfigured ? self::ERR_GATEWAY_NOT_CONFIGURED : self::ERR_GATEWAY_UNAVAILABLE, $payment, [
+                'retryUrl' => $notConfigured ? null : $request->fullUrl(),
+            ]);
+        }
+        $this->recorder()->record($payment, 'checkout_opened', 'redirect', ['session_id' => $checkout['reference']]);
+        $token = AmwalCheckout::returnToken($payment->transaction_id);
+
+        return response()->view('payment.amwal', [
+            'payment' => $payment,
+            'locale' => $locale === 'en' ? 'en' : 'ar',
+            'script' => $checkout['script'],
+            'config' => $checkout['config'],
+            'returnUrl' => route('payment.success', ['transaction_id' => $payment->transaction_id, 't' => $token, 'lang' => $locale === 'en' ? 'en' : 'ar']),
+            'cancelUrl' => route('payment.cancel', ['transaction_id' => $payment->transaction_id, 't' => $token, 'lang' => $locale === 'en' ? 'en' : 'ar']),
+            'retryUrl' => $request->fullUrl(),
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    private function recorder(): \App\Services\Payments\PaymentRecorder
+    {
+        return app(\App\Services\Payments\PaymentRecorder::class);
     }
 
     /**
@@ -319,7 +376,10 @@ class PaymentController extends Controller
         if ($encResponse === '' && ($thawani = $this->thawaniPayment($request))) {
             // Only Thawani's own redirect (it carries the token) cancels:
             // Thawani is asked first, and its sessions are cancelled too.
-            $payment = hash_equals(ThawaniCheckout::returnToken($thawani->transaction_id), (string) $request->query('t', ''))
+            $token = $thawani->gateway === AmwalGateway::NAME
+                ? AmwalCheckout::returnToken($thawani->transaction_id)
+                : ThawaniCheckout::returnToken($thawani->transaction_id);
+            $payment = hash_equals($token, (string) $request->query('t', ''))
                 ? $this->thawaniCancel($thawani)
                 : $this->thawaniCheck($thawani);
             if ($payment->status === 'completed') {

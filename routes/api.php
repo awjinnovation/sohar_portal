@@ -146,6 +146,12 @@ Route::prefix('v1')->group(function () {
     Route::post('/payments/webhooks/thawani/{tenant?}', [\App\Http\Controllers\Api\PaymentWebhookController::class, 'thawani'])
         ->middleware('throttle:payment-webhooks')
         ->name('payments.webhooks.thawani');
+
+    // Amwal Pay cloud notifications (docs/payments_amwal.md): verified by the
+    // SecureHash in the body, stored, then applied by a queued job.
+    Route::post('/payments/webhooks/amwal/{tenant?}', [\App\Http\Controllers\Api\PaymentWebhookController::class, 'amwal'])
+        ->middleware('throttle:payment-webhooks')
+        ->name('payments.webhooks.amwal');
 });
 
 // Protected routes - Authentication required

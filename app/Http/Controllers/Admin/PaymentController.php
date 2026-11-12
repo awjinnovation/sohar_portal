@@ -17,7 +17,6 @@ use App\Models\WalletTransaction;
 use App\Services\Payments\Gateway\GatewayException;
 use App\Services\Payments\Gateway\ThawaniGateway;
 use App\Services\Payments\PaymentRecorder;
-use App\Services\Payments\ThawaniCheckout;
 use App\Services\Wallet\WalletAdminService;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\Request;
@@ -92,13 +91,14 @@ class PaymentController extends Controller
     }
 
     /** POST payments/{payment}/reconcile — ask the gateway now. */
-    public function reconcile(Payment $payment, ThawaniCheckout $thawani, PaymentRecorder $recorder)
+    public function reconcile(Payment $payment, PaymentRecorder $recorder)
     {
-        abort_unless($payment->gateway === ThawaniGateway::NAME, 404);
+        $flow = \App\Services\Payments\GatewayCheckouts::for($payment);
+        abort_unless($flow !== null, 404);
         $recorder->record($payment, 'check_requested', 'admin');
 
         try {
-            $fresh = $thawani->reconcile($payment, 'admin', 'interactive');
+            $fresh = $flow->reconcile($payment, 'admin', 'interactive');
         } catch (GatewayException $e) {
             return back()->with('error', __('تعذّر الاتصال ببوابة الدفع: :message', ['message' => $e->getMessage()]));
         }
@@ -205,6 +205,7 @@ class PaymentController extends Controller
         $message = match (true) {
             $payment->method === Payment::METHOD_WALLET => 'استُردت الدفعة وأُعيد المبلغ إلى المحفظة',
             $payment->gateway === ThawaniGateway::NAME => 'استُردت الدفعة، وأُرسل طلب إعادة المبلغ إلى البطاقة عبر ثواني.',
+            $payment->gateway === \App\Services\Payments\Gateway\AmwalGateway::NAME => 'استُردت الدفعة، وأُرسل طلب إعادة المبلغ إلى البطاقة عبر أموال.',
             default => 'سُجِّلت الدفعة مستردة. أكمل الاسترداد عبر بوابة الدفع.',
         };
 

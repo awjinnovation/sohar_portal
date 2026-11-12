@@ -68,9 +68,9 @@
                         <p class="text-muted small">
                             {{ __('ستُلغى التذاكر، ويعود إلى المحفظة ما دُفع منها إن وُجد، وتُرجَع التأمينات وتُستعاد النقاط.') }}
                         </p>
-                        @if($payment->method === 'gateway' && $payment->gateway === 'thawani')
+                        @if($payment->method === 'gateway' && in_array($payment->gateway, \App\Services\Payments\GatewayCheckouts::RECONCILED, true))
                             <div class="alert alert-info small d-flex gap-2 align-items-start">
-                                <i class="bi bi-info-circle-fill"></i><span>{{ __('يُعاد المبلغ إلى البطاقة تلقائيًا عبر ثواني، وتُعاد المحاولة إذا تعذّر الاتصال.') }}</span>
+                                <i class="bi bi-info-circle-fill"></i><span>{{ $payment->gateway === 'amwal' ? __('يُعاد المبلغ إلى البطاقة تلقائيًا عبر أموال، وتُعاد المحاولة إذا تعذّر الاتصال.') : __('يُعاد المبلغ إلى البطاقة تلقائيًا عبر ثواني، وتُعاد المحاولة إذا تعذّر الاتصال.') }}</span>
                             </div>
                         @elseif($payment->method === 'gateway')
                             <div class="alert alert-warning small d-flex gap-2 align-items-start">
@@ -112,7 +112,7 @@
                                     @if($refund->status === 'needs_review')
                                         <div class="form-check small mb-2">
                                             <input class="form-check-input" type="checkbox" name="confirm_checked" value="1" id="confirm_checked" required>
-                                            <label class="form-check-label" for="confirm_checked">{{ __('تأكدتُ من بوابة ثواني أن المبلغ لم يُرد بعد') }}</label>
+                                            <label class="form-check-label" for="confirm_checked">{{ $payment->gateway === 'amwal' ? __('تأكدتُ من بوابة تجار أموال أن المبلغ لم يُرد بعد') : __('تأكدتُ من بوابة ثواني أن المبلغ لم يُرد بعد') }}</label>
                                         </div>
                                     @endif
                                     <button type="submit" class="btn btn-outline-primary w-100" data-busy><i class="bi bi-arrow-repeat"></i> {{ __('أعد إرسال الاسترداد') }}</button>

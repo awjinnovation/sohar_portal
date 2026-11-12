@@ -62,8 +62,8 @@ class WalletAdminService
      * Refund a completed ticket payment: tickets cancelled, wallet-paid
      * amounts credited back in the buckets they came from, deposits
      * released, points spent restored and points earned reversed (§6a).
-     * Thawani card payments are refunded to the card through the Thawani
-     * API (payment_refunds + ProcessGatewayRefund, retried); other card
+     * Thawani and Amwal card payments are refunded to the card through the
+     * gateway API (payment_refunds + ProcessGatewayRefund, retried); other card
      * payments are marked refunded and repaid through the bank's portal.
      */
     public function refundPayment(Payment $payment, User $admin, ?string $reason = null): Payment
@@ -121,7 +121,7 @@ class WalletAdminService
 
             app(\App\Services\Payments\PaymentRecorder::class)->transition($locked, $from, 'refunded', 'admin', array_filter(['reason' => $reason]));
 
-            if ($locked->method === Payment::METHOD_GATEWAY && $locked->gateway === \App\Services\Payments\Gateway\ThawaniGateway::NAME) {
+            if ($locked->method === Payment::METHOD_GATEWAY && in_array($locked->gateway, \App\Services\Payments\GatewayCheckouts::RECONCILED, true)) {
                 $refund = \App\Models\PaymentRefund::firstOrCreate(['payment_id' => $locked->id], [
                     'tenant_id' => $locked->tenant_id,
                     'gateway' => $locked->gateway,

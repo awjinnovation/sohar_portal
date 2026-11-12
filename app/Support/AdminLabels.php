@@ -96,6 +96,7 @@ class AdminLabels
         'checkout_opened' => 'فُتحت صفحة الدفع',
         'gateway_checked' => 'استُعلم من البوابة',
         'webhook_received' => 'وصل إشعار من البوابة',
+        'callback_received' => 'عاد الزائر من نافذة الدفع',
         'completed' => 'اكتملت الدفعة',
         'cancelled' => 'أُلغيت الدفعة',
         'failed' => 'فشلت الدفعة',

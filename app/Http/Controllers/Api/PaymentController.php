@@ -162,10 +162,10 @@ class PaymentController extends Controller
             ->firstOrFail();
     }
 
-    /** A pending Thawani payment is checked with Thawani (throttled) before answering a poll. */
+    /** A pending Thawani / Amwal payment is checked with the gateway (throttled) before answering a poll. */
     private function fresh(Payment $payment): Payment
     {
-        return app(\App\Services\Payments\ThawaniCheckout::class)->checkIfStale($payment);
+        return \App\Services\Payments\GatewayCheckouts::checkIfStale($payment);
     }
 
     private function statusPayload(Payment $payment): array
@@ -219,10 +219,11 @@ class PaymentController extends Controller
         $payment = $this->ownedPayment($request, $request->input('transaction_id') ?? $request->input('order_id'));
 
         if ($payment->status === 'pending') {
-            // Thawani: asked first and its sessions cancelled, so the open
-            // payment page cannot be paid after the app gave up on it.
-            $payment = $payment->gateway === \App\Services\Payments\Gateway\ThawaniGateway::NAME
-                ? app(\App\Services\Payments\ThawaniCheckout::class)->cancel($payment, 'api', 'cancelled_in_app')
+            // Thawani / Amwal: the gateway is asked first (paid after all →
+            // completed); Thawani's sessions are cancelled there too.
+            $flow = \App\Services\Payments\GatewayCheckouts::for($payment);
+            $payment = $flow
+                ? $flow->cancel($payment, 'api', 'cancelled_in_app')
                 : $fulfillment->fail($payment, 'cancelled', [], 'api', ['reason' => 'cancelled_in_app']);
         }
 

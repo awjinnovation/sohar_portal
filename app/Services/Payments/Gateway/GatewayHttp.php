@@ -85,7 +85,9 @@ class GatewayHttp
                 return new GatewayResponse($status, $json, $body, $correlation);
             }
 
-            $message = trim((string) ($json['description'] ?? $json['message'] ?? '')) ?: "HTTP $status";
+            // Amwal puts the reason in errorList ("message" is a trace code there).
+            $errorList = is_array($json['errorList'] ?? null) ? implode('; ', array_filter(array_map(fn ($e) => is_scalar($e) ? (string) $e : null, $json['errorList']))) : '';
+            $message = trim((string) ($json['description'] ?? ($errorList !== '' ? $errorList : null) ?? $json['message'] ?? '')) ?: "HTTP $status";
             $retryStatus = in_array($status, self::RETRY_STATUSES, true);
             $this->record($request, $correlation, $attempt, $status, $body, $retryStatus || $status >= 500 ? 'server_error' : 'client_error', $message, $ms);
 

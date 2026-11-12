@@ -42,8 +42,8 @@ class TopupController extends Controller
     {
         $topup = WalletTopup::with('payment')->where('user_id', $request->user()->id)->findOrFail($id);
         if ($topup->status === 'pending' && $topup->payment) {
-            // Thawani: ask the gateway now (throttled) instead of waiting for the webhook.
-            $payment = app(\App\Services\Payments\ThawaniCheckout::class)->checkIfStale($topup->payment);
+            // Thawani / Amwal: ask the gateway now (throttled) instead of waiting for the webhook.
+            $payment = \App\Services\Payments\GatewayCheckouts::checkIfStale($topup->payment);
             if ($payment->status !== $topup->payment->status) {
                 $topup->refresh()->load('payment');
             }
