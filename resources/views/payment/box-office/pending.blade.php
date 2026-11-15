@@ -13,6 +13,8 @@
         <div class="note error" data-notice="failed"><i class="bi bi-x-circle"></i><div>{{ $t('لم ينجح الدفع ولم يُخصم أي مبلغ. أعد المحاولة أو استعمل بطاقة أخرى.', 'The payment did not go through and nothing was charged. Try again or use another card.') }}</div></div>
     @elseif($notice === 'cancelled')
         <div class="note warn" data-notice="cancelled"><i class="bi bi-info-circle"></i><div>{{ $t('لم يكتمل الدفع ولم يُخصم أي مبلغ. أعد المحاولة بالضغط على زر الدفع.', 'The payment was not completed and nothing was charged. Press the pay button to try again.') }}</div></div>
+    @elseif($notice === 'unavailable')
+        <div class="note warn" data-notice="unavailable"><i class="bi bi-info-circle"></i><div>{{ $t('لم تعد بوابة الدفع هذه متاحة، ولم يُخصم أي مبلغ. ادفع بالزر أدناه.', 'That payment option is no longer available and nothing was charged. Pay with the button below.') }}</div></div>
     @endif
 
     <div class="bo-timer {{ $seconds <= 120 ? 'is-low' : '' }}" id="boTimer" data-seconds="{{ $seconds }}" role="timer" aria-live="off">
@@ -28,11 +30,22 @@
     <form method="POST" action="{{ route('box-office.pay.checkout', ['token' => $order->public_token]) }}" class="actions bo-pay">
         @csrf
         <input type="hidden" name="lang" value="{{ $lang }}">
-        <button type="submit" class="btn btn-primary" data-pay-button>
-            <i class="bi bi-credit-card-2-front"></i>
-            <span>{{ $t('ادفع', 'Pay') }}</span>
-            <x-admin.money :minor="(int) $order->total_minor" :currency="$order->currency" />
-        </button>
+        @if(! empty($gateways))
+            {{-- Two gateways on: one button each, the default first. --}}
+            @foreach($gateways as $g)
+                <button type="submit" name="gateway" value="{{ $g['id'] }}" class="btn btn-primary" data-pay-button data-gateway="{{ $g['id'] }}">
+                    <i class="bi bi-credit-card-2-front"></i>
+                    <span>{{ $t('ادفع عبر', 'Pay with') }} {{ $isAr ? $g['name']['ar'] : $g['name']['en'] }}</span>
+                    <x-admin.money :minor="(int) $order->total_minor" :currency="$order->currency" />
+                </button>
+            @endforeach
+        @else
+            <button type="submit" class="btn btn-primary" data-pay-button>
+                <i class="bi bi-credit-card-2-front"></i>
+                <span>{{ $t('ادفع', 'Pay') }}</span>
+                <x-admin.money :minor="(int) $order->total_minor" :currency="$order->currency" />
+            </button>
+        @endif
         <p class="muted bo-secure"><i class="bi bi-shield-lock"></i> {{ $t('يُدفع المبلغ عبر بوابة الدفع الآمنة، وتصل التذاكر إلى الحساب المرتبط برقم الهاتف أعلاه.', 'You pay through the secure payment gateway. The tickets go to the account of the phone number above.') }}</p>
     </form>
 @endsection
@@ -53,8 +66,10 @@
     var timer = setInterval(tick, 1000);
     tick();
     document.querySelector('.bo-pay').addEventListener('submit', function () {
-        var b = document.querySelector('[data-pay-button]');
-        b.disabled = true; b.style.opacity = '.75';
+        // After the browser has read the pressed button's gateway.
+        setTimeout(function () {
+            document.querySelectorAll('[data-pay-button]').forEach(function (b) { b.disabled = true; b.style.opacity = '.75'; });
+        }, 0);
     });
 })();
 </script>

@@ -452,10 +452,26 @@ class BoxOfficeService
     /**
      * The gateway payment of a pending order (reused while pending, a new
      * one after a failed / cancelled attempt). Null when the order cannot be paid.
+     *
+     * $gateway: the gateway the visitor picked on /pay/{token} when two are
+     * on (null = the default; GATEWAY_NOT_AVAILABLE for one that is off). A
+     * pending payment on the other gateway is cancelled first through its
+     * own flow (the gateway is asked; paid after all → the order is paid and
+     * nothing new is started).
      */
-    public function startPayment(BoxOfficeOrder $order, ?string $lang = null): ?Payment
+    public function startPayment(BoxOfficeOrder $order, ?string $lang = null, ?string $gateway = null): ?Payment
     {
-        return DB::transaction(function () use ($order, $lang) {
+        if ($gateway !== null) {
+            $gateway = app(\App\Services\Payments\PaymentGatewayManager::class)->resolve(Tenant::findOrFail($order->tenant_id), $gateway);
+            $current = $order->payment_id ? Payment::withoutTenantScope()->find($order->payment_id) : null;
+            if ($current && $current->status === 'pending' && $current->gateway !== $gateway) {
+                $flow = \App\Services\Payments\GatewayCheckouts::for($current);
+                $flow ? $flow->cancel($current, 'redirect', 'gateway_switched')
+                    : $this->fulfillment->fail($current, 'cancelled', [], 'redirect', ['reason' => 'gateway_switched']);
+            }
+        }
+
+        return DB::transaction(function () use ($order, $lang, $gateway) {
             $locked = BoxOfficeOrder::withoutTenantScope()->with('lines')->whereKey($order->id)->lockForUpdate()->firstOrFail();
             if (! $locked->isPending() || $locked->isDue()) {
                 return null;
@@ -465,7 +481,7 @@ class BoxOfficeService
                 return null;
             }
             $current = $locked->payment_id ? Payment::withoutTenantScope()->find($locked->payment_id) : null;
-            if ($current && $current->status === 'pending') {
+            if ($current && $current->status === 'pending' && ($gateway === null || $current->gateway === $gateway)) {
                 if ($lang && ($current->metadata['box_office_lang'] ?? null) !== $lang) {
                     $current->metadata = array_merge($current->metadata ?? [], ['box_office_lang' => $lang]);
                     $current->save();
@@ -478,7 +494,7 @@ class BoxOfficeService
             [$buyer, $tenant, $quote, $bookingDate, $meta] = $this->paymentInput($locked);
 
             $payment = $this->checkout->createGatewayPayment($buyer, $tenant, $quote, $bookingDate, "box_office:{$locked->id}:{$attempt}",
-                $meta + ['box_office_lang' => $lang ?? $locked->locale]);
+                $meta + ['box_office_lang' => $lang ?? $locked->locale], $gateway);
 
             $locked->payment_id = $payment->id;
             $locked->meta = array_merge($locked->meta ?? [], ['payment_attempts' => $attempt]);

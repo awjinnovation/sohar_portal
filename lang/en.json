@@ -1536,9 +1536,7 @@
     "بنك مسقط": "Bank Muscat",
     "بوابة محلية للتجربة": "Local test gateway",
     "تُحفظ المفاتيح مشفّرة ولا تُعرض. اترك الحقل فارغًا لتبقى القيمة الحالية.": "Keys are stored encrypted and never shown. Leave a field blank to keep the current value.",
-    "بوابة الدفع المستخدمة": "Payment gateway",
     "افتراضي المنصة (:driver)": "Platform default (:driver)",
-    "تبقى كل دفعة على البوابة التي أُنشئت بها.": "Each payment stays on the gateway it was created with.",
     "بيئة ثواني": "Thawani environment",
     "افتراضي المنصة (:mode)": "Platform default (:mode)",
     "تجريبية": "Test",
@@ -1560,5 +1558,13 @@
     "نقاط المكافآت واستبدالها برصيد": "Reward points and redeeming them for balance",
     "طلبات استرداد رصيد المحفظة": "Wallet balance refund requests",
     "المطاعم والأكشاك ودليل التجار والدفع لديهم": "Restaurants, kiosks, the vendor directory and paying at vendors",
-    "مسح التذاكر عند البوابات ومن حسابات الموظفين": "Ticket scanning at the gates and from staff accounts"
+    "مسح التذاكر عند البوابات ومن حسابات الموظفين": "Ticket scanning at the gates and from staff accounts",
+    "بوابات الدفع المفعّلة للزوار": "Payment gateways on for visitors",
+    "إذا فُعّلت بوابتا الدفع اختار الزائر إحداهما عند الدفع في التطبيق وصفحة رابط الدفع وصفحة الحجز، وإذا فُعّلت واحدة دفع بها دون سؤال. لا تُفعَّل بوابة دفع قبل إدخال بياناتها.": "With both gateways on, visitors choose one when they pay in the app, on the payment link page and on the booking page; with one on, they pay with it without being asked. A gateway can only be switched on once its details are entered.",
+    "بوابة الدفع الافتراضية": "Default payment gateway",
+    "تُستعمل حين لا يختار الزائر، ويجب أن تكون من بوابات الدفع المفعّلة. ويعمل بنك مسقط وبوابة الدفع المحلية للتجربة وحدهما. وتبقى كل دفعة على بوابة الدفع التي أُنشئت بها.": "Used when the visitor does not choose; it must be one of the gateways that are on. Bank Muscat and the local test gateway work alone. Every payment stays on the gateway it was created with.",
+    "الافتراضية للزوار": "Default for visitors",
+    "مفعّلة للزوار": "On for visitors",
+    "بوابات الدفع المفعّلة للزوار الآن:": "Gateways on for visitors now:",
+    "تُفعَّل بوابة الدفع وتُعطَّل في إعدادات المنظمة، وتعمل الدفعة التجريبية سواء أكانت بوابة الدفع مفعّلة للزوار أم لا؛ وتبقى كل دفعة على بوابة الدفع التي أُنشئت بها.": "Gateways are switched on and off in the organization settings. A test payment works whether or not the gateway is on for visitors, and every payment stays on the gateway it was created with."
 }

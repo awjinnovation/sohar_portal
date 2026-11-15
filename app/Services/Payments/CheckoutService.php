@@ -217,7 +217,8 @@ class CheckoutService
 
     /**
      * @param  array{event_id:int, booking_date?:string|null, quantity?:int, ticket_type?:string|null, items?: list<array{ticket_type_id:int, quantity:int}>,
-     *               method:string, points_to_redeem?:int|null, idempotency_key?:string|null}  $input
+     *               method:string, points_to_redeem?:int|null, idempotency_key?:string|null, gateway?:string|null}  $input
+     *               `gateway`: one of the tenant's enabled gateways (absent = the default; ignored for wallet payments)
      * @param  array  $extraMeta  merged into the payment's metadata (e.g. `web_booking` for the event booking page)
      */
     public function initialize(User $user, Tenant $tenant, array $input, array $extraMeta = []): Payment
@@ -234,10 +235,12 @@ class CheckoutService
         if (! $tenant->moduleEnabled('tickets')) {
             throw ApiException::moduleDisabled('tickets');
         }
+        // GATEWAY_NOT_AVAILABLE before anything is held (an idempotent replay returned above).
+        $gateway = $method === Payment::METHOD_GATEWAY ? $this->gateways->resolve($tenant, $input['gateway'] ?? null) : null;
 
         try {
             // attempts: complete() runs nested in here, so a deadlock is retried at this level.
-            return DB::transaction(function () use ($user, $tenant, $input, $method, $key, $extraMeta) {
+            return DB::transaction(function () use ($user, $tenant, $input, $method, $key, $extraMeta, $gateway) {
                 // Serialise capacity checks for this event.
                 Event::whereKey($input['event_id'])->lockForUpdate()->first();
 
@@ -247,7 +250,7 @@ class CheckoutService
                 $quote = $this->quoteItems($tenant, (int) $input['event_id'], $input['booking_date'] ?? null, $items,
                     (int) ($input['points_to_redeem'] ?? 0), $user);
 
-                $payment = $this->createPayment($user, $tenant, $quote, $quote['booking_date'], $method, $key, $extraMeta);
+                $payment = $this->createPayment($user, $tenant, $quote, $quote['booking_date'], $method, $key, $extraMeta, $gateway);
 
                 if ($quote['points_to_redeem'] > 0) {
                     $this->points->spend($user, $tenant, $quote['points_to_redeem'], $payment, "pay:{$payment->id}:points");
@@ -297,11 +300,13 @@ class CheckoutService
      * A pending gateway payment for an already priced order (gate box
      * office: the order's stored quote, its seats already held). No
      * capacity check, no points; completion goes through
-     * PaymentFulfillmentService like any checkout.
+     * PaymentFulfillmentService like any checkout. $gateway: an enabled
+     * gateway the visitor chose (null = the default).
      */
-    public function createGatewayPayment(User $user, Tenant $tenant, array $quote, ?string $bookingDate, ?string $key, array $extraMeta = []): Payment
+    public function createGatewayPayment(User $user, Tenant $tenant, array $quote, ?string $bookingDate, ?string $key, array $extraMeta = [], ?string $gateway = null): Payment
     {
-        return $this->createPayment($user, $tenant, $quote, $bookingDate, Payment::METHOD_GATEWAY, $key, $extraMeta);
+        return $this->createPayment($user, $tenant, $quote, $bookingDate, Payment::METHOD_GATEWAY, $key, $extraMeta,
+            $this->gateways->resolve($tenant, $gateway));
     }
 
     /**
@@ -321,7 +326,7 @@ class CheckoutService
             : null;
     }
 
-    private function createPayment(User $user, Tenant $tenant, array $quote, ?string $bookingDate, string $method, ?string $key, array $extraMeta = []): Payment
+    private function createPayment(User $user, Tenant $tenant, array $quote, ?string $bookingDate, string $method, ?string $key, array $extraMeta = [], ?string $gateway = null): Payment
     {
         $decimals = $tenant->currencyDecimals();
         $payment = new Payment([
@@ -329,7 +334,7 @@ class CheckoutService
             'transaction_id' => 'TXN'.strtoupper(Str::random(12)),
             'payment_type' => Payment::TYPE_TICKET,
             'method' => $method,
-            'gateway' => $method === Payment::METHOD_GATEWAY ? $this->gateways->driver($tenant) : null,
+            'gateway' => $method === Payment::METHOD_GATEWAY ? ($gateway ?? $this->gateways->defaultGateway($tenant)) : null,
             'payable_id' => $quote['event']->id,
             'payable_type' => Event::class,
             'amount' => \App\Support\Money::format($quote['total_minor'], $decimals),

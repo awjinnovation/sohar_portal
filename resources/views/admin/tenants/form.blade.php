@@ -436,10 +436,30 @@
                             $currentMode = old('thawani_mode', data_get($tenant->settings ?? [], 'payments.thawani.mode'));
                             $currentAmwalMode = old('amwal_mode', data_get($tenant->settings ?? [], 'payments.amwal.mode'));
                             $platformDriver = config('payments.driver');
+                            try {
+                                $enabledGateways = app(\App\Services\Payments\PaymentGatewayManager::class)->enabled($tenant);
+                            } catch (\RuntimeException $e) {
+                                $enabledGateways = [];
+                            }
+                            $checkedGateways = is_array(old('payments_gateways')) ? array_filter(old('payments_gateways')) : $enabledGateways;
                         @endphp
                         <div class="row">
+                            <div class="col-12 field" data-gateway-switches>
+                                <div class="form-label">{{ __('بوابات الدفع المفعّلة للزوار') }}</div>
+                                <input type="hidden" name="payments_gateways[]" value="">
+                                <div class="d-flex flex-wrap gap-3">
+                                    @foreach(\App\Services\Payments\PaymentGatewayManager::SELECTABLE as $g)
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="pg_{{ $g }}" name="payments_gateways[]" value="{{ $g }}" @checked(in_array($g, $checkedGateways, true))>
+                                            <label class="form-check-label" for="pg_{{ $g }}">{{ $driverLabels[$g] ?? $g }}</label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="form-text">{{ __('إذا فُعّلت بوابتا الدفع اختار الزائر إحداهما عند الدفع في التطبيق وصفحة رابط الدفع وصفحة الحجز، وإذا فُعّلت واحدة دفع بها دون سؤال. لا تُفعَّل بوابة دفع قبل إدخال بياناتها.') }}</div>
+                                @error('payments_gateways')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                            </div>
                             <div class="col-md-6 field">
-                                <label class="form-label" for="payments_driver">{{ __('بوابة الدفع المستخدمة') }}</label>
+                                <label class="form-label" for="payments_driver">{{ __('بوابة الدفع الافتراضية') }}</label>
                                 <select name="payments_driver" id="payments_driver" class="form-select @error('payments_driver') is-invalid @enderror">
                                     <option value="">{{ __('افتراضي المنصة (:driver)', ['driver' => $driverLabels[$platformDriver] ?? $platformDriver]) }}</option>
                                     @foreach(\App\Services\Payments\PaymentGatewayManager::DRIVERS as $d)
@@ -447,7 +467,7 @@
                                         <option value="{{ $d }}" @selected($currentDriver === $d)>{{ $driverLabels[$d] ?? $d }}</option>
                                     @endforeach
                                 </select>
-                                <div class="form-text">{{ __('تبقى كل دفعة على البوابة التي أُنشئت بها.') }}</div>
+                                <div class="form-text">{{ __('تُستعمل حين لا يختار الزائر، ويجب أن تكون من بوابات الدفع المفعّلة. ويعمل بنك مسقط وبوابة الدفع المحلية للتجربة وحدهما. وتبقى كل دفعة على بوابة الدفع التي أُنشئت بها.') }}</div>
                                 @error('payments_driver')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-md-6 field">
@@ -586,6 +606,22 @@
             </div>
         </div>
     </form>
+
+    @if($platform)
+        @push('scripts')
+        <script>
+        // Choosing a default gateway switches it on (the server still checks both).
+        (function () {
+            var select = document.getElementById('payments_driver');
+            if (!select) return;
+            select.addEventListener('change', function () {
+                var box = document.getElementById('pg_' + select.value);
+                if (box) box.checked = true;
+            });
+        })();
+        </script>
+        @endpush
+    @endif
 
     @if($platform && $tenant->exists)
         {{-- Outside the main form (which sends _method=PUT). --}}

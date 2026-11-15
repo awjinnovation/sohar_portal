@@ -104,14 +104,16 @@ class PaymentController extends Controller
 
     /**
      * POST /payments/initialize
-     * {event_id, booking_date (only for dated types), quantity | items, ticket_type?, method: gateway|wallet, points_to_redeem?, idempotency_key}
-     * Any client-sent `amount` is ignored.
+     * {event_id, booking_date (only for dated types), quantity | items, ticket_type?, method: gateway|wallet, points_to_redeem?, idempotency_key,
+     *  gateway?: one of GET /tenant/config → payments.gateways[].id (absent = default_gateway; ignored for wallet)}
+     * Any client-sent `amount` is ignored. 422 GATEWAY_NOT_AVAILABLE for a gateway that is not on.
      */
     public function initialize(Request $request)
     {
         $data = $request->validate($this->checkoutRules() + [
             'method' => 'nullable|in:gateway,wallet',
             'idempotency_key' => 'required_if:method,wallet|nullable|string|max:100',
+            'gateway' => 'nullable|string|max:40',
         ]);
         $data['event_id'] = (int) ($data['event_id'] ?? $data['payable_id']);
         $data['method'] = $data['method'] ?? Payment::METHOD_GATEWAY;
@@ -130,6 +132,8 @@ class PaymentController extends Controller
             'transaction_id' => $payment->transaction_id,
             'status' => $payment->status,
             'method' => $payment->method,
+            // The gateway used (null for wallet payments).
+            'gateway' => $payment->method === Payment::METHOD_GATEWAY ? $payment->gateway : null,
             'amount_minor' => $payment->amount_minor,
             'amount' => $tenant->formatMoney((int) $payment->amount_minor),
             'currency' => $payment->currency,

@@ -21,7 +21,8 @@ use Illuminate\Validation\Rule;
 /**
  * Admin → Payments → Gateway test (platform admins): both card gateways'
  * settings at a glance, and a small real charge through the one chosen —
- * whatever gateway visitors currently use — then check / void / refund it
+ * whether or not it is switched on for visitors (payments.gateways) — then
+ * check / void / refund it
  * here. A test payment (payment_type gateway_test) issues nothing and is not
  * revenue; it goes through the same pages, webhooks, reconciler and refund
  * code as a real one.
@@ -73,9 +74,16 @@ class GatewayTestController extends Controller
             $payments = $payments->map(fn ($p) => $p->id === $focus->id ? $focus : $p);
         }
 
+        try {
+            $enabled = $manager->enabled($tenant);
+        } catch (\RuntimeException) {
+            $enabled = [];
+        }
+
         return view('admin.payments.gateway-test', [
             'tenant' => $tenant,
-            'driver' => $manager->driver($tenant),
+            // Switched on for visitors, the default first (a test payment does not depend on it).
+            'enabled' => $enabled,
             'gateways' => $this->gateways(),
             'status' => $status,
             'payments' => $payments,
@@ -110,7 +118,7 @@ class GatewayTestController extends Controller
             'transaction_id' => 'TST'.strtoupper(Str::random(12)),
             'payment_type' => Payment::TYPE_GATEWAY_TEST,
             'method' => Payment::METHOD_GATEWAY,
-            // The chosen gateway, not the tenant's current one: test before switching.
+            // The chosen gateway, on for visitors or not: test before switching it on.
             'gateway' => $data['gateway'],
             'amount' => Money::format($minor, $tenant->currencyDecimals()),
             'amount_minor' => $minor,

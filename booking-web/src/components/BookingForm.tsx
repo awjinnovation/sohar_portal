@@ -16,10 +16,12 @@ export function BookingForm(props: {
   t: Strings;
   hasTickets: boolean;
   busy: boolean;
-  onSubmit: (order: Order) => void;
+  /** gateway: the button pressed when two gateways are on (absent = the default). */
+  onSubmit: (order: Order, gateway?: string) => void;
 }) {
   const { data, t, hasTickets, busy, onSubmit } = props;
   const { tenant, ticket_types: types, dates } = data;
+  const gateways = data.payments?.gateways ?? [];
   const [date, setDate] = useState<string | null>(() => dates.find((d) => d.available !== 0)?.date ?? null);
   const [qty, setQty] = useState<Record<number, number>>({});
 
@@ -38,13 +40,24 @@ export function BookingForm(props: {
   const step = (id: number, delta: number, max: number) =>
     setQty((prev) => ({ ...prev, [id]: Math.min(max, Math.max(0, (prev[id] ?? 0) + delta)) }));
 
+  // A free order needs no gateway: one "Get the tickets" button.
+  const choose = gateways.length > 1 && !(count > 0 && minor === 0);
+
+  const send = (gateway?: string) => {
+    if (busy || count === 0) return;
+    onSubmit(
+      {
+        booking_date: dates.length ? date : null,
+        items: types.filter((type) => (qty[type.id] ?? 0) > 0).map((type) => ({ ticket_type_id: type.id, quantity: qty[type.id] })),
+      },
+      gateway,
+    );
+  };
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (busy || count === 0) return;
-    onSubmit({
-      booking_date: dates.length ? date : null,
-      items: types.filter((type) => (qty[type.id] ?? 0) > 0).map((type) => ({ ticket_type_id: type.id, quantity: qty[type.id] })),
-    });
+    // Enter key with two gateways: the first (default) one.
+    send(choose ? gateways[0].id : undefined);
   };
 
   const dayLabel = (d: BookingDate) => (d.relative === 'today' ? t.today : d.relative === 'tomorrow' ? t.tomorrow : d.day_label);
@@ -127,10 +140,29 @@ export function BookingForm(props: {
           <Money minor={minor} currency={tenant.currency} decimals={tenant.currency_decimals} format={formatMinor} />
         </span>
       </div>
-      <button type="submit" className="btn btn-primary vb-pay" id="vbPay" disabled={busy || count === 0}>
-        {busy ? <span className="vb-spin" aria-hidden="true" /> : <Icon name="credit-card-2-front" />}{' '}
-        <span>{count > 0 && minor === 0 ? t.getTickets : t.payByCard}</span>
-      </button>
+      {choose ? (
+        gateways.map((g, i) => (
+          <button
+            key={g.id}
+            type="button"
+            className="btn btn-primary vb-pay"
+            id={i === 0 ? 'vbPay' : undefined}
+            data-gateway={g.id}
+            disabled={busy || count === 0}
+            onClick={() => send(g.id)}
+          >
+            {busy ? <span className="vb-spin" aria-hidden="true" /> : <Icon name="credit-card-2-front" />}{' '}
+            <span>
+              {t.payWith} {g.name}
+            </span>
+          </button>
+        ))
+      ) : (
+        <button type="submit" className="btn btn-primary vb-pay" id="vbPay" disabled={busy || count === 0}>
+          {busy ? <span className="vb-spin" aria-hidden="true" /> : <Icon name="credit-card-2-front" />}{' '}
+          <span>{count > 0 && minor === 0 ? t.getTickets : t.payByCard}</span>
+        </button>
+      )}
       <p className="muted vb-secure">
         <Icon name="shield-lock" /> {t.secure}
       </p>

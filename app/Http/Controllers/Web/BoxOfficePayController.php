@@ -16,19 +16,20 @@ use Illuminate\Support\Facades\URL;
  * Public payment page of a gate box office order (docs/gate_sales_contract.md
  * §4), no login: the unguessable public_token is the secret.
  *
- * GET  /pay/{token}           pending (pay button + countdown) | paid
- *                             (tickets with QR codes) | expired | cancelled
- * POST /pay/{token}/checkout  → the order's gateway payment → the existing
- *                             signed /payment/redirect flow (Bank Muscat, or
- *                             the fake gateway locally). Webhook / return
- *                             pages stay the idempotent ones; they send the
- *                             visitor back here.
+ * GET  /pay/{token}           pending (pay button + countdown; one button per
+ *                             gateway when two are on) | paid (tickets with QR
+ *                             codes) | expired | cancelled
+ * POST /pay/{token}/checkout  {gateway?} → the order's gateway payment → the
+ *                             existing signed /payment/redirect flow (Thawani,
+ *                             Amwal SmartBox, Bank Muscat, or the fake gateway
+ *                             locally). Webhook / return pages stay the
+ *                             idempotent ones; they send the visitor back here.
  */
 class BoxOfficePayController extends Controller
 {
     public function __construct(private TenantContext $context, private BoxOfficeService $boxOffice) {}
 
-    public function show(Request $request, string $token)
+    public function show(Request $request, string $token, PaymentGatewayManager $gateways)
     {
         $order = $this->boxOffice->expireIfDue($this->order($token));
         $tenant = $this->context->get();
@@ -50,7 +51,9 @@ class BoxOfficePayController extends Controller
             'lang' => $lang,
             'tickets' => $tickets,
             'maskedPhone' => $order->maskedPhone($tenant),
-            'notice' => in_array($request->query('payment'), ['cancelled', 'failed'], true) ? $request->query('payment') : null,
+            // Two or more gateways on: one pay button each; one: the single button as before.
+            'gateways' => $order->status === BoxOfficeOrder::STATUS_PENDING ? $this->choices($gateways) : [],
+            'notice' => in_array($request->query('payment'), ['cancelled', 'failed', 'unavailable'], true) ? $request->query('payment') : null,
             'downloadUrl' => $tickets->isNotEmpty() && ($tx = $order->payment?->transaction_id)
                 ? URL::temporarySignedRoute('payment.download', now()->addDays(30), ['transactionId' => $tx])
                 : null,
@@ -65,13 +68,37 @@ class BoxOfficePayController extends Controller
     {
         $order = $this->boxOffice->expireIfDue($this->order($token));
         $lang = $this->lang($request, $order, $this->context->get());
-        $payment = $order->isPending() ? $this->boxOffice->startPayment($order, $lang) : null;
+        // Sent by the per-gateway buttons only; absent = the default, as before.
+        $gateway = is_string($request->input('gateway')) && $request->input('gateway') !== '' ? substr($request->input('gateway'), 0, 40) : null;
+
+        try {
+            $payment = $order->isPending() ? $this->boxOffice->startPayment($order, $lang, $gateway) : null;
+        } catch (\App\Exceptions\ApiException $e) {
+            // The gateway was switched off after the page was opened: the page now shows the ones that are on.
+            return redirect()->route('box-office.pay', ['token' => $token, 'lang' => $lang, 'payment' => 'unavailable']);
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            return redirect()->route('box-office.pay', ['token' => $token, 'lang' => $lang]);
+        }
 
         if (! $payment) {
             return redirect()->route('box-office.pay', ['token' => $token, 'lang' => $lang]);
         }
 
         return redirect()->away($gateways->paymentUrl($payment, ['lang' => $lang]))->header('Referrer-Policy', 'no-referrer');
+    }
+
+    /** @return list<array{id: string, name: array{ar: string, en: string}}> the gateways to offer, or [] when there is no choice */
+    private function choices(PaymentGatewayManager $gateways): array
+    {
+        try {
+            $enabled = $gateways->enabled($this->context->get());
+        } catch (\RuntimeException) {
+            return [];
+        }
+
+        return count($enabled) > 1
+            ? array_map(fn (string $id) => ['id' => $id, 'name' => PaymentGatewayManager::NAMES[$id] ?? ['ar' => $id, 'en' => $id]], $enabled)
+            : [];
     }
 
     private function order(string $token): BoxOfficeOrder

@@ -43,6 +43,7 @@ const ERROR: Record<string, [Tone, IconName]> = {
   per_order_limit: ['error', 'exclamation-circle'],
   sales_closed: ['error', 'lock'],
   type_not_available: ['error', 'x-circle'],
+  gateway_not_available: ['error', 'x-circle'],
   network: ['error', 'wifi-off'],
   session_ended: ['warn', 'clock-history'],
   unavailable: ['error', 'x-circle'],
@@ -247,10 +248,17 @@ export function App() {
     setError(null);
   };
 
-  const checkout = (order: Order) =>
+  const checkout = (order: Order, gateway?: string) =>
     run(async () => {
       if (!auth) return;
-      const res = await api.checkout(eventId!, auth.token, { lang, form_key: formKey, ...order });
+      let res;
+      try {
+        res = await api.checkout(eventId!, auth.token, { lang, form_key: formKey, ...order, ...(gateway ? { gateway } : {}) });
+      } catch (e) {
+        // That gateway was switched off meanwhile: reload the event to show the ones that are on.
+        if (e instanceof ApiError && e.code === 'GATEWAY_NOT_AVAILABLE') setReloadKey((k) => k + 1);
+        throw e;
+      }
       if (res.status === 'pending' && res.payment_url) {
         // The gateway sends the visitor back to /e/{id}?payment=…
         setBusy(true);

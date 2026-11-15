@@ -48,7 +48,7 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="gateway" id="gw_{{ $g }}" value="{{ $g }}" @checked(old('gateway', $default) === $g) @disabled(! $ok)>
                                 <label class="form-check-label" for="gw_{{ $g }}">{{ $names[$g] }}
-                                    @if($g === $driver)<span class="pill pill-sm pill-success"><span class="dot"></span>{{ __('المستخدمة للزوار') }}</span>@endif
+                                    @if(in_array($g, $enabled, true))<span class="pill pill-sm pill-success"><span class="dot"></span>{{ $g === ($enabled[0] ?? null) ? __('الافتراضية للزوار') : __('مفعّلة للزوار') }}</span>@endif
                                     @if(! $ok)<span class="pill pill-sm pill-neutral">{{ __('غير مُعدّة') }}</span>@endif
                                 </label>
                             </div>
@@ -78,8 +78,8 @@
         <div class="col-xl-7">
             <x-admin.card title="البوابات" icon="hdd-network">
                 <div class="small text-muted mb-3">
-                    {{ __('البوابة المستخدمة للزوار الآن:') }} <b>{{ $names[$driver] ?? $driver }}</b>.
-                    {{ __('للتبديل اختر البوابة في إعدادات المنظمة؛ تبقى كل دفعة على البوابة التي أُنشئت بها.') }}
+                    {{ __('بوابات الدفع المفعّلة للزوار الآن:') }} <b>{{ collect($enabled)->map(fn ($g) => $names[$g] ?? $g)->implode('، ') ?: '—' }}</b>.
+                    {{ __('تُفعَّل بوابة الدفع وتُعطَّل في إعدادات المنظمة، وتعمل الدفعة التجريبية سواء أكانت بوابة الدفع مفعّلة للزوار أم لا؛ وتبقى كل دفعة على بوابة الدفع التي أُنشئت بها.') }}
                 </div>
                 @foreach(['amwal', 'thawani'] as $g)
                     @php $s = $status[$g]; @endphp

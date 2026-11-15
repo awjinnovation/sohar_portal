@@ -44,7 +44,12 @@ use Illuminate\Validation\ValidationException;
  * message for: INVALID_PHONE, OTP_INVALID (data.attempts_remaining),
  * OTP_EXPIRED, OTP_ATTEMPTS_EXCEEDED, TOO_MANY_REQUESTS, ITEMS_REQUIRED,
  * DATE_REQUIRED, DATE_INVALID, SOLD_OUT (data.available), PER_ORDER_LIMIT
- * (data.per_order_max), SALES_CLOSED, TYPE_NOT_AVAILABLE, UNAVAILABLE.
+ * (data.per_order_max), SALES_CLOSED, TYPE_NOT_AVAILABLE, UNAVAILABLE,
+ * GATEWAY_NOT_AVAILABLE (checkout `gateway` not on; data.available).
+ *
+ * Gateways: GET → `payments.gateways` [{id, name}] (names in ?lang), empty
+ * when only one gateway is on; checkout accepts `gateway` (one of those ids,
+ * absent = the default).
  */
 class BookingController extends Controller
 {
@@ -116,6 +121,8 @@ class BookingController extends Controller
                     'num_label' => Carbon::parse($d['date'])->locale($lang)->translatedFormat('j M'),
                 ], $dates),
                 'today' => $today,
+                // Two or more gateways on: the site shows one pay button each; [] = one button, the default gateway.
+                'payments' => ['gateways' => VisitorBookingController::gatewayChoices($tenant, $lang)],
             ],
         ]);
     }
@@ -203,6 +210,7 @@ class BookingController extends Controller
             'items.*.ticket_type_id' => ['required', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:0', 'max:50'],
             'form_key' => ['nullable', 'string', 'max:64'],
+            'gateway' => ['nullable', 'string', 'max:40'],
         ]);
         $items = collect($data['items'] ?? [])
             ->map(fn ($item) => ['ticket_type_id' => (int) $item['ticket_type_id'], 'quantity' => (int) $item['quantity']])
@@ -222,10 +230,9 @@ class BookingController extends Controller
                 'booking_date' => $date,
                 'items' => $items,
                 'method' => Payment::METHOD_GATEWAY,
-                // A double tap of the same order reuses its payment; a changed order is a new one (as on the page).
-                'idempotency_key' => filled($data['form_key'] ?? null)
-                    ? 'web:'.substr(hash('sha256', $data['form_key'].'|'.json_encode($items).'|'.$date), 0, 40)
-                    : null,
+                'gateway' => $data['gateway'] ?? null,
+                // A double tap of the same order reuses its payment; a changed order (or gateway) is a new one (as on the page).
+                'idempotency_key' => VisitorBookingController::webKey($data['form_key'] ?? null, $items, $date, $data['gateway'] ?? null),
             ], ['web_booking' => true, 'web_booking_lang' => $lang]);
         } catch (ValidationException $e) {
             return isset($e->errors()['booking_date'])

@@ -14,15 +14,20 @@ class TopupController extends Controller
 {
     public function __construct(private TenantContext $context) {}
 
-    /** POST /wallet/topups {amount_minor, idempotency_key} */
+    /**
+     * POST /wallet/topups {amount_minor, idempotency_key, gateway?} — gateway: one of
+     * GET /tenant/config → payments.gateways[].id (absent = default_gateway);
+     * 422 GATEWAY_NOT_AVAILABLE for one that is not on. A replayed key returns the original top-up.
+     */
     public function store(Request $request, TopupService $topups, PaymentGatewayManager $gateways)
     {
         $data = $request->validate([
             'amount_minor' => 'required|integer|min:1',
             'idempotency_key' => 'required|string|max:100',
+            'gateway' => 'nullable|string|max:40',
         ]);
 
-        $topup = $topups->initialize($request->user(), $this->context->get(), (int) $data['amount_minor'], $data['idempotency_key']);
+        $topup = $topups->initialize($request->user(), $this->context->get(), (int) $data['amount_minor'], $data['idempotency_key'], $data['gateway'] ?? null);
         $topup->load('payment');
 
         $resource = new TopupResource($topup);

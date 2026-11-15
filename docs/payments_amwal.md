@@ -1,7 +1,7 @@
 # Amwal Pay (SmartBox)
 
-Card payments can run through **Amwal Pay**'s SmartBox instead of Thawani,
-per tenant (*Admin → Tenants → Payment gateway → أموال*). The flow keeps the
+Card payments can run through **Amwal Pay**'s SmartBox instead of, or next
+to, Thawani, per tenant (*Admin → Tenants → Payment gateway*, §5). The flow keeps the
 guarantees of the Thawani integration ([payments_thawani.md](payments_thawani.md)):
 retried and recorded gateway calls, a circuit breaker, exactly-once
 fulfilment, amount checks, late-capture and double-charge detection, and safe
@@ -85,8 +85,8 @@ safety (money out is never resent after an unclear answer; it goes to
 
 ## 4. Setup (UAT)
 
-1. *Admin → Tenants → (tenant) → Payment gateway*: driver **أموال**, Amwal
-   environment **UAT**, then under *Amwal Pay · SmartBox*: Merchant ID (MID),
+1. *Admin → Tenants → (tenant) → Payment gateway*: Amwal environment
+   **UAT**, then under *Amwal Pay · SmartBox*: Merchant ID (MID),
    Terminal ID (TID) and **Secure hash key** (stored encrypted, write-only).
    The merchant portal username / password are not needed here.
 2. *Test connection* (next to the Amwal fields): a signed, read-only inquiry.
@@ -105,26 +105,61 @@ Platform fallback (`.env`): `AMWAL_MODE`, `AMWAL_MERCHANT_ID`,
 `AMWAL_VIEW_TYPE` (1 popup, 2 full screen), `AMWAL_CONTACT_INFO_TYPE`
 (1 all … 4 none).
 
-## 5. Gateway test page and switching gateways
+## 5. Gateway test page, switching gateways on and off
 
 *Admin → Payments → Gateway test* (platform admins, `can:manage tenants`)
 shows both gateways for the current tenant (configured or not, UAT /
-production, MID / TID, notification URL, *Test connection*) and makes a
-**real small charge** (0.100–5 OMR) through the gateway you pick — Amwal or
-Thawani — whatever gateway visitors currently use. The payment page returns
-to the test page, which shows the result; *Check now* asks the gateway and
-*Refund* voids / refunds it (Amwal picks void on the same day). Test
-payments (`payment_type = gateway_test`) issue no tickets or wallet credit
-and are left out of dashboard revenue; they use the same pages, callbacks,
-notifications, reconciler and refund code as real payments.
+production, MID / TID, notification URL, *Test connection*, whether it is on
+for visitors) and makes a **real small charge** (0.100–5 OMR) through the
+gateway you pick — Amwal or Thawani — **whether or not it is switched on for
+visitors**. The payment page returns to the test page, which shows the
+result; *Check now* asks the gateway and *Refund* voids / refunds it (Amwal
+picks void on the same day). Test payments (`payment_type = gateway_test`)
+issue no tickets or wallet credit and are left out of dashboard revenue; they
+use the same pages, callbacks, notifications, reconciler and refund code as
+real payments.
 
-**Switching** is one setting: *Admin → Tenants → (tenant) → Payment gateway →
-بوابة الدفع المستخدمة* (`payments.driver`), or `PAYMENT_DRIVER` for tenants
-without their own. Both gateways can be configured at the same time. A
-payment keeps the gateway it was created with, so switching never strands an
-open payment (its callback, notifications, reconciliation and refunds still
-go to its own gateway), and switching back is the same one setting. The app
-needs no change: it always opens the `payment_url` it is given.
+**Switching.** *Admin → Tenants → (tenant) → Payment gateway*:
+
+| Field | Setting | Meaning |
+|---|---|---|
+| *بوابات الدفع المفعّلة للزوار* — a checkbox per gateway (ثواني, أموال) | `payments.gateways` (list) | The card gateways new payments may use. |
+| *بوابة الدفع الافتراضية* | `payments.driver` (blank = `PAYMENT_DRIVER`) | Used when the visitor / app names none. Must be one of those ticked. |
+
+Rules (checked on save, nothing is stored when refused): at least one
+gateway ticked; the default ticked; a gateway can only be ticked when it has
+credentials (the organization's, else the platform's `.env` ones) — **refused,
+not warned**, so visitors are never offered a gateway that cannot take a
+payment. Choosing a default ticks it in the browser. One gateway ticked is
+stored as before the setting existed (`payments.gateways` removed, only
+`payments.driver`), so a tenant that never touches the checkboxes behaves
+exactly as before. Bank Muscat and the local fake gateway work alone: as the
+default they ignore the checkboxes.
+
+With **two on**, the visitor chooses; with one, nobody is asked:
+
+- App: `GET /api/v1/tenant/config` → `payments: {gateways: [{id, name: {ar, en}}] (default first), default_gateway}`;
+  `POST /payments/initialize` and `POST /wallet/topups` take an optional
+  `gateway` (absent = default; ignored for `method: wallet`) and answer with
+  `gateway`. A gateway that is off → `422 GATEWAY_NOT_AVAILABLE` (`data:
+  {gateway, available}`). A replayed `idempotency_key` returns the original
+  payment whatever gateway it names. Old builds send nothing and keep working.
+  The config is cached per tenant but the cache is dropped when the tenant is
+  saved, so its `ETag` changes at once (apps may still hold it for the
+  `max-age` of 300 s; a stale choice gets `GATEWAY_NOT_AVAILABLE`, after which
+  the app should reload the config).
+- Gate box office `/pay/{token}`: one button per gateway (default first),
+  else the single *Pay* button. Choosing the other gateway after opening one
+  cancels the first payment through its own flow (the gateway is asked first)
+  and starts a new one.
+- Booking page `/e/{event}` and the booking site API (`GET …/booking/events/{id}`
+  → `payments.gateways` [{id, name}], empty with one gateway; checkout
+  `gateway`): one button per gateway. The React site (`booking-web/`) shows
+  them too once it is rebuilt; an old build keeps one button (the default).
+
+A payment keeps the gateway it was created with, so switching a gateway off
+never strands an open payment (its callback, notifications, reconciliation
+and refunds still go to its own gateway).
 
 Go-live order:
 
@@ -135,8 +170,9 @@ Go-live order:
 2. Production credentials from Amwal (and the notification URL registered on
    the production merchant), environment **Production**, *Test connection*,
    one 0.100 OMR test payment with a real card, then *Refund* it.
-3. Switch the tenant's driver to **أموال**. To roll back, set it back to
-   Thawani; payments already made on Amwal keep working.
+3. Tick **أموال** (with Thawani still ticked, visitors now choose; untick
+   Thawani and make Amwal the default to move everyone to Amwal). To roll
+   back, untick Amwal; payments already made on Amwal keep working.
 
 ## 6. To confirm in UAT
 

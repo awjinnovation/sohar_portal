@@ -218,6 +218,7 @@ class TenantManagementTest extends AdminPlatformTestCase
             ->getContent();
         $data = $this->formData($html, 'tenantForm');
         $data['payments_driver'] = 'thawani';
+        $data['payments_gateways'][] = 'thawani'; // a browser ticks it with the default (the server checks both)
         $data['thawani_mode'] = 'production';
         $data['gateway']['thawani'] = ['secret_key' => 'sk_live_value', 'publishable_key' => 'pk_live_value', 'webhook_secret' => 'wh_live_value'];
 
@@ -258,6 +259,7 @@ class TenantManagementTest extends AdminPlatformTestCase
             ->assertSessionHasErrors(['gateway.amwal.secure_key', 'gateway.amwal.merchant_id']);
 
         $data['payments_driver'] = 'amwal';
+        $data['payments_gateways'][] = 'amwal';
         $data['amwal_mode'] = 'uat';
         $data['gateway']['amwal'] = ['merchant_id' => '777001', 'terminal_id' => '888002', 'secure_key' => $key];
         $this->actingAs($super)->put(route('admin.tenants.update', $tenant), $data)->assertSessionHasNoErrors();

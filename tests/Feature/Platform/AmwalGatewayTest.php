@@ -60,6 +60,10 @@ class AmwalGatewayTest extends TestCase
             'services.amwal.merchant_id' => self::MID,
             'services.amwal.terminal_id' => self::TID,
             'services.amwal.secure_key' => self::KEY,
+            // A local .env with Thawani keys must not leak into these tests.
+            'services.thawani.secret_key' => null,
+            'services.thawani.publishable_key' => null,
+            'services.thawani.webhook_secret' => null,
             'payments.circuit.threshold' => 50,
         ]);
 

@@ -25,6 +25,8 @@ return [
         'type_sold_out_total' => 'نفدت تذاكر «:type».',
         'booking_date_required' => 'اختر يوم الزيارة.',
         'event_ended' => 'انتهت الفعالية.',
+        // Payment gateways (docs/payments_amwal.md §5).
+        'gateway_not_available' => 'طريقة الدفع هذه غير متاحة الآن. اختر طريقة أخرى.',
     ],
     // Validity of a ticket type or ticket (docs/ticket_types_contract.md §7).
     'validity' => [

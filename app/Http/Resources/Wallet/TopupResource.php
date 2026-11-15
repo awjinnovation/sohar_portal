@@ -18,6 +18,8 @@ class TopupResource extends JsonResource
             'topup_id' => $this->id,
             'transaction_id' => $this->payment?->transaction_id,
             'status' => $this->status,
+            // The gateway of the top-up's payment.
+            'gateway' => $this->payment?->gateway,
         ], $this->money('amount', $this->amount_minor), $this->money('bonus', (int) $this->bonus_minor),
             $this->paymentUrl ? ['payment_url' => $this->paymentUrl] : [], [
                 'created_at' => \App\Support\TenantTime::iso($this->created_at),
