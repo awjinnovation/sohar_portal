@@ -189,7 +189,10 @@ for an unknown reference answers `200 {success: true, data: []}`;
 Not stated precisely in Amwal's pages; the code follows Amwal's plugin and
 fails safe (needs review / API check) if they differ:
 
-- the `Amount` format of cloud notifications (assumed OMR, e.g. `2.5`);
+- the `Amount` format of cloud notifications (assumed OMR, e.g. `2.5`; when a
+  signed notification's amount differs, the API is asked first and the
+  notification amount is only flagged `amount_mismatch` if the API does not
+  settle it);
 - that the notification `MerchantId` / `TerminalId` equal the configured ones;
 - the `TxnType` values of refund / void notifications (only purchases are
   applied; others are recorded);

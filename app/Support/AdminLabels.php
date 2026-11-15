@@ -115,6 +115,7 @@ class AdminLabels
         'points_retaken' => 'خُصمت النقاط مجددًا',
         'points_retake_failed' => 'تعذّر خصم النقاط مجددًا',
         'box_office_paid_after_close' => 'دُفع طلب البوابة بعد انتهاء صلاحيته أو إلغائه',
+        'notification_amount_differs' => 'اختلف مبلغ الإشعار عن الدفعة، فاستُعلم من بوابة الدفع',
     ];
 
     public const PAYMENT_EVENT_SOURCES = [

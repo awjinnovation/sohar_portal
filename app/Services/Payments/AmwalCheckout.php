@@ -530,9 +530,24 @@ class AmwalCheckout
         }
 
         // Signature checked when it was stored (PaymentWebhookController::amwal).
+        $approved = $event->signature_valid === true && (string) ($body['ResponseCode'] ?? '') === AmwalGateway::APPROVED;
+        if ($approved && AmwalGateway::minor($body['Amount'] ?? null) !== (int) $payment->amount_minor) {
+            // The notification's Amount format is not confirmed by Amwal (docs §6): the API decides first;
+            // only when it does not settle the payment is the notification's amount flagged as before.
+            $this->recorder->record($payment, 'notification_amount_differs', 'webhook', [
+                'reference' => $reference, 'amount' => is_scalar($body['Amount'] ?? null) ? (string) $body['Amount'] : null,
+                'expected_minor' => (int) $payment->amount_minor,
+            ]);
+            $checked = $this->reconcile($payment, 'webhook', 'background', false, $reference);
+            if (! $checked->isPending() || $checked->needs_review) {
+                $event->forceFill(['status' => PaymentWebhookEvent::PROCESSED, 'processed_at' => now(), 'last_error' => null])->save();
+
+                return;
+            }
+        }
         $this->applySigned($payment, [
             'reference' => $reference,
-            'approved' => $event->signature_valid === true && (string) ($body['ResponseCode'] ?? '') === AmwalGateway::APPROVED,
+            'approved' => $approved,
             'amount' => $body['Amount'] ?? null,
             'currency_id' => $body['CurrencyId'] ?? null,
             // SystemReference is Amwal's transaction id, not necessarily the GUID refunds need (looked up then).

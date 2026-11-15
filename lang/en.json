@@ -1572,5 +1572,6 @@
     "الدفع بأموال في التطبيق": "Amwal payments in the app",
     "رابط الدفع": "Payment link",
     "حزمة SDK داخل التطبيق": "SDK inside the app",
-    "لا تسري حزمة SDK إلا على إصدارات التطبيق التي تتضمنها، وتبقى الإصدارات الأقدم وصفحات الويب كلها على رابط الدفع.": "The SDK only applies to app builds that include it; older builds and every web page keep using the payment link."
+    "لا تسري حزمة SDK إلا على إصدارات التطبيق التي تتضمنها، وتبقى الإصدارات الأقدم وصفحات الويب كلها على رابط الدفع.": "The SDK only applies to app builds that include it; older builds and every web page keep using the payment link.",
+    "اختلف مبلغ الإشعار عن الدفعة، فاستُعلم من بوابة الدفع": "The notification amount differed from the payment, so the gateway was asked"
 }

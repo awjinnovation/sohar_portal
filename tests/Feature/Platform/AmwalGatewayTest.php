@@ -338,6 +338,32 @@ class AmwalGatewayTest extends TestCase
     }
 
     #[Test]
+    public function a_notification_with_an_unexpected_amount_lets_the_api_decide(): void
+    {
+        $user = $this->makeUser();
+        $topup = $this->startTopup($user, 4000);
+        $this->get($topup['payment_url']);
+        $payment = Payment::firstOrFail();
+        $ref = $payment->transaction_id.'_1';
+
+        // Amount in another format (baisa): Amwal's API shows the right purchase, so it completes, unflagged.
+        $this->pay($ref, '4.000');
+        $this->postNotification($this->notification($ref, '4000'))->assertOk();
+        $payment->refresh();
+        $this->assertSame(['completed', false], [$payment->status, (bool) $payment->needs_review]);
+        $this->assertContains('notification_amount_differs', $this->types($payment));
+        $this->assertSame(4000, $this->wallet($user)->balance_minor);
+
+        // The API has nothing: the signed notification's amount is flagged, as before.
+        $other = $this->startTopup($user, 3000);
+        $this->get($other['payment_url']);
+        $second = Payment::where('transaction_id', '!=', $payment->transaction_id)->firstOrFail();
+        $this->postNotification($this->notification($second->transaction_id.'_1', '3000'))->assertOk();
+        $second->refresh();
+        $this->assertSame(['pending', true, 'amount_mismatch'], [$second->status, (bool) $second->needs_review, $second->review_reason]);
+    }
+
+    #[Test]
     public function forged_notifications_are_rejected_and_recorded(): void
     {
         $user = $this->makeUser();
