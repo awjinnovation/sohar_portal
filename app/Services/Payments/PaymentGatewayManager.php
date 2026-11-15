@@ -44,6 +44,14 @@ class PaymentGatewayManager
 
     public const NOT_AVAILABLE = 'GATEWAY_NOT_AVAILABLE';
 
+    /**
+     * How the app pays a gateway: `link` = it opens payment_url (every
+     * gateway, every web page); `sdk` = Amwal's Flutter SDK in the app
+     * (tenant setting payments.amwal.app_flow; app builds without the SDK
+     * keep using the link).
+     */
+    public const APP_FLOWS = ['link', 'sdk'];
+
     /** The configured default driver (tenant `payments.driver`, else PAYMENT_DRIVER). */
     public function driver(?Tenant $tenant = null): string
     {
@@ -135,9 +143,19 @@ class PaymentGatewayManager
         }
 
         return [
-            'gateways' => array_map(fn (string $id) => ['id' => $id, 'name' => self::NAMES[$id] ?? ['ar' => $id, 'en' => $id]], $enabled),
+            'gateways' => array_map(fn (string $id) => [
+                'id' => $id,
+                'name' => self::NAMES[$id] ?? ['ar' => $id, 'en' => $id],
+                'app_flow' => $this->appFlow($tenant, $id),
+            ], $enabled),
             'default_gateway' => $enabled[0],
         ];
+    }
+
+    /** `sdk` only for Amwal with payments.amwal.app_flow = sdk; `link` otherwise. */
+    public function appFlow(Tenant $tenant, string $gateway): string
+    {
+        return $gateway === 'amwal' && $tenant->setting('payments.amwal.app_flow') === 'sdk' ? 'sdk' : 'link';
     }
 
     /** Visitor-facing name of a gateway in a language. */

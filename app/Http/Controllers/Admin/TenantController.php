@@ -280,6 +280,8 @@ class TenantController extends Controller
             'payments_gateways.*' => ['nullable', Rule::in(array_merge(\App\Services\Payments\PaymentGatewayManager::SELECTABLE, ['']))],
             'thawani_mode' => ['nullable', Rule::in(\App\Services\Payments\Gateway\ThawaniConfig::MODES)],
             'amwal_mode' => ['nullable', Rule::in(\App\Services\Payments\Gateway\AmwalConfig::MODES)],
+            // How the app pays Amwal: the payment page (link, default) or Amwal's Flutter SDK.
+            'amwal_app_flow' => ['nullable', Rule::in(\App\Services\Payments\PaymentGatewayManager::APP_FLOWS)],
             // The secure hash key is hex (it is hex-decoded before signing).
             'gateway.amwal.secure_key' => ['nullable', 'string', 'max:1000', 'regex:/^\s*([0-9A-Fa-f]{2})+\s*$/'],
             'gateway.amwal.merchant_id' => ['nullable', 'string', 'max:30', 'regex:/^\s*\d+\s*$/'],
@@ -398,13 +400,15 @@ class TenantController extends Controller
             $tenant->settings = $settings;
         }
 
-        // Driver and gateway modes are plain settings (blank = platform default, key removed).
-        foreach (['payments_driver' => 'payments.driver', 'thawani_mode' => 'payments.thawani.mode', 'amwal_mode' => 'payments.amwal.mode'] as $input => $key) {
+        // Driver, gateway modes and the Amwal app flow are plain settings (blank = platform default, key removed; `link` is the default flow).
+        foreach (['payments_driver' => 'payments.driver', 'thawani_mode' => 'payments.thawani.mode', 'amwal_mode' => 'payments.amwal.mode',
+            'amwal_app_flow' => 'payments.amwal.app_flow'] as $input => $key) {
             if (! $request->has($input)) {
                 continue;
             }
             $settings = $tenant->settings ?? [];
-            if ($value = (string) $request->input($input)) {
+            $value = (string) $request->input($input);
+            if ($value !== '' && ! ($input === 'amwal_app_flow' && $value === 'link')) {
                 data_set($settings, $key, $value);
             } else {
                 $this->forget($settings, $key);

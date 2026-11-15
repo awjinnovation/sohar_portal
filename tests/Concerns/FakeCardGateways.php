@@ -33,6 +33,9 @@ trait FakeCardGateways
     /** @var array<int, array{gateway: string, op: string, body: array}> */
     protected array $gatewayCalls = [];
 
+    /** Next answer of Amwal's Membership/GetSDKSessionToken (null = Amwal refuses). */
+    protected ?array $amwalSdkAnswer = ['success' => true, 'message' => 'Success', 'data' => ['sessionToken' => 'eyJhbGciOiJkaXIi.sdk-session-token']];
+
     protected function setUpCardGateways(array $config = []): void
     {
         Sleep::fake();
@@ -62,6 +65,7 @@ trait FakeCardGateways
             $this->assertSame(AmwalGateway::sign($fields, self::AMWAL_KEY), $body['secureHashValue'] ?? null, 'Amwal request hash');
             $op = match (true) {
                 str_ends_with($path, '/Transaction/GetByMerchantReference') => 'get_transactions',
+                str_ends_with($path, '/Membership/GetSDKSessionToken') => 'sdk_session',
                 str_ends_with($path, '/Execute/Void') => 'void',
                 str_ends_with($path, '/Execute/Refund') => 'refund',
                 default => 'unknown',
@@ -71,6 +75,9 @@ trait FakeCardGateways
             return match ($op) {
                 'get_transactions' => Http::response(['success' => true, 'responseCode' => '00', 'message' => 'Success', 'errorList' => [],
                     'data' => array_reverse($this->amwalTxs[$body['merchantReference']] ?? [])]),
+                'sdk_session' => $this->amwalSdkAnswer === null
+                    ? Http::response(['success' => false, 'responseCode' => '01', 'message' => 'InvalidHashing', 'data' => null, 'errorList' => ['InvalidHashing']], 401)
+                    : Http::response($this->amwalSdkAnswer),
                 'void', 'refund' => Http::response(['success' => true, 'responseCode' => '00', 'message' => 'Success',
                     'data' => ['transactionId' => 'rev-'.count($this->gatewayCalls), 'amount' => $body['amount']]]),
                 default => Http::response([], 500),

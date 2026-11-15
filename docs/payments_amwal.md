@@ -67,6 +67,7 @@ secure key, upper-case hex (`AmwalGateway::sign()`).
 | completeCallback (`secureHashValue`) | `amount`, `currencyId`, `customerId`, `customerTokenId`, `merchantId`*, `merchantReference`, `responseCode`, `terminalId`*, `transactionId`, `transactionTime` — *ours, not sent by SmartBox |
 | Cloud notification (`SecureHash`) | `Amount`, `AuthorizationDateTime`, `CurrencyId`, `DateTimeLocalTrxn`, `MerchantId`, `MerchantReference`, `Message`, `PaidThrough`, `ResponseCode`, `SystemReference`, `TerminalId`, `TxnType` |
 | API requests (`secureHashValue`) | every other field of the JSON body |
+| SDK session token (`secureHashValue`) | `merchantId`, `requestDateTime` (ISO UTC, `2026-11-15T19:27:40Z`); `customerId` only when there is one — a `null` customerId fails the hash (401 `InvalidHashing`, checked against UAT) |
 
 ## 3. Amwal API used
 
@@ -74,6 +75,7 @@ secure key, upper-case hex (`AmwalGateway::sign()`).
 |---|---|
 | `POST Transaction/GetByMerchantReference` `{merchantId, merchantReference, requestDateTime}` | Status of an attempt: `data[]` purchases (`id` GUID, `amount` in OMR, `responseCode`, `isRefunded`, `transactionActions`). Also *Test connection* (an unknown reference). |
 | `POST Execute/Void` / `Execute/Refund` `{amount, currencyCode, merchantId, requestDateTime, terminalId, transactionId (new GUID), transactionIdentifierType 2, transactionIdentifierValue (GUID)}` | Full refund: void while `transactionActions.canVoid`, else refund. |
+| `POST Membership/GetSDKSessionToken` `{merchantId, requestDateTime}` | Session token for the Flutter SDK (`data.sessionToken`), §7. |
 
 Hosts: UAT `https://test.amwalpg.com:14443` (API) and
 `https://test.amwalpg.com:7443/js/SmartBox.js?v=1.1`; production
@@ -179,10 +181,71 @@ Go-live order:
 
 ## 6. To confirm in UAT
 
+Checked against UAT (MID 153466, 15 Nov 2026): a signed `Transaction/GetByMerchantReference`
+for an unknown reference answers `200 {success: true, data: []}`;
+`Membership/GetSDKSessionToken` answers `200 {success, message, data: {sessionToken}}`
+(a JWE, about 350 characters) and refuses a body with `customerId: null`.
+
 Not stated precisely in Amwal's pages; the code follows Amwal's plugin and
 fails safe (needs review / API check) if they differ:
 
 - the `Amount` format of cloud notifications (assumed OMR, e.g. `2.5`);
 - that the notification `MerchantId` / `TerminalId` equal the configured ones;
 - the `TxnType` values of refund / void notifications (only purchases are
-  applied; others are recorded).
+  applied; others are recorded);
+- **that `GetByMerchantReference` finds a purchase made through the Flutter
+  SDK by the `merchantReference` the app passed** (§7). Not verified: it needs
+  one real SDK payment in UAT. Both the API check and the cloud notification
+  match a payment by that reference only: if the app does not pass
+  `merchant_reference` to the SDK, a charged visitor's payment stays pending
+  and is cancelled at give-up, so a person must find it in the Amwal portal.
+
+## 7. In the app: Amwal's Flutter SDK (`amwal_pay_sdk`)
+
+*Admin → Tenants → Payment gateway → Amwal → الدفع بأموال في التطبيق*
+(`payments.amwal.app_flow`): **رابط الدفع** (`link`, default) or **حزمة SDK
+داخل التطبيق** (`sdk`). It only changes app builds that include the SDK;
+older builds and every web page (box office, booking) keep using the link.
+`GET /tenant/config` → each `payments.gateways[]` entry has `app_flow`
+(`sdk` for Amwal when set, `link` otherwise).
+
+```
+App ── POST /payments/initialize | /wallet/topups (gateway amwal) ──► payment (pending) + transaction_id
+App ── POST /api/v1/payments/amwal/sdk-session {transaction_id} ──► Amwal Membership/GetSDKSessionToken
+                                                                  + attempt {tx}_{n} (as a SmartBox page open)
+App ── AmwalPaySdk.initSdk(settings from the answer) ──► Amwal (card, Apple / Google Pay)
+App polls /payments/status | /wallet/topups/{id} ──► Amwal API by merchant reference (as for the link)
+Amwal ──► cloud notification ──► as for the link
+```
+
+`POST /api/v1/payments/amwal/sdk-session` (sanctum, `throttle:money`), body
+`{"transaction_id": "TXN…"}` (`data.transaction_id` of `/wallet/topups`,
+`transaction_id` of `/payments/initialize`):
+
+```json
+{"success": true, "data": {"environment": "UAT", "session_token": "eyJhbGciOiJkaXIi…", "merchant_id": "153466",
+  "terminal_id": "502952", "currency": "OMR", "amount": "2.500", "merchant_reference": "TXNAB12CD34EF56_1",
+  "transaction_id": "4f0c…-uuid", "locale": "ar"}}
+```
+
+`environment` `UAT` | `PROD` (the tenant's Amwal mode); `locale` from
+`Accept-Language`; `transaction_id` is a new UUID for the SDK. The app must
+pass `merchant_reference` to the SDK: that is how our checks find the payment.
+Each call opens a new attempt (like reopening the page). The secure key never
+leaves the server; the token is not kept in the gateway call log.
+
+Errors: `404` unknown or another user's payment; `409 PAYMENT_NOT_PENDING`
+(`data.status`, also for a gate order that expired); `422
+AMWAL_SDK_NOT_AVAILABLE` with `data.reason` `flow_off` | `not_amwal` |
+`not_configured` | `no_token` — the app then opens `payment_url`, which keeps
+working.
+
+**The SDK's own result is not trusted.** It is reported to the app only; the
+payment completes, as for the link, when the Amwal API (polls, return page,
+`payments:reconcile`) shows an approved purchase for one of its attempts or a
+signed cloud notification says so, with the same amount check. Cancelling,
+late / double captures, refunds and the reconciler work unchanged because the
+attempt is an ordinary `payment_gateway_sessions` row (`data.flow = sdk`).
+Code: `AmwalCheckout::startSdk()`, `AmwalGateway::sdkSessionToken()`,
+`Api\PaymentController::amwalSdkSession()`. Tests:
+`tests/Feature/Platform/AmwalSdkSessionTest.php`.

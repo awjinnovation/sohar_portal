@@ -20,6 +20,8 @@ use Illuminate\Support\Str;
  *   Cloud notification (Amwal → us)         Amount, AuthorizationDateTime, CurrencyId, DateTimeLocalTrxn, MerchantId, MerchantReference, Message, PaidThrough, ResponseCode, SystemReference, TerminalId, TxnType
  *   POST Transaction/GetByMerchantReference merchantId, merchantReference, requestDateTime
  *   POST Execute/Refund | Execute/Void      amount, currencyCode, merchantId, requestDateTime (ISO), terminalId, transactionId (new GUID), transactionIdentifierType (2 = GUID), transactionIdentifierValue
+ *   POST Membership/GetSDKSessionToken      merchantId, requestDateTime (ISO, Z) — customerId only when there is one (a null
+ *                                           customerId fails Amwal's hash check: checked against UAT, 15 Nov 2026)
  *
  * Response code "00" = approved.
  */
@@ -209,6 +211,28 @@ class AmwalGateway
             'transactionIdentifierType' => 2,
             'transactionIdentifierValue' => $transactionGuid,
         ], $ctx, idempotent: false, unprocessed: [425, 429]), 'background')->data();
+    }
+
+    /**
+     * Session token for Amwal's Flutter SDK (amwal_pay_sdk): the app pays
+     * in its own screen with it; our secure key never leaves the server.
+     * Answer: {success, message, data: {sessionToken}}.
+     *
+     * @throws GatewayException no token (Amwal refused, or answered without one)
+     */
+    public function sdkSessionToken(AmwalConfig $c, array $ctx = [], string $profile = 'interactive', ?string $customerId = null): string
+    {
+        $fields = array_filter([
+            'customerId' => $customerId,
+            'merchantId' => $this->numeric($c->merchantId),
+            'requestDateTime' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
+        ], fn ($v) => $v !== null && $v !== '');
+        $token = $this->http->send($this->request($c, 'sdk_session', 'Membership/GetSDKSessionToken', $fields, $ctx), $profile)->data()['sessionToken'] ?? null;
+        if (! is_string($token) || $token === '') {
+            throw new GatewayException('Amwal answered without an SDK session token', 'client');
+        }
+
+        return $token;
     }
 
     /** Admin "Test connection": an inquiry for a reference that does not exist (a signed, read-only call). */

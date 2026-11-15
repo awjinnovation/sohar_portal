@@ -147,7 +147,7 @@ class GatewayHttp
                 'url' => Str::limit(self::redactUrl($r->url), 495, ''),
                 'request_body' => $r->body !== null ? self::redact($r->body) : null,
                 'response_status' => $status,
-                'response_body' => $body !== null ? Str::limit($body, self::BODY_LIMIT, '…[truncated]') : null,
+                'response_body' => $body !== null ? Str::limit(self::redactBody($body), self::BODY_LIMIT, '…[truncated]') : null,
                 'outcome' => $outcome,
                 'error' => $error !== null ? Str::limit($error, 2000) : null,
                 'duration_ms' => $ms,
@@ -170,6 +170,12 @@ class GatewayHttp
         }
 
         return $data;
+    }
+
+    /** Session tokens in a response (Amwal SDK) are not kept: they let anyone pay to the merchant for a while. */
+    private static function redactBody(string $body): string
+    {
+        return (string) preg_replace('/("(?:session_?token)"\s*:\s*")[^"]*(")/i', '$1[redacted]$2', $body);
     }
 
     private static function redactUrl(string $url): string

@@ -239,6 +239,57 @@ class PaymentController extends Controller
     }
 
     /**
+     * POST /payments/amwal/sdk-session {transaction_id} — the owner's pending
+     * Amwal payment is paid in the app through Amwal's Flutter SDK (tenant
+     * setting payments.amwal.app_flow = sdk): a new attempt is opened like a
+     * SmartBox page open, and the app gets what the SDK needs (no secret).
+     * The SDK's result is not trusted: the app then polls /payments/status
+     * as for the link (Amwal API / signed notification decide).
+     *
+     * 404 another user's / unknown payment; 409 PAYMENT_NOT_PENDING (data.status);
+     * 422 AMWAL_SDK_NOT_AVAILABLE (data.reason: flow_off | not_amwal |
+     * not_configured | no_token) — the app opens payment_url instead.
+     */
+    public function amwalSdkSession(Request $request, \App\Services\Payments\PaymentGatewayManager $gateways, \App\Services\Payments\AmwalCheckout $amwal)
+    {
+        $request->validate(['transaction_id' => 'required|string|max:64']);
+        $payment = $this->ownedPayment($request, (string) $request->input('transaction_id'));
+        $tenant = $this->context->get();
+        $unavailable = fn (string $reason) => new \App\Exceptions\ApiException('AMWAL_SDK_NOT_AVAILABLE', __('platform.errors.amwal_sdk_not_available'), 422, ['reason' => $reason]);
+
+        $status = $payment->status;
+        if ($status === 'pending' && ($orderId = (int) ($payment->metadata['box_office_order_id'] ?? 0))) {
+            // A gate order that expired or was cancelled is never handed to the gateway (as on /payment/redirect).
+            $order = \App\Models\BoxOfficeOrder::withoutTenantScope()->find($orderId);
+            if ($order && ! app(\App\Services\Gate\BoxOfficeService::class)->expireIfDue($order)->isPending()) {
+                $fresh = $payment->fresh()->status;
+                $status = $fresh === 'pending' ? 'cancelled' : $fresh; // its cancel may still be queued
+            }
+        }
+        if ($status !== 'pending' || $payment->method !== Payment::METHOD_GATEWAY) {
+            throw new \App\Exceptions\ApiException('PAYMENT_NOT_PENDING', __('platform.errors.payment_not_pending'), 409, ['status' => $status]);
+        }
+        if ($payment->gateway !== \App\Services\Payments\Gateway\AmwalGateway::NAME) {
+            throw $unavailable('not_amwal');
+        }
+        if ($gateways->appFlow($tenant, 'amwal') !== 'sdk') {
+            throw $unavailable('flow_off');
+        }
+
+        $locale = app()->getLocale() === 'ar' ? 'ar' : 'en';
+        try {
+            $session = $amwal->startSdk($payment, $locale);
+        } catch (\App\Services\Payments\Gateway\GatewayException $e) {
+            Log::warning('Amwal SDK session could not start', ['transaction_id' => $payment->transaction_id, 'error' => $e->getMessage()]);
+            throw $unavailable($e->kind === 'config' ? 'not_configured' : 'no_token');
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException) {
+            throw $unavailable('no_token');
+        }
+
+        return response()->json(['success' => true, 'data' => $session]);
+    }
+
+    /**
      * POST /payments/webhook — Bank Muscat server-to-server callback. The
      * encrypted payload (tenant working key) is the integrity check.
      */

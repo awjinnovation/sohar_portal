@@ -189,6 +189,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // Payments / checkout (contract §8) — always scoped to the owner
     Route::post('/payments/initialize', [PaymentController::class, 'initialize'])->middleware('throttle:money');
+    // Amwal paid inside the app with its Flutter SDK (docs/payments_amwal.md §7)
+    Route::post('/payments/amwal/sdk-session', [PaymentController::class, 'amwalSdkSession'])->middleware('throttle:money');
     Route::post('/payments/confirm', [PaymentController::class, 'confirm']);
     Route::post('/payments/cancel', [PaymentController::class, 'cancel']);
     Route::get('/payments/status/{transactionId}', [PaymentController::class, 'checkStatus']);

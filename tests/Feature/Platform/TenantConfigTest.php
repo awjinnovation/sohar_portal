@@ -44,7 +44,7 @@ class TenantConfigTest extends TestCase
             ->assertJsonPath('data.auth.country_code', '968')
             ->assertJsonPath('data.auth.phone_length', 8)
             // Only the gateways a visitor may choose; payment settings stay server-side.
-            ->assertJsonPath('data.payments', ['gateways' => [['id' => 'fake', 'name' => ['ar' => 'بوابة الدفع التجريبية', 'en' => 'Test gateway']]], 'default_gateway' => 'fake'])
+            ->assertJsonPath('data.payments', ['gateways' => [['id' => 'fake', 'name' => ['ar' => 'بوابة الدفع التجريبية', 'en' => 'Test gateway'], 'app_flow' => 'link']], 'default_gateway' => 'fake'])
             ->assertJsonMissingPath('data.payments.billing')
             ->assertJsonMissingPath('data.messages')
             ->assertHeader('ETag');

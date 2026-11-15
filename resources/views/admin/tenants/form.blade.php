@@ -509,6 +509,18 @@
                                 @endif
                             </div>
                             <div class="row">
+                                @if($provider === 'amwal')
+                                    @php $currentAmwalFlow = old('amwal_app_flow', data_get($tenant->settings ?? [], 'payments.amwal.app_flow', 'link')); @endphp
+                                    <div class="col-md-6 field">
+                                        <label class="form-label" for="amwal_app_flow">{{ __('الدفع بأموال في التطبيق') }}</label>
+                                        <select name="amwal_app_flow" id="amwal_app_flow" class="form-select @error('amwal_app_flow') is-invalid @enderror">
+                                            <option value="link" @selected($currentAmwalFlow !== 'sdk')>{{ __('رابط الدفع') }}</option>
+                                            <option value="sdk" @selected($currentAmwalFlow === 'sdk')>{{ __('حزمة SDK داخل التطبيق') }}</option>
+                                        </select>
+                                        <div class="form-text">{{ __('لا تسري حزمة SDK إلا على إصدارات التطبيق التي تتضمنها، وتبقى الإصدارات الأقدم وصفحات الويب كلها على رابط الدفع.') }}</div>
+                                        @error('amwal_app_flow')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                @endif
                                 @foreach($gFields as $gf)
                                     @php $gSet = filled(data_get($tenant->gateway_credentials ?? [], $provider.'.'.$gf)); @endphp
                                     <div class="col-md-6 field">

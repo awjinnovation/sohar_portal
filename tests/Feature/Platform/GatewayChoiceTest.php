@@ -73,7 +73,7 @@ class GatewayChoiceTest extends TestCase
     {
         $first = $this->getJson('/api/v1/tenant/config', $this->tenantHeaders())->assertOk()
             ->assertJsonPath('data.payments', [
-                'gateways' => [['id' => 'thawani', 'name' => ['ar' => 'ثواني', 'en' => 'Thawani']]],
+                'gateways' => [['id' => 'thawani', 'name' => ['ar' => 'ثواني', 'en' => 'Thawani'], 'app_flow' => 'link']],
                 'default_gateway' => 'thawani',
             ]);
 
@@ -82,8 +82,8 @@ class GatewayChoiceTest extends TestCase
             ->assertOk() // not 304: the admin change shows on the next request
             ->assertJsonPath('data.payments', [
                 'gateways' => [
-                    ['id' => 'amwal', 'name' => ['ar' => 'أموال باي', 'en' => 'Amwal Pay']],
-                    ['id' => 'thawani', 'name' => ['ar' => 'ثواني', 'en' => 'Thawani']],
+                    ['id' => 'amwal', 'name' => ['ar' => 'أموال باي', 'en' => 'Amwal Pay'], 'app_flow' => 'link'],
+                    ['id' => 'thawani', 'name' => ['ar' => 'ثواني', 'en' => 'Thawani'], 'app_flow' => 'link'],
                 ],
                 'default_gateway' => 'amwal',
             ]);

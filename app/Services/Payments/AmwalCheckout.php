@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Amwal Pay SmartBox flow (docs/payments_amwal.md):
@@ -64,6 +65,59 @@ class AmwalCheckout
      */
     public function start(Payment $payment, string $locale, string $source = 'redirect'): array
     {
+        $c = $this->startable($payment);
+        $config = null;
+        $row = $this->openAttempt($payment, $c, $source, $c->smartBoxUrl(), function (string $reference) use ($c, $payment, $locale, &$config) {
+            $config = AmwalGateway::smartBoxConfig($c, $reference, (int) $payment->amount_minor, $locale);
+
+            return Arr::except($config, ['SecureHash']);
+        });
+
+        return ['config' => $config, 'script' => $c->smartBoxUrl(), 'reference' => $row->session_id];
+    }
+
+    /**
+     * A new attempt paid in the app through Amwal's Flutter SDK (tenant
+     * setting payments.amwal.app_flow = sdk; POST /payments/amwal/sdk-session):
+     * an SDK session token from Amwal, then an attempt exactly like a
+     * SmartBox page open (merchant reference {tx}_{n}, same TTL, the same
+     * reconcile / late- and double-capture watch, notifications, cancel and
+     * refunds). The SDK's own result goes to the app only and is never
+     * trusted: completion still comes from the Amwal API or a signed
+     * notification.
+     *
+     * @return array{environment: string, session_token: string, merchant_id: string, terminal_id: string, currency: string,
+     *               amount: string, merchant_reference: string, transaction_id: string, locale: string}
+     *
+     * @throws GatewayException not configured, or Amwal gave no token
+     */
+    public function startSdk(Payment $payment, string $locale, string $source = 'api'): array
+    {
+        $c = $this->startable($payment);
+        // Token first: no attempt is opened when Amwal refuses.
+        $token = $this->api->sdkSessionToken($c, $this->ctx($payment), 'interactive');
+        $sdkTransactionId = (string) Str::uuid();
+        $amount = AmwalGateway::amount((int) $payment->amount_minor);
+        // checkout_url (not null): where the attempt came from — the token endpoint, not a page.
+        $row = $this->openAttempt($payment, $c, $source, $c->apiUrl('Membership/GetSDKSessionToken'), fn () => [
+            'flow' => 'sdk', 'sdk_transaction_id' => $sdkTransactionId, 'amount' => $amount, 'locale' => $locale,
+        ], ['flow' => 'sdk']);
+
+        return [
+            'environment' => $c->mode === 'production' ? 'PROD' : 'UAT',
+            'session_token' => $token,
+            'merchant_id' => $c->merchantId,
+            'terminal_id' => $c->terminalId,
+            'currency' => 'OMR',
+            'amount' => $amount,
+            'merchant_reference' => $row->session_id,
+            'transaction_id' => $sdkTransactionId,
+            'locale' => $locale,
+        ];
+    }
+
+    private function startable(Payment $payment): AmwalConfig
+    {
         $c = $this->config($payment);
         if (! $c->isConfigured()) {
             throw GatewayException::notConfigured('Amwal merchant ID, terminal ID and secure key are not set for this organizer');
@@ -72,10 +126,20 @@ class AmwalCheckout
             throw GatewayException::notConfigured('Amwal SmartBox accepts OMR only');
         }
 
-        return Cache::lock("payments:session:{$payment->id}", 30)->block(15, function () use ($payment, $c, $locale, $source) {
+        return $c;
+    }
+
+    /**
+     * Opens attempt n+1 of the payment (one at a time per payment):
+     * merchant reference {transaction_id}_{n}, watched until
+     * payments.amwal.session_ttl_minutes. $data(reference) = what the
+     * attempt row keeps.
+     */
+    private function openAttempt(Payment $payment, AmwalConfig $c, string $source, string $checkoutUrl, \Closure $data, array $event = []): PaymentGatewaySession
+    {
+        return Cache::lock("payments:session:{$payment->id}", 30)->block(15, function () use ($payment, $c, $source, $checkoutUrl, $data, $event) {
             $seq = PaymentGatewaySession::where('payment_id', $payment->id)->count() + 1;
             $reference = $payment->transaction_id.'_'.$seq;
-            $config = AmwalGateway::smartBoxConfig($c, $reference, (int) $payment->amount_minor, $locale);
 
             $row = PaymentGatewaySession::create([
                 'tenant_id' => $payment->tenant_id,
@@ -87,9 +151,9 @@ class AmwalCheckout
                 'status' => PaymentGatewaySession::OPEN,
                 'amount_minor' => (int) $payment->amount_minor,
                 'currency' => 'OMR',
-                'checkout_url' => $c->smartBoxUrl(),
+                'checkout_url' => $checkoutUrl,
                 'expires_at' => now()->addMinutes(max(5, (int) config('payments.amwal.session_ttl_minutes', 120))),
-                'data' => Arr::except($config, ['SecureHash']),
+                'data' => $data($reference),
             ]);
 
             $payment->forceFill([
@@ -102,9 +166,9 @@ class AmwalCheckout
                 'mode' => $c->mode,
                 'amount_minor' => $row->amount_minor,
                 'expires_at' => $row->expires_at?->toIso8601String(),
-            ]);
+            ] + $event);
 
-            return ['config' => $config, 'script' => $c->smartBoxUrl(), 'reference' => $reference];
+            return $row;
         });
     }
 
