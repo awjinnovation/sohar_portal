@@ -167,6 +167,13 @@ class PaymentGatewayManager
     /** @param  array  $query  extra signed query parameters (e.g. lang) */
     public function paymentUrl(Payment $payment, array $query = []): string
     {
+        // The payment page opens in the language of the request that made
+        // the link, when that request named one (the app sends
+        // Accept-Language with every API call).
+        if (! isset($query['lang']) && request()->hasHeader('Accept-Language') && in_array(app()->getLocale(), ['ar', 'en'], true)) {
+            $query['lang'] = app()->getLocale();
+        }
+
         return URL::temporarySignedRoute(
             'payment.redirect',
             now()->addMinutes((int) config('payments.link_ttl_minutes', 60)),

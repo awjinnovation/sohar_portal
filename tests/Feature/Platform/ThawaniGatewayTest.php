@@ -310,7 +310,7 @@ class ThawaniGatewayTest extends TestCase
 
         $this->get($topup['payment_url'])->assertOk()
             ->assertSee('data-error-code="gateway_unavailable"', false)
-            ->assertSee('أعد المحاولة');
+            ->assertSee('Try again'); // the page follows the language of the API request that made the link
         $this->assertSame(1, $this->sentCount('create_session'));
 
         // The retry link works once Thawani answers.
