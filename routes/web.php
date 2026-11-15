@@ -120,6 +120,13 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
             Route::post('sales/{order}/review', [Admin\GateSalesController::class, 'clearReview'])->whereNumber('order')->name('sales.review');
             Route::post('sales/{order}/void', [Admin\GateSalesController::class, 'voidSale'])->whereNumber('order')->name('sales.void');
         });
+        // Morning reconciliation of a gate day (docs/gate_reconciliation.md): `manage gates` or `view payments` (checked in the controller).
+        Route::prefix('gates/reconciliation')->name('admin.gates.reconciliation')->group(function () {
+            Route::get('/', [Admin\GateReconciliationController::class, 'index']);
+            Route::get('export', [Admin\GateReconciliationController::class, 'export'])->middleware('throttle:10,1')->name('.export');
+            Route::post('check', [Admin\GateReconciliationController::class, 'check'])->middleware('throttle:10,1')->name('.check');
+            Route::post('orders/{order}/checked', [Admin\GateReconciliationController::class, 'markChecked'])->whereNumber('order')->name('.checked');
+        });
         Route::resource('gates', Admin\GateController::class, ['as' => 'admin'])->except(['show'])->middleware('can:manage gates');
 
         // Visitor satisfaction «راضي» report + CSV export (docs/radi_satisfaction_contract.md §4)

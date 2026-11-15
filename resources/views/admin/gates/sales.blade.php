@@ -14,6 +14,7 @@
     @can('manage settings')
         <a href="{{ route('admin.branding.edit') }}#sec-gate-sales" class="btn"><i class="bi bi-sliders"></i> {{ __('إعدادات البيع') }}</a>
     @endcan
+    <a href="{{ route('admin.gates.reconciliation') }}" class="btn"><i class="bi bi-clipboard-check"></i> {{ __('مطابقة مبيعات البوابات') }}</a>
     <a href="{{ route('admin.gates.dashboard') }}" class="btn"><i class="bi bi-broadcast"></i> {{ __('لوحة البوابات المباشرة') }}</a>
 @endsection
 
