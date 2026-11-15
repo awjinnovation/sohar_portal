@@ -1566,5 +1566,7 @@
     "الافتراضية للزوار": "Default for visitors",
     "مفعّلة للزوار": "On for visitors",
     "بوابات الدفع المفعّلة للزوار الآن:": "Gateways on for visitors now:",
-    "تُفعَّل بوابة الدفع وتُعطَّل في إعدادات المنظمة، وتعمل الدفعة التجريبية سواء أكانت بوابة الدفع مفعّلة للزوار أم لا؛ وتبقى كل دفعة على بوابة الدفع التي أُنشئت بها.": "Gateways are switched on and off in the organization settings. A test payment works whether or not the gateway is on for visitors, and every payment stays on the gateway it was created with."
+    "تُفعَّل بوابة الدفع وتُعطَّل في إعدادات المنظمة، وتعمل الدفعة التجريبية سواء أكانت بوابة الدفع مفعّلة للزوار أم لا؛ وتبقى كل دفعة على بوابة الدفع التي أُنشئت بها.": "Gateways are switched on and off in the organization settings. A test payment works whether or not the gateway is on for visitors, and every payment stays on the gateway it was created with.",
+    "دُفع طلب البوابة بعد انتهاء صلاحيته أو إلغائه": "Gate order paid after it expired or was cancelled",
+    "دُفع طلب البوابة ولم تصدر تذاكره، فيلزم الاسترداد": "Gate order paid without tickets: a refund is needed"
 }

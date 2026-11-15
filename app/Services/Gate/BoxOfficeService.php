@@ -438,15 +438,35 @@ class BoxOfficeService
         });
 
         // A gateway checkout the visitor left open is cancelled too. If the
-        // bank still captures it, fulfillment completes the order (markPaid).
+        // bank still captures it, fulfillment completes the order (markPaid)
+        // and flags the payment for the morning check (late_capture).
         if ($closed->status === $status && $closed->payment_id) {
             $payment = Payment::withoutTenantScope()->find($closed->payment_id);
             if ($payment && $payment->status === 'pending') {
-                $this->fulfillment->fail($payment, 'cancelled');
+                $this->closePayment($payment, $status === BoxOfficeOrder::STATUS_EXPIRED ? 'box_office_expired' : 'box_office_cancelled');
             }
         }
 
         return $closed;
+    }
+
+    /**
+     * The pending payment of a closed order. Thawani / Amwal with a page
+     * already opened: queued (no gateway call while a gate or visitor
+     * waits) through the gateway's own cancel — the gateway is asked first
+     * (paid just before the close → completed), Thawani's open sessions are
+     * cancelled there; Amwal attempts stay watched for a late capture.
+     * Otherwise cancelled here at once, as before.
+     */
+    private function closePayment(Payment $payment, string $reason): void
+    {
+        if ($payment->method === Payment::METHOD_GATEWAY && $payment->gateway_session_id
+            && in_array($payment->gateway, \App\Services\Payments\GatewayCheckouts::RECONCILED, true)) {
+            \App\Jobs\CancelGatewayPayment::dispatch($payment->id, $reason)->afterCommit();
+
+            return;
+        }
+        $this->fulfillment->fail($payment, 'cancelled', [], 'system', ['reason' => $reason]);
     }
 
     /**
@@ -589,6 +609,13 @@ class BoxOfficeService
             'order' => $order->reference, 'payment' => $payment->transaction_id, 'reason' => $reason, 'order_status' => $order->status,
         ]);
         $payment->metadata = array_merge($payment->metadata ?? [], ['box_office_refund_required' => true, 'box_office_unfulfilled_reason' => $reason]);
+        // Money taken through a gateway with nothing issued: on the morning
+        // list (Admin → Gates → Reconciliation) until it is refunded or cleared.
+        // Card terminal sales keep their own flow (§9).
+        if ($payment->method === Payment::METHOD_GATEWAY && ! $payment->needs_review) {
+            $payment->needs_review = true;
+            $payment->review_reason = 'box_office_refund_required';
+        }
         if ($reason === 'sold_out') {
             $order->meta = array_merge($order->meta ?? [], ['paid_after' => $order->status, 'refund_required' => true]);
             $order->status = BoxOfficeOrder::STATUS_PAID_UNFULFILLED;
@@ -668,6 +695,15 @@ class BoxOfficeService
         if (! $order->isPending()) {
             Log::warning('Box office order paid after it was '.$order->status, ['order' => $order->reference]);
             $order->meta = array_merge($order->meta ?? [], ['paid_after' => $order->status]);
+            // A gateway payment confirmed after the order closed: the visitor
+            // may have paid again another way meanwhile, so a person checks it.
+            if ($payment->method === Payment::METHOD_GATEWAY && ! $payment->needs_review) {
+                $payment->needs_review = true;
+                $payment->review_reason = 'late_capture';
+            }
+            app(\App\Services\Payments\PaymentRecorder::class)->record($payment, 'box_office_paid_after_close', 'system', [
+                'order' => $order->reference, 'order_status' => $order->meta['paid_after'],
+            ]);
         }
         $order->status = BoxOfficeOrder::STATUS_PAID;
         $order->paid_at = $payment->paid_at ?? now();

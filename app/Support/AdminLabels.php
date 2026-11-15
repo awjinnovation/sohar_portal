@@ -114,6 +114,7 @@ class AdminLabels
         'duplicate_capture' => 'دُفع المبلغ مرتين',
         'points_retaken' => 'خُصمت النقاط مجددًا',
         'points_retake_failed' => 'تعذّر خصم النقاط مجددًا',
+        'box_office_paid_after_close' => 'دُفع طلب البوابة بعد انتهاء صلاحيته أو إلغائه',
     ];
 
     public const PAYMENT_EVENT_SOURCES = [
@@ -165,6 +166,9 @@ class AdminLabels
         'duplicate_capture' => 'دُفع المبلغ مرتين عبر جلستين',
         'session_unverifiable' => 'تعذّر التحقق من جلسة الدفع لدى البوابة',
         'late_capture_points' => 'دُفع بعد الإلغاء ولم يكفِ رصيد النقاط لخصمها مجددًا',
+        // Gate box office (docs/gate_reconciliation.md).
+        'late_capture' => 'دُفع طلب البوابة بعد انتهاء صلاحيته أو إلغائه',
+        'box_office_refund_required' => 'دُفع طلب البوابة ولم تصدر تذاكره، فيلزم الاسترداد',
     ];
 
     public const VENDOR_STAFF_ROLES = [

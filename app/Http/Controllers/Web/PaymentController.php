@@ -221,11 +221,15 @@ class PaymentController extends Controller
     /**
      * Thawani / Amwal return page: ask the gateway (throttled per payment),
      * then show the result. Amwal's SmartBox callback (relayed by our page,
-     * with its token) is verified and applied first.
+     * with its token) is verified and applied first — also when the payment
+     * was cancelled meanwhile (e.g. its gate order expired while the visitor
+     * was paying): a signed approval then completes it as a late capture
+     * instead of waiting for the reconciler.
      */
     private function thawaniResult(Request $request, Payment $payment)
     {
-        $payment = $payment->gateway === AmwalGateway::NAME && $payment->isPending()
+        $payment = $payment->gateway === AmwalGateway::NAME && ! $payment->fulfilled_at
+            && in_array($payment->status, ['pending', 'cancelled', 'failed'], true)
             && hash_equals(AmwalCheckout::returnToken($payment->transaction_id), (string) $request->query('t', ''))
             && $request->filled('merchantReference')
             ? app(AmwalCheckout::class)->handleReturn($payment, $request->query())

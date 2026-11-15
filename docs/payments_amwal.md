@@ -50,7 +50,10 @@ watched for a late capture, and are closed (`expired`) after
 `AMWAL_SESSION_TTL_MINUTES` (120). Cancelling (in the app, or *Cancel* on our
 page) asks Amwal first, then cancels the payment; a later payment of a still
 open SmartBox completes it (`late_capture`); a second paid attempt of a paid
-payment is flagged `duplicate_capture`.
+payment is flagged `duplicate_capture`. A gate box office order that expires or
+is cancelled closes its payment the same way, queued (`CancelGatewayPayment`);
+a payment confirmed after that is flagged for the morning check
+([gate_reconciliation.md](gate_reconciliation.md) §3).
 
 ## 2. Secure hash
 
