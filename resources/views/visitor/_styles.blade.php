@@ -43,6 +43,7 @@
     .vb-total { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 12px; margin-top: 4px; border-top: 1px dashed var(--hairline); font-weight: 800; font-size: 15.5px; }
     .vb-total .money { font-size: 22px; font-weight: 800; }
     .vb-pay { min-height: 58px; font-size: 17px; }
+    .vb-pay + .vb-pay { margin-top: 12px; }
     .vb-secure { text-align: center; font-size: 13px; margin: 10px 0 0; }
     .vb-ticket { padding: 16px; }
     .vb-ticket-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
