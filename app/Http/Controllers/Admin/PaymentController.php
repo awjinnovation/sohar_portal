@@ -209,6 +209,10 @@ class PaymentController extends Controller
             default => 'سُجِّلت الدفعة مستردة. أكمل الاسترداد عبر بوابة الدفع.',
         };
 
-        return redirect()->route('admin.payments.show', $payment)->with('success', $message);
+        $back = $payment->payment_type === Payment::TYPE_GATEWAY_TEST
+            ? route('admin.payments.gateway-test', ['payment' => $payment->id])
+            : route('admin.payments.show', $payment);
+
+        return redirect()->to($back)->with('success', $message);
     }
 }

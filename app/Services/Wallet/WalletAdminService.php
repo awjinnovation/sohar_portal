@@ -78,7 +78,7 @@ class WalletAdminService
             if ($locked->status !== 'completed') {
                 throw new ApiException('INVALID_STATE', 'Only completed payments can be refunded', 409);
             }
-            if ($locked->payment_type !== Payment::TYPE_TICKET) {
+            if (! in_array($locked->payment_type, [Payment::TYPE_TICKET, Payment::TYPE_GATEWAY_TEST], true)) {
                 throw new ApiException('INVALID_STATE', 'Top-ups are refunded through wallet refund requests', 409);
             }
 

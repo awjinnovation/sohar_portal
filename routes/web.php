@@ -129,6 +129,12 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         });
 
         // Payments
+        // Gateway test (platform admins; before payments/{payment}): a small real charge through Amwal or Thawani.
+        Route::middleware('can:manage tenants')->group(function () {
+            Route::get('payments/gateway-test', [Admin\GatewayTestController::class, 'index'])->name('admin.payments.gateway-test');
+            Route::post('payments/gateway-test', [Admin\GatewayTestController::class, 'store'])
+                ->middleware('throttle:20,1')->name('admin.payments.gateway-test.store');
+        });
         Route::middleware('can:view payments')->group(function () {
             Route::get('payments', [Admin\PaymentController::class, 'index'])->name('admin.payments.index');
             Route::get('payments/gateway-log', [Admin\PaymentController::class, 'gatewayLog'])->name('admin.payments.gateway-log');

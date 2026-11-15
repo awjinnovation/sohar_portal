@@ -82,6 +82,7 @@ class AdminLabels
     public const PAYMENT_TYPES = [
         'ticket' => 'تذاكر',
         'topup' => 'شحن محفظة',
+        'gateway_test' => 'اختبار بوابة الدفع',
     ];
 
     public const PAYMENT_METHODS = [

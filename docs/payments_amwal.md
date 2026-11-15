@@ -105,7 +105,40 @@ Platform fallback (`.env`): `AMWAL_MODE`, `AMWAL_MERCHANT_ID`,
 `AMWAL_VIEW_TYPE` (1 popup, 2 full screen), `AMWAL_CONTACT_INFO_TYPE`
 (1 all … 4 none).
 
-## 5. To confirm in UAT
+## 5. Gateway test page and switching gateways
+
+*Admin → Payments → Gateway test* (platform admins, `can:manage tenants`)
+shows both gateways for the current tenant (configured or not, UAT /
+production, MID / TID, notification URL, *Test connection*) and makes a
+**real small charge** (0.100–5 OMR) through the gateway you pick — Amwal or
+Thawani — whatever gateway visitors currently use. The payment page returns
+to the test page, which shows the result; *Check now* asks the gateway and
+*Refund* voids / refunds it (Amwal picks void on the same day). Test
+payments (`payment_type = gateway_test`) issue no tickets or wallet credit
+and are left out of dashboard revenue; they use the same pages, callbacks,
+notifications, reconciler and refund code as real payments.
+
+**Switching** is one setting: *Admin → Tenants → (tenant) → Payment gateway →
+بوابة الدفع المستخدمة* (`payments.driver`), or `PAYMENT_DRIVER` for tenants
+without their own. Both gateways can be configured at the same time. A
+payment keeps the gateway it was created with, so switching never strands an
+open payment (its callback, notifications, reconciliation and refunds still
+go to its own gateway), and switching back is the same one setting. The app
+needs no change: it always opens the `payment_url` it is given.
+
+Go-live order:
+
+1. UAT: enter the UAT credentials, *Test connection*, then on the test page
+   pay with an Amwal test card → *completed*; *Refund* → void succeeded;
+   send Amwal the notification URL and check a notification arrives
+   (*Payments → Gateway log*).
+2. Production credentials from Amwal (and the notification URL registered on
+   the production merchant), environment **Production**, *Test connection*,
+   one 0.100 OMR test payment with a real card, then *Refund* it.
+3. Switch the tenant's driver to **أموال**. To roll back, set it back to
+   Thawani; payments already made on Amwal keep working.
+
+## 6. To confirm in UAT
 
 Not stated precisely in Amwal's pages; the code follows Amwal's plugin and
 fails safe (needs review / API check) if they differ:

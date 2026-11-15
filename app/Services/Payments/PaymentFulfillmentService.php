@@ -65,6 +65,7 @@ class PaymentFulfillmentService
 
             match ($locked->payment_type) {
                 Payment::TYPE_TOPUP => $this->fulfillTopup($locked, $tenant),
+                Payment::TYPE_GATEWAY_TEST => null, // nothing to issue
                 default => $this->fulfillTicket($locked, $tenant),
             };
 

@@ -7,7 +7,7 @@
 @php
     $pageIcon = 'credit-card-2-front';
     $breadcrumbs = ['المحفظة والمدفوعات' => null, 'المدفوعات' => route('admin.payments.index'), __('الدفعة #:id', ['id' => $payment->id]) => null];
-    $canRefund = $payment->status === 'completed' && $payment->payment_type === \App\Models\Payment::TYPE_TICKET;
+    $canRefund = $payment->status === 'completed' && in_array($payment->payment_type, [\App\Models\Payment::TYPE_TICKET, \App\Models\Payment::TYPE_GATEWAY_TEST], true);
 @endphp
 @section('page-actions')
     <a href="{{ route('admin.payments.index') }}" class="btn"><i class="bi bi-arrow-right dir-icon"></i> {{ __('رجوع') }}</a>

@@ -231,6 +231,10 @@ class PaymentController extends Controller
             ? app(AmwalCheckout::class)->handleReturn($payment, $request->query())
             : $this->thawaniCheck($payment);
 
+        if ($payment->payment_type === Payment::TYPE_GATEWAY_TEST) {
+            return $this->returnRedirect($payment); // the test page shows any outcome
+        }
+
         return match (true) {
             $payment->status === 'completed' => $this->successView($payment),
             // Amwal: a declined attempt can be paid again from a new SmartBox page.
@@ -335,11 +339,19 @@ class PaymentController extends Controller
     /** Box office link or event booking page the payment came from; null for the app's own checkout. */
     private function returnRedirect(?Payment $payment, array $query = [])
     {
+        if ($payment?->payment_type === Payment::TYPE_GATEWAY_TEST) {
+            // Back to Admin → Payments → Gateway test, which shows the result.
+            return redirect()->route('admin.payments.gateway-test', ['payment' => $payment->id]);
+        }
+
         return $this->boxOfficeRedirect($payment, $query) ?? $this->webBookingRedirect($payment, $query);
     }
 
     private function successView(Payment $payment)
     {
+        if ($payment->payment_type === Payment::TYPE_GATEWAY_TEST) {
+            return $this->returnRedirect($payment);
+        }
         if ($redirect = $this->boxOfficeRedirect($payment) ?? $this->webBookingRedirect($payment, ['payment' => 'success'])) {
             return $redirect;
         }

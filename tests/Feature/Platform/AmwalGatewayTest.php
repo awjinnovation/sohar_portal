@@ -538,4 +538,65 @@ class AmwalGatewayTest extends TestCase
         $this->assertSame('needs_review', $refund->fresh()->status);
         $this->assertSame(2, $this->sentCount('refund'));
     }
+
+    // ------------------------------------------------------------------ gateway test page
+
+    private function platformAdmin(): User
+    {
+        $this->seedRoles();
+        $admin = User::factory()->create();
+        $admin->forceFill(['is_super_admin' => true])->save();
+
+        return $admin;
+    }
+
+    #[Test]
+    public function the_gateway_test_page_charges_checks_and_voids_a_test_payment(): void
+    {
+        config(['payments.driver' => 'thawani']); // visitors stay on Thawani while Amwal is tested
+        $admin = $this->platformAdmin();
+
+        $this->actingAs($admin)->get(route('admin.payments.gateway-test'))->assertOk()
+            ->assertSee('Amwal Pay')->assertSee('MID '.self::MID.' · TID '.self::TID)
+            ->assertSee(route('payments.webhooks.amwal', ['tenant' => $this->tenant->slug]))
+            ->assertDontSee(self::KEY);
+
+        // Thawani has no keys here: refused before any payment is made.
+        $this->actingAs($admin)->post(route('admin.payments.gateway-test.store'), ['gateway' => 'thawani', 'amount' => '0.100'])
+            ->assertSessionHasErrors('gateway');
+        $this->actingAs($admin)->post(route('admin.payments.gateway-test.store'), ['gateway' => 'amwal', 'amount' => '50'])
+            ->assertSessionHasErrors('amount');
+
+        $url = $this->actingAs($admin)->post(route('admin.payments.gateway-test.store'), ['gateway' => 'amwal', 'amount' => '0.100', 'lang' => 'en'])
+            ->assertRedirect()->headers->get('Location');
+        $payment = Payment::sole();
+        $this->assertSame(['amwal', 'gateway_test', 100, 'pending'], [$payment->gateway, $payment->payment_type, $payment->amount_minor, $payment->status]);
+
+        $this->get($url)->assertOk()->assertSee('"AmountTrxn":"0.100"', false)->assertSee('"LanguageId":"en"', false);
+        $this->get($this->returnUrl($payment, $this->smartBoxCallback($payment->transaction_id.'_1', '0.100')))
+            ->assertRedirect(route('admin.payments.gateway-test', ['payment' => $payment->id]));
+
+        $this->actingAs($admin)->get(route('admin.payments.gateway-test', ['payment' => $payment->id]))->assertOk()
+            ->assertSee('data-test-result="completed"', false);
+        $this->assertSame('completed', $payment->fresh()->status);
+        $this->assertSame(0, Ticket::count());
+        $this->assertSame(0, WalletTransaction::count());
+        $this->assertSame(0, app(\App\Services\Admin\DashboardMetrics::class)->activity($this->tenant)['revenue_today']);
+
+        // Void it from the page; back to the page.
+        $this->pay($payment->transaction_id.'_1', '0.100');
+        $this->actingAs($admin)->post(route('admin.payments.refund', $payment), ['reason' => 'Gateway test'])
+            ->assertRedirect(route('admin.payments.gateway-test', ['payment' => $payment->id]));
+        $this->assertSame(['succeeded', 'void'], [PaymentRefund::sole()->status, PaymentRefund::sole()->data['operation']]);
+        $this->assertSame('refunded', $payment->fresh()->status);
+        $this->actingAs($admin)->get(route('admin.payments.gateway-test'))->assertOk()->assertSee('أُعيد إلى البطاقة');
+    }
+
+    #[Test]
+    public function only_platform_admins_open_the_gateway_test_page(): void
+    {
+        $this->actingAs($this->admin())->get(route('admin.payments.gateway-test'))->assertForbidden();
+        $this->actingAs($this->admin())->post(route('admin.payments.gateway-test.store'), ['gateway' => 'amwal', 'amount' => '0.1'])->assertForbidden();
+        $this->assertSame(0, Payment::count());
+    }
 }

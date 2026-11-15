@@ -93,7 +93,8 @@ class DashboardMetrics
             }
         };
 
-        $completed = fn () => Payment::where('status', 'completed');
+        // Gateway test charges (Admin → Payments → Gateway test) are not revenue.
+        $completed = fn () => Payment::where('status', 'completed')->where('payment_type', '!=', Payment::TYPE_GATEWAY_TEST);
 
         $m = [
             'revenue_today' => $safe(fn () => (int) $completed()->where('created_at', '>=', $today)->sum('amount_minor')),
