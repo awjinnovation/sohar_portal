@@ -33,6 +33,7 @@
         'per_order_limit' => ['error', 'bi-exclamation-circle', $t('عدد التذاكر أكبر من المسموح في الطلب الواحد', 'Too many tickets in one order').(isset($errorData['per_order_max']) ? ' ('.$t('الحد ', 'max ').$errorData['per_order_max'].')' : '').'.'],
         'sales_closed' => ['error', 'bi-lock', $t('البيع مغلق لهذا النوع من التذاكر.', 'Sales are closed for this ticket type.')],
         'type_not_available' => ['error', 'bi-x-circle', $t('هذا النوع من التذاكر غير متاح.', 'This ticket type is not available.')],
+        'gateway_not_available' => ['error', 'bi-x-circle', $t('لم تعد بوابة الدفع هذه متاحة، ولم يُخصم أي مبلغ. ادفع بالزر أدناه.', 'That payment option is no longer available and nothing was charged. Pay with the button below.')],
     ];
     $unavailable = ['error', 'bi-x-circle', $t('الحجز غير متاح الآن. أعد المحاولة لاحقًا.', 'Booking is not available right now. Try again later.')];
     $notes = array_filter([$notice ? ($messages[$notice] ?? null) : null, $error ? ($messages[$error] ?? $unavailable) : null]);
@@ -211,9 +212,19 @@
                 <span>{{ $t('الإجمالي', 'Total') }}</span>
                 <span id="vbTotal"><x-admin.money :minor="0" :currency="$currency" /></span>
             </div>
-            <button type="submit" class="btn btn-primary vb-pay" id="vbPay" data-label-pay="{{ $t('ادفع بالبطاقة', 'Pay by card') }}" data-label-free="{{ $t('احصل على التذاكر', 'Get the tickets') }}">
-                <i class="bi bi-credit-card-2-front"></i> <span>{{ $t('ادفع بالبطاقة', 'Pay by card') }}</span>
-            </button>
+            @if(! empty($gateways))
+                {{-- Two gateways on: one button each (a free order only shows the first, as "Get the tickets"). --}}
+                @foreach($gateways as $g)
+                    <button type="submit" name="gateway" value="{{ $g['id'] }}" class="btn btn-primary vb-pay" @if($loop->first) id="vbPay" @endif data-pay data-gateway="{{ $g['id'] }}"
+                            data-label-pay="{{ $t('ادفع عبر', 'Pay with') }} {{ $g['name'] }}" data-label-free="{{ $t('احصل على التذاكر', 'Get the tickets') }}">
+                        <i class="bi bi-credit-card-2-front"></i> <span>{{ $t('ادفع عبر', 'Pay with') }} {{ $g['name'] }}</span>
+                    </button>
+                @endforeach
+            @else
+                <button type="submit" class="btn btn-primary vb-pay" id="vbPay" data-pay data-label-pay="{{ $t('ادفع بالبطاقة', 'Pay by card') }}" data-label-free="{{ $t('احصل على التذاكر', 'Get the tickets') }}">
+                    <i class="bi bi-credit-card-2-front"></i> <span>{{ $t('ادفع بالبطاقة', 'Pay by card') }}</span>
+                </button>
+            @endif
             <p class="muted vb-secure"><i class="bi bi-shield-lock"></i> {{ $t('يتم الدفع عبر بوابة الدفع الآمنة. تجد تذاكرك هنا وفي التطبيق عند الدخول برقم هاتفك.', 'You pay through the secure payment gateway. Your tickets show here, and in the app when you sign in with your number.') }}</p>
         </form>
     @endif
@@ -235,8 +246,9 @@
     // Double submits: disable the form's button once sent.
     document.querySelectorAll('[data-busy-form]').forEach(function (form) {
         form.addEventListener('submit', function () {
-            var b = form.querySelector('button[type=submit]');
-            if (b) { setTimeout(function () { b.disabled = true; b.style.opacity = '.75'; }, 0); }
+            setTimeout(function () {
+                form.querySelectorAll('button[type=submit]').forEach(function (b) { b.disabled = true; b.style.opacity = '.75'; });
+            }, 0);
         });
     });
 
@@ -244,7 +256,7 @@
     var book = document.getElementById('vbBook');
     if (book) {
         var decimals = parseInt(book.getAttribute('data-decimals'), 10) || 0;
-        var pay = document.getElementById('vbPay');
+        var pays = book.querySelectorAll('[data-pay]');
         var total = function () {
             var minor = 0, count = 0;
             book.querySelectorAll('.vb-type').forEach(function (row) {
@@ -259,9 +271,13 @@
             money.innerHTML = '';
             money.appendChild(cur);
             money.appendChild(document.createTextNode(amount));
-            pay.disabled = count === 0;
-            pay.style.opacity = count === 0 ? '.6' : '';
-            pay.querySelector('span').textContent = count > 0 && minor === 0 ? pay.getAttribute('data-label-free') : pay.getAttribute('data-label-pay');
+            var free = count > 0 && minor === 0;
+            pays.forEach(function (pay, i) {
+                pay.disabled = count === 0;
+                pay.style.opacity = count === 0 ? '.6' : '';
+                pay.style.display = free && i > 0 ? 'none' : '';
+                pay.querySelector('span').textContent = free ? pay.getAttribute('data-label-free') : pay.getAttribute('data-label-pay');
+            });
         };
         book.querySelectorAll('.vb-type').forEach(function (row) {
             var input = row.querySelector('input');

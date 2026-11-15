@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Payment;
-use App\Services\Payments\ThawaniCheckout;
+use App\Services\Payments\GatewayCheckouts;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -40,13 +40,13 @@ class ReconcilePayment implements ShouldBeUnique, ShouldQueue
         return [10, 30];
     }
 
-    public function handle(ThawaniCheckout $thawani): void
+    public function handle(): void
     {
         $payment = Payment::withoutTenantScope()->find($this->paymentId);
         if (! $payment) {
             return;
         }
 
-        $thawani->reconcile($payment, $this->source, 'background', $this->final);
+        GatewayCheckouts::for($payment)?->reconcile($payment, $this->source, 'background', $this->final);
     }
 }

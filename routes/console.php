@@ -42,8 +42,8 @@ Artisan::command('payments:expire-pending {--minutes=120}', function (PaymentFul
     Payment::withoutTenantScope()
         ->where('status', 'pending')
         ->where('method', Payment::METHOD_GATEWAY)
-        // Thawani payments are checked with Thawani first (payments:reconcile).
-        ->where(fn ($q) => $q->whereNull('gateway')->orWhere('gateway', '!=', 'thawani'))
+        // Thawani / Amwal payments are checked with the gateway first (payments:reconcile).
+        ->where(fn ($q) => $q->whereNull('gateway')->orWhereNotIn('gateway', \App\Services\Payments\GatewayCheckouts::RECONCILED))
         ->where('created_at', '<', now()->subMinutes((int) $this->option('minutes')))
         ->orderBy('id')
         ->each(function (Payment $payment) use ($fulfillment, &$count) {
@@ -54,7 +54,8 @@ Artisan::command('payments:expire-pending {--minutes=120}', function (PaymentFul
 })->purpose('Cancel abandoned Bank Muscat / fake gateway checkouts and give back reserved points');
 
 /*
-| Thawani reconciliation (docs/payments_thawani.md §6), every minute:
+| Thawani / Amwal reconciliation (docs/payments_thawani.md §6,
+| docs/payments_amwal.md), every minute:
 |  1. pending payments due for a check (next_check_at) are checked with
 |     Thawani; past payments.reconcile.give_up_after_minutes the check is
 |     final and an unpaid payment is cancelled;
@@ -74,7 +75,7 @@ Artisan::command('payments:reconcile {--limit=}', function (PaymentFulfillmentSe
     Payment::withoutTenantScope()
         ->whereIn('status', ['pending', 'processing'])
         ->where('method', Payment::METHOD_GATEWAY)
-        ->where('gateway', 'thawani')
+        ->whereIn('gateway', \App\Services\Payments\GatewayCheckouts::RECONCILED)
         ->whereNotNull('gateway_session_id')
         // next_check_at is null once a person must look (e.g. amount mismatch).
         ->where('next_check_at', '<=', now())
@@ -89,7 +90,7 @@ Artisan::command('payments:reconcile {--limit=}', function (PaymentFulfillmentSe
     Payment::withoutTenantScope()
         ->where('status', 'pending')
         ->where('method', Payment::METHOD_GATEWAY)
-        ->where('gateway', 'thawani')
+        ->whereIn('gateway', \App\Services\Payments\GatewayCheckouts::RECONCILED)
         ->whereNull('gateway_session_id')
         ->where('created_at', '<', $giveUp)
         ->orderBy('id')
@@ -102,7 +103,7 @@ Artisan::command('payments:reconcile {--limit=}', function (PaymentFulfillmentSe
 
     \App\Models\PaymentGatewaySession::query()
         ->join('payments', 'payments.id', '=', 'payment_gateway_sessions.payment_id')
-        ->where('payment_gateway_sessions.gateway', 'thawani')
+        ->whereIn('payment_gateway_sessions.gateway', \App\Services\Payments\GatewayCheckouts::RECONCILED)
         ->where('payment_gateway_sessions.status', 'open')
         ->where(fn ($q) => $q->whereIn('payments.status', ['cancelled', 'failed'])
             ->orWhere(fn ($w) => $w->whereIn('payments.status', ['completed', 'refunded'])
@@ -140,7 +141,7 @@ Artisan::command('payments:reconcile {--limit=}', function (PaymentFulfillmentSe
         });
 
     $this->info(collect($counts)->map(fn ($n, $k) => "$k: $n")->implode(', '));
-})->purpose('Check pending Thawani payments with Thawani; cancel unpaid ones after the give-up time');
+})->purpose('Check pending Thawani / Amwal payments with the gateway; cancel unpaid ones after the give-up time');
 
 Artisan::command('payments:prune-gateway-logs {--days=}', function () {
     $cutoff = now()->subDays(max(30, (int) ($this->option('days') ?: config('payments.log_retention_days', 400))));

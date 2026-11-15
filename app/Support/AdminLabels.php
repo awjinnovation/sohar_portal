@@ -82,6 +82,7 @@ class AdminLabels
     public const PAYMENT_TYPES = [
         'ticket' => 'تذاكر',
         'topup' => 'شحن محفظة',
+        'gateway_test' => 'اختبار بوابة الدفع',
     ];
 
     public const PAYMENT_METHODS = [
@@ -96,6 +97,7 @@ class AdminLabels
         'checkout_opened' => 'فُتحت صفحة الدفع',
         'gateway_checked' => 'استُعلم من البوابة',
         'webhook_received' => 'وصل إشعار من البوابة',
+        'callback_received' => 'عاد الزائر من نافذة الدفع',
         'completed' => 'اكتملت الدفعة',
         'cancelled' => 'أُلغيت الدفعة',
         'failed' => 'فشلت الدفعة',
@@ -112,6 +114,8 @@ class AdminLabels
         'duplicate_capture' => 'دُفع المبلغ مرتين',
         'points_retaken' => 'خُصمت النقاط مجددًا',
         'points_retake_failed' => 'تعذّر خصم النقاط مجددًا',
+        'box_office_paid_after_close' => 'دُفع طلب البوابة بعد انتهاء صلاحيته أو إلغائه',
+        'notification_amount_differs' => 'اختلف مبلغ الإشعار عن الدفعة، فاستُعلم من بوابة الدفع',
     ];
 
     public const PAYMENT_EVENT_SOURCES = [
@@ -163,6 +167,9 @@ class AdminLabels
         'duplicate_capture' => 'دُفع المبلغ مرتين عبر جلستين',
         'session_unverifiable' => 'تعذّر التحقق من جلسة الدفع لدى البوابة',
         'late_capture_points' => 'دُفع بعد الإلغاء ولم يكفِ رصيد النقاط لخصمها مجددًا',
+        // Gate box office (docs/gate_reconciliation.md).
+        'late_capture' => 'دُفع طلب البوابة بعد انتهاء صلاحيته أو إلغائه',
+        'box_office_refund_required' => 'دُفع طلب البوابة ولم تصدر تذاكره، فيلزم الاسترداد',
     ];
 
     public const VENDOR_STAFF_ROLES = [

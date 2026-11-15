@@ -85,7 +85,9 @@ class GatewayHttp
                 return new GatewayResponse($status, $json, $body, $correlation);
             }
 
-            $message = trim((string) ($json['description'] ?? $json['message'] ?? '')) ?: "HTTP $status";
+            // Amwal puts the reason in errorList ("message" is a trace code there).
+            $errorList = is_array($json['errorList'] ?? null) ? implode('; ', array_filter(array_map(fn ($e) => is_scalar($e) ? (string) $e : null, $json['errorList']))) : '';
+            $message = trim((string) ($json['description'] ?? ($errorList !== '' ? $errorList : null) ?? $json['message'] ?? '')) ?: "HTTP $status";
             $retryStatus = in_array($status, self::RETRY_STATUSES, true);
             $this->record($request, $correlation, $attempt, $status, $body, $retryStatus || $status >= 500 ? 'server_error' : 'client_error', $message, $ms);
 
@@ -145,7 +147,7 @@ class GatewayHttp
                 'url' => Str::limit(self::redactUrl($r->url), 495, ''),
                 'request_body' => $r->body !== null ? self::redact($r->body) : null,
                 'response_status' => $status,
-                'response_body' => $body !== null ? Str::limit($body, self::BODY_LIMIT, '…[truncated]') : null,
+                'response_body' => $body !== null ? Str::limit(self::redactBody($body), self::BODY_LIMIT, '…[truncated]') : null,
                 'outcome' => $outcome,
                 'error' => $error !== null ? Str::limit($error, 2000) : null,
                 'duration_ms' => $ms,
@@ -168,6 +170,12 @@ class GatewayHttp
         }
 
         return $data;
+    }
+
+    /** Session tokens in a response (Amwal SDK) are not kept: they let anyone pay to the merchant for a while. */
+    private static function redactBody(string $body): string
+    {
+        return (string) preg_replace('/("(?:session_?token)"\s*:\s*")[^"]*(")/i', '$1[redacted]$2', $body);
     }
 
     private static function redactUrl(string $url): string

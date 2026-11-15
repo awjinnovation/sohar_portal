@@ -22,14 +22,16 @@ class TopupService
 {
     public function __construct(private WalletService $wallets, private PaymentGatewayManager $gateways) {}
 
-    public function initialize(User $user, Tenant $tenant, int $amountMinor, string $key): WalletTopup
+    /** $gateway: one of the tenant's enabled gateways (null = the default); GATEWAY_NOT_AVAILABLE otherwise. */
+    public function initialize(User $user, Tenant $tenant, int $amountMinor, string $key, ?string $gateway = null): WalletTopup
     {
         $wallet = $this->wallets->walletFor($user, $tenant);
 
         $find = fn () => WalletTopup::withoutTenantScope()->where('wallet_id', $wallet->id)->where('idempotency_key', $key)->first();
         if ($existing = $find()) {
-            return $existing;
+            return $existing; // the original top-up, whatever gateway this retry names
         }
+        $gateway = $this->gateways->resolve($tenant, $gateway);
 
         if ($wallet->isFrozen()) {
             throw ApiException::walletFrozen();
@@ -48,7 +50,7 @@ class TopupService
         }
 
         try {
-            return DB::transaction(function () use ($user, $tenant, $wallet, $amountMinor, $key) {
+            return DB::transaction(function () use ($user, $tenant, $wallet, $amountMinor, $key, $gateway) {
                 $topup = new WalletTopup([
                     'wallet_id' => $wallet->id,
                     'user_id' => $user->id,
@@ -64,7 +66,7 @@ class TopupService
                     'transaction_id' => 'TOP'.strtoupper(Str::random(12)),
                     'payment_type' => Payment::TYPE_TOPUP,
                     'method' => Payment::METHOD_GATEWAY,
-                    'gateway' => $this->gateways->driver($tenant),
+                    'gateway' => $gateway,
                     'payable_id' => $topup->id,
                     'payable_type' => WalletTopup::class,
                     'amount' => Money::format($amountMinor, $tenant->currencyDecimals()),

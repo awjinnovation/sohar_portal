@@ -4,7 +4,8 @@ return [
 
     /*
     | Platform default payment gateway driver: "thawani" (Thawani Pay hosted
-    | checkout), "bankmuscat" (CCAvenue non-seamless) or "fake" (local page
+    | checkout), "amwal" (Amwal Pay SmartBox), "bankmuscat" (CCAvenue
+    | non-seamless) or "fake" (local page
     | with Simulate success / failure buttons, for development and automated
     | tests; refused when APP_ENV=production). A tenant can pick its own in
     | Admin → Tenants → payment gateway (settings payments.driver).
@@ -39,6 +40,32 @@ return [
         'product_name_max' => 40,
         // Webhook timestamps older than this (seconds) are rejected (replay guard); 0 = off.
         'webhook_tolerance_seconds' => (int) env('THAWANI_WEBHOOK_TOLERANCE', 600),
+    ],
+
+    /*
+    | Amwal Pay SmartBox (docs/payments_amwal.md). Keys are per tenant
+    | (encrypted, Admin → Tenants) with config/services.php `amwal` as the
+    | fallback. `smartbox` = the script our payment page loads; `api` = the
+    | merchant API (transaction inquiry, refund, void).
+    */
+    'amwal' => [
+        'hosts' => [
+            'uat' => [
+                'smartbox' => 'https://test.amwalpg.com:7443/js/SmartBox.js?v=1.1',
+                'api' => 'https://test.amwalpg.com:14443',
+            ],
+            'production' => [
+                'smartbox' => 'https://checkout.amwalpg.com/js/SmartBox.js?v=1.1',
+                'api' => 'https://webhook.amwalpg.com',
+            ],
+        ],
+        // A SmartBox attempt (merchant reference) is watched this long after
+        // the page was opened; Amwal has no expiry or cancel for it.
+        'session_ttl_minutes' => (int) env('AMWAL_SESSION_TTL_MINUTES', 120),
+        // 1 = popup over our page, 2 = full screen.
+        'view_type' => (int) env('AMWAL_VIEW_TYPE', 2),
+        // SmartBox contact fields: 1 all, 2 email, 3 phone, 4 none.
+        'contact_info_type' => (int) env('AMWAL_CONTACT_INFO_TYPE', 4),
     ],
 
     /*

@@ -120,6 +120,13 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
             Route::post('sales/{order}/review', [Admin\GateSalesController::class, 'clearReview'])->whereNumber('order')->name('sales.review');
             Route::post('sales/{order}/void', [Admin\GateSalesController::class, 'voidSale'])->whereNumber('order')->name('sales.void');
         });
+        // Morning reconciliation of a gate day (docs/gate_reconciliation.md): `manage gates` or `view payments` (checked in the controller).
+        Route::prefix('gates/reconciliation')->name('admin.gates.reconciliation')->group(function () {
+            Route::get('/', [Admin\GateReconciliationController::class, 'index']);
+            Route::get('export', [Admin\GateReconciliationController::class, 'export'])->middleware('throttle:10,1')->name('.export');
+            Route::post('check', [Admin\GateReconciliationController::class, 'check'])->middleware('throttle:10,1')->name('.check');
+            Route::post('orders/{order}/checked', [Admin\GateReconciliationController::class, 'markChecked'])->whereNumber('order')->name('.checked');
+        });
         Route::resource('gates', Admin\GateController::class, ['as' => 'admin'])->except(['show'])->middleware('can:manage gates');
 
         // Visitor satisfaction «راضي» report + CSV export (docs/radi_satisfaction_contract.md §4)
@@ -129,6 +136,12 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         });
 
         // Payments
+        // Gateway test (platform admins; before payments/{payment}): a small real charge through Amwal or Thawani.
+        Route::middleware('can:manage tenants')->group(function () {
+            Route::get('payments/gateway-test', [Admin\GatewayTestController::class, 'index'])->name('admin.payments.gateway-test');
+            Route::post('payments/gateway-test', [Admin\GatewayTestController::class, 'store'])
+                ->middleware('throttle:20,1')->name('admin.payments.gateway-test.store');
+        });
         Route::middleware('can:view payments')->group(function () {
             Route::get('payments', [Admin\PaymentController::class, 'index'])->name('admin.payments.index');
             Route::get('payments/gateway-log', [Admin\PaymentController::class, 'gatewayLog'])->name('admin.payments.gateway-log');

@@ -160,7 +160,9 @@ class ThawaniCheckout
 
     private function productName(Payment $payment): string
     {
-        if ($payment->payment_type === Payment::TYPE_TOPUP) {
+        if ($payment->payment_type === Payment::TYPE_GATEWAY_TEST) {
+            $name = 'Gateway test';
+        } elseif ($payment->payment_type === Payment::TYPE_TOPUP) {
             $name = 'Wallet top-up';
         } else {
             $event = Event::withoutTenantScope()->find($payment->metadata['event_id'] ?? $payment->payable_id);

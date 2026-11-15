@@ -104,14 +104,16 @@ class PaymentController extends Controller
 
     /**
      * POST /payments/initialize
-     * {event_id, booking_date (only for dated types), quantity | items, ticket_type?, method: gateway|wallet, points_to_redeem?, idempotency_key}
-     * Any client-sent `amount` is ignored.
+     * {event_id, booking_date (only for dated types), quantity | items, ticket_type?, method: gateway|wallet, points_to_redeem?, idempotency_key,
+     *  gateway?: one of GET /tenant/config → payments.gateways[].id (absent = default_gateway; ignored for wallet)}
+     * Any client-sent `amount` is ignored. 422 GATEWAY_NOT_AVAILABLE for a gateway that is not on.
      */
     public function initialize(Request $request)
     {
         $data = $request->validate($this->checkoutRules() + [
             'method' => 'nullable|in:gateway,wallet',
             'idempotency_key' => 'required_if:method,wallet|nullable|string|max:100',
+            'gateway' => 'nullable|string|max:40',
         ]);
         $data['event_id'] = (int) ($data['event_id'] ?? $data['payable_id']);
         $data['method'] = $data['method'] ?? Payment::METHOD_GATEWAY;
@@ -130,6 +132,8 @@ class PaymentController extends Controller
             'transaction_id' => $payment->transaction_id,
             'status' => $payment->status,
             'method' => $payment->method,
+            // The gateway used (null for wallet payments).
+            'gateway' => $payment->method === Payment::METHOD_GATEWAY ? $payment->gateway : null,
             'amount_minor' => $payment->amount_minor,
             'amount' => $tenant->formatMoney((int) $payment->amount_minor),
             'currency' => $payment->currency,
@@ -162,10 +166,10 @@ class PaymentController extends Controller
             ->firstOrFail();
     }
 
-    /** A pending Thawani payment is checked with Thawani (throttled) before answering a poll. */
+    /** A pending Thawani / Amwal payment is checked with the gateway (throttled) before answering a poll. */
     private function fresh(Payment $payment): Payment
     {
-        return app(\App\Services\Payments\ThawaniCheckout::class)->checkIfStale($payment);
+        return \App\Services\Payments\GatewayCheckouts::checkIfStale($payment);
     }
 
     private function statusPayload(Payment $payment): array
@@ -219,10 +223,11 @@ class PaymentController extends Controller
         $payment = $this->ownedPayment($request, $request->input('transaction_id') ?? $request->input('order_id'));
 
         if ($payment->status === 'pending') {
-            // Thawani: asked first and its sessions cancelled, so the open
-            // payment page cannot be paid after the app gave up on it.
-            $payment = $payment->gateway === \App\Services\Payments\Gateway\ThawaniGateway::NAME
-                ? app(\App\Services\Payments\ThawaniCheckout::class)->cancel($payment, 'api', 'cancelled_in_app')
+            // Thawani / Amwal: the gateway is asked first (paid after all →
+            // completed); Thawani's sessions are cancelled there too.
+            $flow = \App\Services\Payments\GatewayCheckouts::for($payment);
+            $payment = $flow
+                ? $flow->cancel($payment, 'api', 'cancelled_in_app')
                 : $fulfillment->fail($payment, 'cancelled', [], 'api', ['reason' => 'cancelled_in_app']);
         }
 
@@ -231,6 +236,57 @@ class PaymentController extends Controller
             'message' => $payment->status === 'cancelled' ? 'Payment cancelled successfully' : 'Payment can no longer be cancelled',
             'data' => $this->statusPayload($payment),
         ]);
+    }
+
+    /**
+     * POST /payments/amwal/sdk-session {transaction_id} — the owner's pending
+     * Amwal payment is paid in the app through Amwal's Flutter SDK (tenant
+     * setting payments.amwal.app_flow = sdk): a new attempt is opened like a
+     * SmartBox page open, and the app gets what the SDK needs (no secret).
+     * The SDK's result is not trusted: the app then polls /payments/status
+     * as for the link (Amwal API / signed notification decide).
+     *
+     * 404 another user's / unknown payment; 409 PAYMENT_NOT_PENDING (data.status);
+     * 422 AMWAL_SDK_NOT_AVAILABLE (data.reason: flow_off | not_amwal |
+     * not_configured | no_token) — the app opens payment_url instead.
+     */
+    public function amwalSdkSession(Request $request, \App\Services\Payments\PaymentGatewayManager $gateways, \App\Services\Payments\AmwalCheckout $amwal)
+    {
+        $request->validate(['transaction_id' => 'required|string|max:64']);
+        $payment = $this->ownedPayment($request, (string) $request->input('transaction_id'));
+        $tenant = $this->context->get();
+        $unavailable = fn (string $reason) => new \App\Exceptions\ApiException('AMWAL_SDK_NOT_AVAILABLE', __('platform.errors.amwal_sdk_not_available'), 422, ['reason' => $reason]);
+
+        $status = $payment->status;
+        if ($status === 'pending' && ($orderId = (int) ($payment->metadata['box_office_order_id'] ?? 0))) {
+            // A gate order that expired or was cancelled is never handed to the gateway (as on /payment/redirect).
+            $order = \App\Models\BoxOfficeOrder::withoutTenantScope()->find($orderId);
+            if ($order && ! app(\App\Services\Gate\BoxOfficeService::class)->expireIfDue($order)->isPending()) {
+                $fresh = $payment->fresh()->status;
+                $status = $fresh === 'pending' ? 'cancelled' : $fresh; // its cancel may still be queued
+            }
+        }
+        if ($status !== 'pending' || $payment->method !== Payment::METHOD_GATEWAY) {
+            throw new \App\Exceptions\ApiException('PAYMENT_NOT_PENDING', __('platform.errors.payment_not_pending'), 409, ['status' => $status]);
+        }
+        if ($payment->gateway !== \App\Services\Payments\Gateway\AmwalGateway::NAME) {
+            throw $unavailable('not_amwal');
+        }
+        if ($gateways->appFlow($tenant, 'amwal') !== 'sdk') {
+            throw $unavailable('flow_off');
+        }
+
+        $locale = app()->getLocale() === 'ar' ? 'ar' : 'en';
+        try {
+            $session = $amwal->startSdk($payment, $locale);
+        } catch (\App\Services\Payments\Gateway\GatewayException $e) {
+            Log::warning('Amwal SDK session could not start', ['transaction_id' => $payment->transaction_id, 'error' => $e->getMessage()]);
+            throw $unavailable($e->kind === 'config' ? 'not_configured' : 'no_token');
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException) {
+            throw $unavailable('no_token');
+        }
+
+        return response()->json(['success' => true, 'data' => $session]);
     }
 
     /**

@@ -39,7 +39,7 @@
     ];
     $moduleOn = fn (string $route) => ! isset($menuModules[$route]) || ! $brand || $brand->moduleEnabled($menuModules[$route]);
 
-    // [route, active pattern, icon, label, permission (null = any panel user), badge]
+    // [route, active pattern, icon, label, permission(s) (null = any panel user; a list = any of them), badge]
     $menuSections = [
         ['title' => 'نظرة عامة', 'items' => [
             ['admin.dashboard', 'admin.dashboard', 'grid-1x2', 'لوحة التحكم', null],
@@ -57,6 +57,7 @@
             ['admin.gates.devices.index', 'admin.gates.devices.*', 'upc-scan', 'أجهزة المسح', 'manage gates'],
             ['admin.gates.scans.index', 'admin.gates.scans.*', 'list-check', 'سجل المسح', 'manage gates'],
             ['admin.gates.sales.index', 'admin.gates.sales.*', 'cart-check', 'مبيعات البوابات', 'manage gates', $boxOfficeRefunds],
+            ['admin.gates.reconciliation', ['admin.gates.reconciliation', 'admin.gates.reconciliation.*'], 'clipboard-check', 'مطابقة مبيعات البوابات', ['manage gates', 'view payments']],
         ]],
         ['title' => ! $brand || $brand->moduleEnabled('wallet') ? 'المحفظة والمدفوعات' : 'المدفوعات', 'items' => [
             ['admin.wallets.index', 'admin.wallets.*', 'wallet2', 'المحافظ', 'manage wallets'],
@@ -167,7 +168,7 @@
                 @php
                     $menuItems = array_values(array_filter($menuSection['items'], function ($item) use ($user, $moduleOn) {
                         if (! \Illuminate\Support\Facades\Route::has($item[0]) || ! $moduleOn($item[0])) return false;
-                        return $item[4] === null || ($user && $user->can($item[4]));
+                        return $item[4] === null || ($user && $user->canAny((array) $item[4]));
                     }));
                 @endphp
                 @if($menuItems)

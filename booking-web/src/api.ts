@@ -71,6 +71,8 @@ export interface EventPayload {
   ticket_types: TicketType[];
   dates: BookingDate[];
   today: string;
+  /** Two or more payment gateways on: one pay button each (names in the page language); empty or absent = one button. */
+  payments?: { gateways: { id: string; name: string }[] };
 }
 
 export interface Ticket {
@@ -164,7 +166,7 @@ export const api = {
   checkout: (
     id: number,
     token: string,
-    body: { lang: Lang; form_key: string; booking_date: string | null; items: { ticket_type_id: number; quantity: number }[] },
+    body: { lang: Lang; form_key: string; booking_date: string | null; items: { ticket_type_id: number; quantity: number }[]; gateway?: string },
   ) => request<{ status: 'completed' | 'pending'; payment_url?: string }>(`${ev(id)}/checkout`, { method: 'POST', token, body }),
 
   logout: (id: number, token: string) => request<void>(`${ev(id)}/logout`, { method: 'POST', token, body: {} }),

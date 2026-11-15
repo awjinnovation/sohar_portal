@@ -25,6 +25,10 @@ return [
         'type_sold_out_total' => 'No :type tickets are left.',
         'booking_date_required' => 'Choose the day of your visit.',
         'event_ended' => 'The event has ended.',
+        // Payment gateways (docs/payments_amwal.md §5).
+        'gateway_not_available' => 'This payment method is not available right now. Choose another one.',
+        'amwal_sdk_not_available' => 'Paying with Amwal inside the app is not available right now. Pay on the payment page.',
+        'payment_not_pending' => 'This payment is no longer awaiting payment.',
     ],
     // Validity of a ticket type or ticket (docs/ticket_types_contract.md §7).
     'validity' => [

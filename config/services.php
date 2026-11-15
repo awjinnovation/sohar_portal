@@ -57,6 +57,17 @@ return [
         'webhook_secret' => env('THAWANI_WEBHOOK_SECRET'),
     ],
 
+    // Amwal Pay (SmartBox) platform fallback; each tenant can override these
+    // in tenants.gateway_credentials.amwal (encrypted, admin panel).
+    // mode: uat (test.amwalpg.com) | production (checkout / webhook.amwalpg.com).
+    // secure_key = the hex "secure hash" key from Amwal (never sent anywhere).
+    'amwal' => [
+        'mode' => env('AMWAL_MODE', 'uat'),
+        'merchant_id' => env('AMWAL_MERCHANT_ID'),
+        'terminal_id' => env('AMWAL_TERMINAL_ID'),
+        'secure_key' => env('AMWAL_SECURE_KEY'),
+    ],
+
     // AI Experience (docs/ai_and_gate_contract.md §A). The key is read only
     // through config('services.openai.key') and is never logged.
     'openai' => [

@@ -6,7 +6,8 @@ use App\Models\Tenant;
 
 /**
  * Builds the public tenant config document (contract §5). Server-only
- * settings (payments, messages, legacy, gateway credentials) are omitted.
+ * settings (payment settings, messages, legacy, gateway credentials) are
+ * omitted; `payments` only lists the gateways a visitor may choose.
  */
 class TenantConfigPresenter
 {
@@ -69,6 +70,8 @@ class TenantConfigPresenter
             ],
             // Visitor satisfaction survey «راضي» (docs/radi_satisfaction_contract.md §1).
             'radi' => \App\Services\Satisfaction\RadiSettings::present($tenant),
+            // Card gateways switched on (default first): with two, the app lets the visitor choose (docs/payments_amwal.md §5).
+            'payments' => app(\App\Services\Payments\PaymentGatewayManager::class)->present($tenant),
         ];
     }
 }

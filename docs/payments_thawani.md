@@ -47,9 +47,11 @@ A paid session is only fulfilled when Thawani's `total_amount` and currency
 equal the payment's. Otherwise the payment is flagged **needs review**
 (`amount_mismatch`) and nothing is issued.
 
-The driver is chosen per tenant (*Admin → Tenants → Payment gateway*, setting
-`payments.driver`), else `PAYMENT_DRIVER` (default `thawani`). A payment keeps
-the driver it was created with, so switching gateways never strands a payment.
+Thawani and Amwal are switched on per tenant (*Admin → Tenants → Payment
+gateway*, settings `payments.gateways` + the default `payments.driver`, else
+`PAYMENT_DRIVER`, default `thawani`); with both on the visitor chooses
+([payments_amwal.md §5](payments_amwal.md#5-gateway-test-page-switching-gateways-on-and-off)).
+A payment keeps the driver it was created with, so switching gateways never strands a payment.
 
 ## 2. Thawani API used
 
@@ -201,4 +203,4 @@ Run a queue worker on `payments` (the compose `worker` does:
 `--queue=payments,default`) and the scheduler. With several app servers the
 cache must be shared (Redis) for the circuit breaker, locks and unique jobs.
 
-Go-live: [DEPLOY_COOLIFY.md §9](DEPLOY_COOLIFY.md#9-thawani-pay).
+Go-live: [DEPLOY_COOLIFY.md §9](DEPLOY_COOLIFY.md#9-thawani-pay). Amwal Pay SmartBox: [payments_amwal.md](payments_amwal.md).

@@ -31,6 +31,7 @@ class TenantController extends Controller
 
     public const GATEWAY_FIELDS = [
         'thawani' => ['secret_key', 'publishable_key', 'webhook_secret'],
+        'amwal' => ['merchant_id', 'terminal_id', 'secure_key'],
         'bank_muscat' => ['merchant_id', 'access_code', 'working_key', 'gateway_url'],
     ];
 
@@ -96,15 +97,16 @@ class TenantController extends Controller
 
         $tenant = new Tenant();
         $tenant->slug = $request->input('slug');
+        $gateways = $this->gatewayChoice($request, $tenant);
         $values = $this->collectSettings($request, $tenant);
 
-        $tenant = DB::transaction(function () use ($request, $tenant, $values, $adminUser, $email) {
+        $tenant = DB::transaction(function () use ($request, $tenant, $values, $adminUser, $email, $gateways) {
             $tenant->status = $request->input('status');
             $tenant->domain = $request->input('domain');
             $tenant->name = $this->nameInput($request);
             $tenant->settings = [];
             $this->applySettings($tenant, $values);
-            $this->applyGateway($request, $tenant);
+            $this->applyGateway($request, $tenant, $gateways);
             $tenant->save();
 
             if ($email) {
@@ -141,13 +143,14 @@ class TenantController extends Controller
             $this->gatewayRules(),
         ));
 
+        $gateways = $this->gatewayChoice($request, $tenant);
         $values = $this->collectSettings($request, $tenant);
 
         $tenant->status = $request->input('status');
         $tenant->domain = $request->input('domain');
         $tenant->name = $this->nameInput($request, $tenant);
         $this->applySettings($tenant, $values);
-        $this->applyGateway($request, $tenant);
+        $this->applyGateway($request, $tenant, $gateways);
         $tenant->save();
 
         AuditLog::record('tenant.updated', $tenant, ['keys' => array_keys($values)]);
@@ -272,19 +275,32 @@ class TenantController extends Controller
         $drivers = array_values(array_filter(\App\Services\Payments\PaymentGatewayManager::DRIVERS, fn ($d) => $d !== 'fake' || ! app()->environment('production')));
         $rules = [
             'payments_driver' => ['nullable', Rule::in($drivers)],
+            // Checkboxes (+ a hidden empty value so "none ticked" is sent too).
+            'payments_gateways' => ['nullable', 'array'],
+            'payments_gateways.*' => ['nullable', Rule::in(array_merge(\App\Services\Payments\PaymentGatewayManager::SELECTABLE, ['']))],
             'thawani_mode' => ['nullable', Rule::in(\App\Services\Payments\Gateway\ThawaniConfig::MODES)],
+            'amwal_mode' => ['nullable', Rule::in(\App\Services\Payments\Gateway\AmwalConfig::MODES)],
+            // How the app pays Amwal: the payment page (link, default) or Amwal's Flutter SDK.
+            'amwal_app_flow' => ['nullable', Rule::in(\App\Services\Payments\PaymentGatewayManager::APP_FLOWS)],
+            // The secure hash key is hex (it is hex-decoded before signing).
+            'gateway.amwal.secure_key' => ['nullable', 'string', 'max:1000', 'regex:/^\s*([0-9A-Fa-f]{2})+\s*$/'],
+            'gateway.amwal.merchant_id' => ['nullable', 'string', 'max:30', 'regex:/^\s*\d+\s*$/'],
+            'gateway.amwal.terminal_id' => ['nullable', 'string', 'max:30', 'regex:/^\s*\d+\s*$/'],
         ];
         foreach (self::GATEWAY_FIELDS as $provider => $fields) {
             foreach ($fields as $field) {
-                $rules["gateway.$provider.$field"] = ['nullable', 'string', 'max:1000'];
+                $rules["gateway.$provider.$field"] ??= ['nullable', 'string', 'max:1000'];
             }
         }
 
         return $rules;
     }
 
-    /** Write-only credentials: blank inputs keep the stored value. */
-    private function applyGateway(Request $request, Tenant $tenant): void
+    /**
+     * Stored credentials with this request's non-blank inputs over them
+     * (null = nothing posted). Write-only: blank inputs keep the stored value.
+     */
+    private function postedCredentials(Request $request, Tenant $tenant): ?array
     {
         $credentials = $tenant->gateway_credentials ?? [];
         $changed = false;
@@ -297,17 +313,102 @@ class TenantController extends Controller
                 }
             }
         }
-        if ($changed) {
-            $tenant->gateway_credentials = $credentials;
+
+        return $changed ? $credentials : null;
+    }
+
+    /**
+     * Gateways switched on for visitors (docs/payments_amwal.md §5), checked
+     * against the default and the credentials this request leaves in place.
+     *
+     * - Checkboxes for Thawani and Amwal (`payments_gateways[]`); the default
+     *   (`payments_driver`, blank = platform default) must be one of those
+     *   ticked, and at least one must be ticked.
+     * - A gateway without credentials (the organization's, else the
+     *   platform's) cannot be switched on: refused, not just warned, so a
+     *   visitor is never offered a gateway that cannot take the payment.
+     * - Bank Muscat and the local test gateway work alone: as the default
+     *   they ignore the checkboxes, as before.
+     *
+     * @return array{manage: bool, list: ?list<string>} list = what to store
+     *   in payments.gateways (null = remove the key: only the default is on)
+     */
+    private function gatewayChoice(Request $request, Tenant $tenant): array
+    {
+        $selectable = \App\Services\Payments\PaymentGatewayManager::SELECTABLE;
+        $default = $request->has('payments_driver')
+            ? ((string) $request->input('payments_driver') ?: (string) config('payments.driver', 'thawani'))
+            : (string) ($tenant->setting('payments.driver') ?: config('payments.driver', 'thawani'));
+
+        if ($request->has('payments_gateways')) {
+            $posted = array_filter((array) $request->input('payments_gateways'), 'is_string');
+            $ticked = array_values(array_intersect($selectable, $posted));
+        } else {
+            // Not part of this request (the form always sends it): keep what is stored.
+            $stored = (array) data_get($tenant->settings ?? [], 'payments.gateways', []);
+            if (! $stored) {
+                return ['manage' => false, 'list' => null];
+            }
+            $ticked = array_values(array_intersect($selectable, $stored));
         }
 
-        // Driver and Thawani mode are plain settings (blank = platform default, key removed).
-        foreach (['payments_driver' => 'payments.driver', 'thawani_mode' => 'payments.thawani.mode'] as $input => $key) {
+        if (! in_array($default, $selectable, true)) {
+            return ['manage' => true, 'list' => null];
+        }
+        if (! $ticked) {
+            throw ValidationException::withMessages(['payments_gateways' => 'فعّل بوابة دفع واحدة على الأقل.']);
+        }
+        if (! in_array($default, $ticked, true)) {
+            throw ValidationException::withMessages(['payments_driver' => 'اختر بوابة الدفع الافتراضية من بوابات الدفع المفعّلة.']);
+        }
+
+        $probe = clone $tenant;
+        if (($credentials = $this->postedCredentials($request, $tenant)) !== null) {
+            $probe->gateway_credentials = $credentials;
+        }
+        $missing = [
+            'thawani' => fn () => ! \App\Services\Payments\Gateway\ThawaniConfig::forTenant($probe)->isConfigured(),
+            'amwal' => fn () => ! \App\Services\Payments\Gateway\AmwalConfig::forTenant($probe)->isConfigured(),
+        ];
+        $messages = [
+            'thawani' => 'أدخل مفتاحَي ثواني السري والعام أولًا، ثم فعّل ثواني.',
+            'amwal' => 'أدخل رقم التاجر ورقم الطرفية ومفتاح التوقيع لأموال أولًا، ثم فعّل أموال.',
+        ];
+        foreach ($ticked as $g) {
+            if (($missing[$g] ?? fn () => false)()) {
+                throw ValidationException::withMessages(['payments_gateways' => $messages[$g]]);
+            }
+        }
+
+        // One gateway on = the default alone: no list stored, exactly as before the setting existed.
+        return ['manage' => true, 'list' => count($ticked) > 1 ? $ticked : null];
+    }
+
+    /** Write-only credentials: blank inputs keep the stored value. */
+    private function applyGateway(Request $request, Tenant $tenant, array $gateways = ['manage' => false, 'list' => null]): void
+    {
+        if (($credentials = $this->postedCredentials($request, $tenant)) !== null) {
+            $tenant->gateway_credentials = $credentials;
+        }
+        if ($gateways['manage']) {
+            $settings = $tenant->settings ?? [];
+            if ($gateways['list']) {
+                data_set($settings, 'payments.gateways', $gateways['list']);
+            } else {
+                $this->forget($settings, 'payments.gateways');
+            }
+            $tenant->settings = $settings;
+        }
+
+        // Driver, gateway modes and the Amwal app flow are plain settings (blank = platform default, key removed; `link` is the default flow).
+        foreach (['payments_driver' => 'payments.driver', 'thawani_mode' => 'payments.thawani.mode', 'amwal_mode' => 'payments.amwal.mode',
+            'amwal_app_flow' => 'payments.amwal.app_flow'] as $input => $key) {
             if (! $request->has($input)) {
                 continue;
             }
             $settings = $tenant->settings ?? [];
-            if ($value = (string) $request->input($input)) {
+            $value = (string) $request->input($input);
+            if ($value !== '' && ! ($input === 'amwal_app_flow' && $value === 'link')) {
                 data_set($settings, $key, $value);
             } else {
                 $this->forget($settings, $key);
@@ -316,9 +417,12 @@ class TenantController extends Controller
         }
     }
 
-    /** POST tenants/{tenant}/gateway-check — read-only Thawani key check (recorded like any call). */
-    public function gatewayCheck(Tenant $tenant, \App\Services\Payments\Gateway\ThawaniGateway $thawani)
+    /** POST tenants/{tenant}/gateway-check[?gateway=amwal] — read-only key check (recorded like any call). */
+    public function gatewayCheck(Request $request, Tenant $tenant, \App\Services\Payments\Gateway\ThawaniGateway $thawani)
     {
+        if ($request->input('gateway') === 'amwal') {
+            return $this->amwalCheck($tenant);
+        }
         $config = \App\Services\Payments\Gateway\ThawaniConfig::forTenant($tenant);
         if (! $config->isConfigured()) {
             return back()->with('error', __('أدخل مفتاحَي ثواني السري والعام أولًا.'));
@@ -331,6 +435,23 @@ class TenantController extends Controller
             $result['ok']
                 ? __('قبلت ثواني المفاتيح (:mode).', ['mode' => $config->mode])
                 : __('رفضت ثواني الاتصال: :message', ['message' => trim(($result['status'] ? $result['status'].' · ' : '').$result['message'])])
+        );
+    }
+
+    private function amwalCheck(Tenant $tenant)
+    {
+        $config = \App\Services\Payments\Gateway\AmwalConfig::forTenant($tenant);
+        if (! $config->isConfigured()) {
+            return back()->with('error', __('أدخل رقم التاجر ورقم الطرفية ومفتاح التوقيع (Secure hash) لأموال أولًا.'));
+        }
+        $result = app(\App\Services\Payments\Gateway\AmwalGateway::class)->ping($config, ['tenant_id' => $tenant->id]);
+        AuditLog::record('tenant.gateway_check', $tenant, ['gateway' => 'amwal', 'mode' => $config->mode, 'ok' => $result['ok'], 'status' => $result['status']]);
+
+        return back()->with(
+            $result['ok'] ? 'success' : 'error',
+            $result['ok']
+                ? __('قبلت أموال بيانات التاجر (:mode).', ['mode' => $config->mode])
+                : __('رفضت أموال الاتصال: :message', ['message' => trim(($result['status'] ? $result['status'].' · ' : '').$result['message'])])
         );
     }
 

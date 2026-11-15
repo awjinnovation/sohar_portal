@@ -33,8 +33,9 @@ use Illuminate\Validation\ValidationException;
  * POST /e/{event}/verify    check it, sign in on the `visitor` guard
  *                           (remembered VISITOR_SESSION_DAYS, default 30)
  * POST /e/{event}/checkout  CheckoutService::initialize → gateway (free
- *                           orders complete at once); the payment pages
- *                           send the visitor back here
+ *                           orders complete at once; `gateway` = the button
+ *                           pressed when two gateways are on); the payment
+ *                           pages send the visitor back here
  * POST /e/{event}/logout
  *
  * The phone is normalised like the box office (968 + local number), so the
@@ -106,6 +107,8 @@ class VisitorBookingController extends Controller
             'notice' => $request->session()->get('visitor_notice')
                 ?? (in_array($request->query('payment'), ['success', 'cancelled', 'failed'], true) ? 'payment_'.$request->query('payment') : null),
             'formKey' => (string) Str::uuid(),
+            // Two or more gateways on: one pay button each (else the single button).
+            'gateways' => self::gatewayChoices($tenant),
             'phoneHint' => (string) $tenant->setting('auth.phone_hint', '9123 4567'),
             'countryCode' => (string) $tenant->setting('auth.country_code', '968'),
         ])->withHeaders([
@@ -182,6 +185,7 @@ class VisitorBookingController extends Controller
             'items' => ['nullable', 'array', 'max:30'],
             'items.*' => ['nullable', 'integer', 'min:0', 'max:50'],
             'form_key' => ['nullable', 'string', 'max:64'],
+            'gateway' => ['nullable', 'string', 'max:40'],
         ]);
         $items = collect($data['items'] ?? [])
             ->map(fn ($qty, $typeId) => ['ticket_type_id' => (int) $typeId, 'quantity' => (int) $qty])
@@ -201,10 +205,9 @@ class VisitorBookingController extends Controller
                 'booking_date' => $date,
                 'items' => $items,
                 'method' => Payment::METHOD_GATEWAY,
-                // A double tap of the same order reuses its payment; a changed order is a new one.
-                'idempotency_key' => filled($data['form_key'] ?? null)
-                    ? 'web:'.substr(hash('sha256', $data['form_key'].'|'.json_encode($items).'|'.$date), 0, 40)
-                    : null,
+                'gateway' => $data['gateway'] ?? null,
+                // A double tap of the same order reuses its payment; a changed order (or another gateway) is a new one.
+                'idempotency_key' => self::webKey($data['form_key'] ?? null, $items, $date, $data['gateway'] ?? null),
             ], ['web_booking' => true, 'web_booking_lang' => $lang]);
         } catch (ApiException $e) {
             return $this->back($event, $lang, [
@@ -296,6 +299,36 @@ class VisitorBookingController extends Controller
         }
 
         return $dates;
+    }
+
+    /**
+     * Idempotency key of a booking form submit (also Api\BookingController):
+     * same form, order and gateway = same payment. Without a gateway the key
+     * is the one used before gateways could be chosen.
+     */
+    public static function webKey(?string $formKey, array $items, ?string $date, ?string $gateway): ?string
+    {
+        if (! filled($formKey)) {
+            return null;
+        }
+        $gateway = is_string($gateway) && $gateway !== '' ? '|'.strtolower($gateway) : '';
+
+        return 'web:'.substr(hash('sha256', $formKey.'|'.json_encode($items).'|'.$date.$gateway), 0, 40);
+    }
+
+    /** @return list<array{id: string, name: string}> gateways to offer on a booking page (names in $lang), [] when there is no choice */
+    public static function gatewayChoices(Tenant $tenant, ?string $lang = null): array
+    {
+        try {
+            $enabled = app(PaymentGatewayManager::class)->enabled($tenant);
+        } catch (\RuntimeException) {
+            return [];
+        }
+        $lang ??= app()->getLocale();
+
+        return count($enabled) > 1
+            ? array_map(fn (string $id) => ['id' => $id, 'name' => PaymentGatewayManager::label($id, $lang)], $enabled)
+            : [];
     }
 
     /** 96891234567 → •••• 4567, isolated left-to-right so Arabic text keeps its order. */

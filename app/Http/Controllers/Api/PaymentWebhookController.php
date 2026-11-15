@@ -8,6 +8,8 @@ use App\Models\Payment;
 use App\Models\PaymentGatewaySession;
 use App\Models\PaymentWebhookEvent;
 use App\Models\Tenant;
+use App\Services\Payments\Gateway\AmwalConfig;
+use App\Services\Payments\Gateway\AmwalGateway;
 use App\Services\Payments\Gateway\ThawaniConfig;
 use App\Services\Payments\Gateway\ThawaniGateway;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -79,6 +81,62 @@ class PaymentWebhookController extends Controller
     }
 
     /**
+     * POST /api/v1/payments/webhooks/amwal/{tenant?} — Amwal cloud
+     * notification (docs/payments_amwal.md). The body carries SecureHash,
+     * signed with the secure key of the tenant that owns the payment (found
+     * by MerchantReference; the URL's tenant must match). Amwal expects
+     * {"success": true, "message": "success"}.
+     */
+    public function amwal(Request $request, ?string $tenant = null)
+    {
+        $raw = (string) $request->getContent();
+        if ($raw === '' || strlen($raw) > self::MAX_BODY) {
+            return response()->json(['success' => false, 'message' => 'Invalid body'], $raw === '' ? 400 : 413);
+        }
+        $body = json_decode($raw, true);
+        $reference = is_array($body) ? mb_substr((string) ($body['MerchantReference'] ?? ''), 0, 120) : '';
+
+        $urlTenant = $tenant ? Tenant::where('slug', $tenant)->first() : null;
+        $paymentTenantId = $reference !== ''
+            ? PaymentGatewaySession::where('gateway', AmwalGateway::NAME)->where('session_id', $reference)->value('tenant_id')
+            : null;
+        [$owner, $reason] = match (true) {
+            ! is_array($body) => [$urlTenant, 'invalid_json'],
+            $paymentTenantId && $tenant && $urlTenant?->id !== (int) $paymentTenantId => [$urlTenant, 'tenant_mismatch'],
+            (bool) $paymentTenantId => [Tenant::find($paymentTenantId), null],
+            $urlTenant !== null => [$urlTenant, null],
+            default => [null, 'unknown_tenant'],
+        };
+        if ($reason === null) {
+            $config = AmwalConfig::forTenant($owner);
+            $reason = match (true) {
+                ! $config->isConfigured() => 'no_webhook_secret',
+                (string) ($body['MerchantId'] ?? '') !== $config->merchantId || (string) ($body['TerminalId'] ?? '') !== $config->terminalId => 'merchant_mismatch',
+                ! AmwalGateway::verifyNotification($config, $body) => 'bad_signature',
+                default => null,
+            };
+        }
+
+        $event = $this->store($request, $raw, $body, $reference ?: null, $owner, $reason, AmwalGateway::NAME, is_array($body) ? (string) ($body['TxnType'] ?? '') : '');
+
+        if ($reason !== null) {
+            Log::warning('Amwal notification rejected', ['reason' => $reason, 'event_id' => $event->id, 'ip' => $request->ip()]);
+
+            return response()->json(['success' => false, 'message' => 'Rejected'], $reason === 'invalid_json' ? 400 : 401);
+        }
+
+        if (in_array($event->status, [PaymentWebhookEvent::RECEIVED, PaymentWebhookEvent::FAILED], true)) {
+            try {
+                ProcessPaymentWebhook::dispatch($event->id);
+            } catch (\Throwable $e) {
+                Log::error('Could not queue payment webhook', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return response()->json(['success' => true, 'message' => 'success']);
+    }
+
+    /**
      * The tenant whose secret must have signed this delivery: the payment's
      * tenant when the session / reference is known (the URL's must match),
      * else the URL's.
@@ -122,10 +180,10 @@ class PaymentWebhookController extends Controller
         return abs(now()->timestamp - $ts) <= $tolerance;
     }
 
-    private function store(Request $request, string $raw, mixed $body, ?string $sessionId, ?Tenant $owner, ?string $reason): PaymentWebhookEvent
+    private function store(Request $request, string $raw, mixed $body, ?string $sessionId, ?Tenant $owner, ?string $reason, string $gateway = ThawaniGateway::NAME, ?string $eventType = null): PaymentWebhookEvent
     {
         $hash = hash('sha256', $raw);
-        $existing = PaymentWebhookEvent::where('gateway', ThawaniGateway::NAME)->where('payload_hash', $hash)->first();
+        $existing = PaymentWebhookEvent::where('gateway', $gateway)->where('payload_hash', $hash)->first();
         if ($existing) {
             $existing->increment('deliveries');
             // An earlier copy was rejected (e.g. stale timestamp); this one verifies.
@@ -144,14 +202,14 @@ class PaymentWebhookController extends Controller
         try {
             return PaymentWebhookEvent::create([
                 'tenant_id' => $owner?->id,
-                'gateway' => ThawaniGateway::NAME,
-                'event_type' => is_array($body) ? (mb_substr((string) ($body['event_type'] ?? ''), 0, 80) ?: null) : null,
+                'gateway' => $gateway,
+                'event_type' => is_array($body) ? (mb_substr((string) ($eventType ?? $body['event_type'] ?? ''), 0, 80) ?: null) : null,
                 'session_id' => $sessionId,
                 'payload_hash' => $hash,
                 // null = could not be checked (no tenant / no secret).
                 'signature_valid' => match ($reason) {
                     null => true,
-                    'bad_signature', 'stale_timestamp' => false,
+                    'bad_signature', 'stale_timestamp', 'merchant_mismatch' => false,
                     default => null,
                 },
                 'headers' => $headers,
@@ -162,7 +220,7 @@ class PaymentWebhookController extends Controller
             ]);
         } catch (UniqueConstraintViolationException) {
             // The same delivery arrived twice at once.
-            $event = PaymentWebhookEvent::where('gateway', ThawaniGateway::NAME)->where('payload_hash', $hash)->firstOrFail();
+            $event = PaymentWebhookEvent::where('gateway', $gateway)->where('payload_hash', $hash)->firstOrFail();
             $event->increment('deliveries');
 
             return $event;

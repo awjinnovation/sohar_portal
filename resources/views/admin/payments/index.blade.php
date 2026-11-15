@@ -10,6 +10,9 @@
 @endphp
 @section('page-actions')
     <a href="{{ route('admin.payments.gateway-log') }}" class="btn"><i class="bi bi-hdd-network"></i> {{ __('سجل بوابة الدفع') }}</a>
+    @can('manage tenants')
+        <a href="{{ route('admin.payments.gateway-test') }}" class="btn"><i class="bi bi-credit-card-2-front"></i> {{ __('اختبار بوابة الدفع') }}</a>
+    @endcan
 @endsection
 
 @section('content')

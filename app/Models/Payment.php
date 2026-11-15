@@ -18,6 +18,9 @@ class Payment extends Model
     public const TYPE_TICKET = 'ticket';
     public const TYPE_TOPUP = 'topup';
 
+    // Admin → Payments → Gateway test: a real gateway charge that issues nothing.
+    public const TYPE_GATEWAY_TEST = 'gateway_test';
+
     public const METHOD_GATEWAY = 'gateway';
     public const METHOD_WALLET = 'wallet';
 
