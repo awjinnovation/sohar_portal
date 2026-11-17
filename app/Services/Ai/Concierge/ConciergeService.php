@@ -215,7 +215,7 @@ class ConciergeService
 
         if (! $requested) {
             foreach (array_keys($tools->seenEvents) as $id) {
-                $event = Event::query()->where('tenant_id', $tenant->id)->find($id);
+                $event = Event::query()->where('tenant_id', $tenant->id)->where('is_active', true)->find($id);
                 if ($event && $this->mentions($text, [$event->title, $event->title_ar])) {
                     $requested[] = ['type' => 'event', 'id' => $id];
                 }

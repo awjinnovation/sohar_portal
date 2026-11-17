@@ -45,8 +45,10 @@ class FavoriteController extends Controller
     {
         $user = Auth::user();
 
+        // Unpublished events are hidden until the team publishes them again.
         $favorites = UserFavorite::where('user_id', $user->id)
             ->where('favoritable_type', Event::class)
+            ->whereHasMorph('favoritable', [Event::class], fn ($q) => $q->where('is_active', true))
             ->with(['favoritable'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -107,8 +109,8 @@ class FavoriteController extends Controller
         // Determine the model class
         $modelClass = $type === 'event' ? Event::class : Restaurant::class;
 
-        // Check if item exists
-        $item = $modelClass::find($itemId);
+        // Check if item exists (an unpublished event is not public)
+        $item = $modelClass === Event::class ? Event::active()->find($itemId) : $modelClass::find($itemId);
         if (!$item) {
             return response()->json([
                 'success' => false,

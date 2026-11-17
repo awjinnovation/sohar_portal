@@ -13,11 +13,12 @@ use App\Support\TenantTime;
 class EventController extends Controller
 {
     /**
-     * Get all events
+     * Get all events. Only published events (is_active) are ever public:
+     * unpublished ones are drafts the festival team keeps in the admin panel.
      */
     public function index(Request $request)
     {
-        $query = Event::with(['category', 'tags', 'mapLocation']);
+        $query = Event::with(['category', 'tags', 'mapLocation'])->active();
 
         // Filter by date - check if date falls within event range
         if ($request->has('date')) {
@@ -28,10 +29,10 @@ class EventController extends Controller
             });
         }
 
-        // Filter by status
-        if ($request->has('status')) {
-            $statusValue = $request->status === 'active' ? 1 : 0;
-            $query->where('is_active', $statusValue);
+        // `status` is still accepted from older app builds; any value other
+        // than `active` asks for unpublished events, which are never listed.
+        if ($request->has('status') && $request->status !== 'active') {
+            $query->whereRaw('1 = 0');
         }
 
         // Search
@@ -62,7 +63,7 @@ class EventController extends Controller
      */
     public function show($id)
     {
-        $event = Event::with(['category', 'tags', 'mapLocation'])->findOrFail($id);
+        $event = Event::with(['category', 'tags', 'mapLocation'])->active()->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -155,7 +156,7 @@ class EventController extends Controller
      */
     public function toggleFavorite(Request $request, $id)
     {
-        $event = Event::findOrFail($id);
+        $event = Event::active()->findOrFail($id);
         $user = $request->user();
 
         $favorite = UserFavorite::where('user_id', $user->id)
@@ -194,6 +195,7 @@ class EventController extends Controller
             ->pluck('favoritable_id');
 
         $events = Event::with(['category', 'tags', 'mapLocation'])
+            ->active()
             ->whereIn('id', $favoriteIds)
             ->orderBy('start_time')
             ->paginate(20);
@@ -220,7 +222,7 @@ class EventController extends Controller
             'quantity' => 'nullable|integer|min:1'
         ]);
 
-        $event = Event::findOrFail($id);
+        $event = Event::active()->findOrFail($id);
         $date = $request->input('date');
         $quantity = $request->input('quantity', 1);
 
@@ -255,7 +257,7 @@ class EventController extends Controller
      */
     public function dailyAvailability($id)
     {
-        $event = Event::findOrFail($id);
+        $event = Event::active()->findOrFail($id);
 
         return response()->json([
             'success' => true,

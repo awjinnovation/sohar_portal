@@ -13,7 +13,8 @@ class CategoryController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Category::withCount('events');
+        // Published events only: unpublished drafts are not counted.
+        $query = Category::withCount(['events' => fn ($q) => $q->where('is_active', true)]);
 
         // Filter active categories
         if ($request->has('active_only')) {
