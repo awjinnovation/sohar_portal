@@ -16,6 +16,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Payments\CheckoutService;
 use App\Services\Payments\PaymentFulfillmentService;
+use App\Support\PhoneNumber;
 use App\Support\TenantTime;
 use App\Tenancy\TenantContext;
 use Carbon\Carbon;
@@ -80,6 +81,8 @@ class BoxOfficeService
             'pos_enabled' => (bool) ($s['pos_enabled'] ?? false),
             'pos_accept_unverified' => (bool) ($s['pos_accept_unverified'] ?? true),
             'pos_terminal_ids' => self::terminalIds($s['pos_terminal_ids'] ?? ''),
+            // Stored as `pos_receipt_photo_required`; off = staff may confirm a payment without a photo.
+            'pos_photo_required' => (bool) ($s['pos_receipt_photo_required'] ?? false),
         ];
     }
 
@@ -954,20 +957,8 @@ class BoxOfficeService
     /** Country code + local number, digits only (tenant `auth` settings), else INVALID_PHONE. */
     public function normalizePhone(Tenant $tenant, string $input): string
     {
-        $cc = (string) $tenant->setting('auth.country_code', '968');
-        $len = (int) $tenant->setting('auth.phone_length', 8);
-        $digits = preg_replace('/\D/', '', $input);
-        if (str_starts_with($digits, '00')) {
-            $digits = substr($digits, 2);
-        }
-        $local = strlen($digits) === strlen($cc) + $len && str_starts_with($digits, $cc) ? substr($digits, strlen($cc)) : $digits;
-        // Omani mobiles start with 7 or 9.
-        $mobile = $cc !== '968' || in_array($local[0] ?? '', ['7', '9'], true);
-        if (strlen($local) !== $len || ! $mobile) {
-            throw new ApiException('INVALID_PHONE', __('box_office.errors.invalid_phone'), 422, ['field' => 'buyer_phone']);
-        }
-
-        return $cc.$local;
+        return PhoneNumber::normalize($tenant, $input)
+            ?? throw new ApiException('INVALID_PHONE', __('box_office.errors.invalid_phone'), 422, ['field' => 'buyer_phone']);
     }
 
     /** The buyer's account by phone (users are global), created without a password they know. */

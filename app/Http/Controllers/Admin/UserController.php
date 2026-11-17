@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\Concerns\TenantValidation;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\PhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -18,6 +21,12 @@ use Spatie\Permission\Models\Role;
  * user holds *in this tenant* (spatie teams, team = tenant; the team context
  * is set by AdminMiddleware). Platform super-admins additionally see every
  * user (?scope=all) and may grant/revoke users.is_super_admin.
+ *
+ * Staff who only use the app (gate scanners, vendor staff) sign in there
+ * with their phone number and a one-time code, so a user is added by phone,
+ * by e-mail + password (panel sign-in), or both. A phone number that already
+ * has an account (the employee signed in to the app before) gets the roles
+ * on that account instead of a second one.
  */
 class UserController extends Controller
 {
@@ -55,21 +64,41 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $roleNames = $this->assignableRoles()->pluck('name')->all();
+        $phone = $this->normalizedPhone($request);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
+            'phone_number' => ['nullable', 'string', $this->phoneRule($phone)],
+            'email' => ['nullable', 'required_without:phone_number', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['nullable', 'required_with:email', 'string', 'min:8', 'confirmed'],
             'roles' => 'required|array',
             'roles.*' => ['string', Rule::in($roleNames)],
             'is_super_admin' => 'sometimes|boolean',
+        ], [
+            'email.required_without' => __('أدخل رقم الهاتف أو البريد الإلكتروني'),
+            'password.required_with' => __('أدخل كلمة مرور للدخول إلى لوحة التحكم بالبريد الإلكتروني'),
         ]);
 
-        $user = DB::transaction(function () use ($validated, $request) {
+        // The employee already has an account (signed in to the app before):
+        // give it the roles in this tenant, without touching its identity.
+        $existing = is_string($phone) ? User::where('phone_number', $phone)->first() : null;
+        if ($existing !== null) {
+            if (filled($validated['email'] ?? null) || ($existing->isSuperAdmin() && ! $request->user()->isSuperAdmin())) {
+                throw ValidationException::withMessages(['phone_number' => __('رقم الهاتف مسجل لحساب آخر')]);
+            }
+            $existing->assignRole($validated['roles']);
+
+            return redirect()->route('admin.users.index')
+                ->with('success', __('الرقم مسجل في التطبيق باسم :name، فأُضيفت الأدوار إلى حسابه', ['name' => $existing->name]));
+        }
+
+        $user = DB::transaction(function () use ($validated, $request, $phone) {
             $user = User::create([
                 'name' => $validated['name'],
-                'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
+                'email' => $validated['email'] ?? null,
+                'phone_number' => $phone ?: null,
+                // Phone-only staff sign in with a one-time code, never a password.
+                'password' => Hash::make($validated['password'] ?? Str::random(32)),
             ]);
 
             if ($request->user()->isSuperAdmin() && $request->has('is_super_admin')) {
@@ -116,25 +145,32 @@ class UserController extends Controller
             'roles.*' => ['string', Rule::in($roleNames)],
             'is_super_admin' => 'sometimes|boolean',
         ];
+        $phone = null;
         if ($canEditIdentity) {
+            $phone = $this->normalizedPhone($request);
             $rules += [
                 'name' => 'required|string|max:255',
+                'phone_number' => ['nullable', 'string', $this->phoneRule($phone), Rule::unique('users', 'phone_number')->ignore($user->id)],
                 // Phone-only (OTP) users may have no e-mail.
-                'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+                'email' => ['nullable', 'required_without:phone_number', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
                 'password' => 'nullable|string|min:8|confirmed',
             ];
         }
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, [
+            'phone_number.unique' => __('رقم الهاتف مسجل لحساب آخر'),
+            'email.required_without' => __('أدخل رقم الهاتف أو البريد الإلكتروني'),
+        ]);
 
         if ($user->is($actor) && ! $actor->isSuperAdmin() && ! in_array('admin', $validated['roles'], true) && $actor->hasRole('admin')) {
             return back()->withInput()->with('error', 'لا يمكنك إزالة دور المدير من حسابك');
         }
 
-        DB::transaction(function () use ($validated, $user, $actor, $request, $canEditIdentity) {
+        DB::transaction(function () use ($validated, $user, $actor, $request, $canEditIdentity, $phone) {
             if ($canEditIdentity) {
                 $user->update([
                     'name' => $validated['name'],
                     'email' => $validated['email'] ?? null,
+                    'phone_number' => $phone ?: null,
                 ]);
                 if (! empty($validated['password'])) {
                     $user->update(['password' => Hash::make($validated['password'])]);
@@ -178,6 +214,37 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('success', 'أُزيلت صلاحيات المستخدم في هذه المنظمة');
+    }
+
+    /**
+     * The form's phone number as the app stores it (`96891234567`), put back
+     * on the request so the other rules see it: null when left empty, false
+     * when it is not a valid mobile number ([phoneRule] reports that).
+     */
+    private function normalizedPhone(Request $request): string|false|null
+    {
+        $input = trim((string) $request->input('phone_number', ''));
+        if ($input === '') {
+            $request->merge(['phone_number' => null]);
+
+            return null;
+        }
+        $phone = PhoneNumber::normalize($this->currentTenant(), $input);
+        if ($phone !== null) {
+            $request->merge(['phone_number' => $phone]);
+        }
+
+        return $phone ?? false;
+    }
+
+    /** Fails when [normalizedPhone] could not read the number. */
+    private function phoneRule(string|false|null $phone): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($phone) {
+            if ($phone === false) {
+                $fail(__('رقم الهاتف غير صحيح، أدخل رقم جوال من :n أرقام', ['n' => PhoneNumber::localLength($this->currentTenant())]));
+            }
+        };
     }
 
     /** Users holding at least one role in the current tenant. */

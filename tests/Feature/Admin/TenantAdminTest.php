@@ -312,6 +312,78 @@ class TenantAdminTest extends TestCase
     }
 
     #[Test]
+    public function staff_are_added_by_phone_and_a_number_with_an_app_account_gets_the_roles()
+    {
+        $this->actingAs($this->admin);
+
+        $this->get(route('admin.users.create'))
+            ->assertOk()
+            ->assertSee('name="phone_number"', false)
+            ->assertSee('موظف بوابة');
+
+        // Phone only: an app employee who signs in with a one-time code.
+        $this->post(route('admin.users.store'), [
+            'name' => 'Gate Staff',
+            'phone_number' => '9123 4567',
+            'roles' => ['staff'],
+        ])->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
+        $staff = User::where('phone_number', '96891234567')->firstOrFail();
+        $this->assertNull($staff->email);
+        $this->assertSame('Gate Staff', $staff->name);
+        $this->assertTrue($staff->hasRole('staff'));
+
+        // The number already signed in to the app: same account, roles added,
+        // name untouched (it may be used by other tenants).
+        $visitor = User::factory()->create(['name' => 'App Visitor', 'email' => null, 'phone_number' => '96899887766']);
+        $this->post(route('admin.users.store'), [
+            'name' => 'Someone Else',
+            'phone_number' => '+968 9988 7766',
+            'roles' => ['staff'],
+        ])->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
+        $this->assertSame(1, User::where('phone_number', '96899887766')->count());
+        $this->assertSame('App Visitor', $visitor->fresh()->name);
+        $this->assertTrue($visitor->fresh()->hasRole('staff'));
+
+        // ... but not when the form also asks for a new panel sign-in.
+        $this->post(route('admin.users.store'), [
+            'name' => 'X', 'phone_number' => '99887766', 'email' => 'x@nb.test',
+            'password' => 'password123', 'password_confirmation' => 'password123', 'roles' => ['viewer'],
+        ])->assertSessionHasErrors('phone_number');
+
+        // Not a mobile number; neither phone nor e-mail; e-mail without a password.
+        $this->post(route('admin.users.store'), ['name' => 'Bad', 'phone_number' => '1234', 'roles' => ['staff']])
+            ->assertSessionHasErrors('phone_number');
+        $this->post(route('admin.users.store'), ['name' => 'Nobody', 'roles' => ['staff']])
+            ->assertSessionHasErrors('email');
+        $this->post(route('admin.users.store'), ['name' => 'No Pass', 'email' => 'nopass@nb.test', 'roles' => ['viewer']])
+            ->assertSessionHasErrors('password');
+        $this->assertDatabaseMissing('users', ['email' => 'x@nb.test']);
+    }
+
+    #[Test]
+    public function a_users_phone_number_can_be_set_and_stays_unique()
+    {
+        $staff = User::factory()->create(['name' => 'Staff', 'email' => 'staff2@nb.test']);
+        $staff->assignRole('viewer');
+        User::factory()->create(['phone_number' => '96871112222']);
+        $this->actingAs($this->admin);
+
+        $this->get(route('admin.users.edit', $staff))->assertOk()->assertSee('name="phone_number"', false);
+
+        $this->put(route('admin.users.update', $staff), [
+            'name' => 'Staff', 'email' => 'staff2@nb.test', 'phone_number' => '9555 1234', 'roles' => ['staff'],
+        ])->assertRedirect(route('admin.users.index'))->assertSessionHasNoErrors();
+        $this->assertSame('96895551234', $staff->fresh()->phone_number);
+        $this->assertTrue($staff->fresh()->hasRole('staff'));
+
+        // Taken by another account.
+        $this->put(route('admin.users.update', $staff), [
+            'name' => 'Staff', 'email' => 'staff2@nb.test', 'phone_number' => '71112222', 'roles' => ['staff'],
+        ])->assertSessionHasErrors('phone_number');
+        $this->assertSame('96895551234', $staff->fresh()->phone_number);
+    }
+
+    #[Test]
     public function role_definitions_can_only_be_changed_by_super_admins()
     {
         $this->actingAs($this->admin);

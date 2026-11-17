@@ -19,38 +19,24 @@
         @csrf
         <div class="row g-4">
             <div class="col-xl-8">
-                <x-admin.card title="معلومات المستخدم الجديد" icon="person-vcard" subtitle="بيانات الدخول إلى لوحة التحكم">
+                <x-admin.card title="معلومات المستخدم الجديد" icon="person-vcard" subtitle="رقم الهاتف لدخول التطبيق، والبريد الإلكتروني وكلمة المرور لدخول لوحة التحكم، أو كلاهما">
                     <div class="row">
                         <x-admin.form-field col="col-md-6" name="name" id="name" label="الاسم الكامل" :value="old('name')" required autocomplete="name" />
-                        <x-admin.form-field col="col-md-6" name="email" id="email" type="email" label="البريد الإلكتروني" :value="old('email')" dir="ltr" required autocomplete="email" />
+                        <x-admin.form-field col="col-md-6" name="phone_number" id="phone_number" type="tel" label="رقم الهاتف" :value="old('phone_number')" dir="ltr" inputmode="tel" placeholder="9XXXXXXX" autocomplete="tel"
+                            help="يدخل به الموظف إلى التطبيق برمز تحقق يصله في رسالة. إن كان له حساب في التطبيق أُضيفت الأدوار إليه." />
                     </div>
                     <div class="row">
-                        <x-admin.form-field col="col-md-6" name="password" id="password" type="password" label="كلمة المرور" dir="ltr" required help="8 أحرف على الأقل" autocomplete="new-password" />
-                        <x-admin.form-field col="col-md-6" name="password_confirmation" id="password_confirmation" type="password" label="تأكيد كلمة المرور" dir="ltr" required autocomplete="new-password" />
+                        <x-admin.form-field col="col-md-6" name="email" id="email" type="email" label="البريد الإلكتروني" :value="old('email')" dir="ltr" autocomplete="email"
+                            help="لدخول لوحة التحكم، ويلزم معه كلمة مرور" />
+                    </div>
+                    <div class="row">
+                        <x-admin.form-field col="col-md-6" name="password" id="password" type="password" label="كلمة المرور" dir="ltr" help="8 أحرف على الأقل" autocomplete="new-password" />
+                        <x-admin.form-field col="col-md-6" name="password_confirmation" id="password_confirmation" type="password" label="تأكيد كلمة المرور" dir="ltr" autocomplete="new-password" />
                     </div>
                 </x-admin.card>
 
                 <x-admin.card title="الأدوار" icon="shield-lock" subtitle="اختر دورًا واحدًا على الأقل؛ تحدد الأدوار ما يمكن للمستخدم الوصول إليه">
-                    <div class="row g-2">
-                        @foreach($roles as $role)
-                            <div class="col-md-6 col-xxl-4">
-                                <label class="toggle-row" for="role_{{ $role->id }}">
-                                    <span class="tr-text">
-                                        <span class="tr-label d-block"><span class="ltr">{{ $role->name }}</span></span>
-                                        <span class="tr-desc d-block">{{ __('الصلاحيات: :count', ['count' => $role->permissions->count()]) }}</span>
-                                    </span>
-                                    <span class="switch">
-                                        <input type="checkbox" role="switch" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}"
-                                               @checked(in_array($role->name, $checkedRoles))>
-                                        <span class="track"></span>
-                                    </span>
-                                </label>
-                            </div>
-                        @endforeach
-                    </div>
-                    @error('roles')
-                        <div class="invalid-feedback d-block mt-2">{{ $message }}</div>
-                    @enderror
+                    @include('admin.users._roles')
                 </x-admin.card>
             </div>
 
@@ -62,7 +48,7 @@
                     @endif
                     <p class="text-muted small mb-0">
                         <i class="bi bi-info-circle"></i>
-                        {{ __('يستطيع المستخدم تسجيل الدخول بعد الحفظ مباشرة ببريده الإلكتروني وكلمة المرور.') }}
+                        {{ __('يدخل المستخدم إلى التطبيق برقم هاتفه، وإلى لوحة التحكم ببريده الإلكتروني وكلمة المرور، مباشرة بعد الحفظ.') }}
                     </p>
                     <x-slot:footer>
                         <div class="d-flex gap-2">

@@ -25,10 +25,15 @@
         <div class="row g-4">
             <div class="col-xl-8">
                 @if($canEditIdentity)
-                    <x-admin.card title="تعديل معلومات المستخدم" icon="person-vcard" subtitle="الاسم والبريد وكلمة المرور مشتركة بين جميع المنظمات">
+                    <x-admin.card title="تعديل معلومات المستخدم" icon="person-vcard" subtitle="الاسم والهاتف والبريد وكلمة المرور مشتركة بين جميع المنظمات">
                         <div class="row">
                             <x-admin.form-field col="col-md-6" name="name" id="name" label="الاسم الكامل" :value="old('name', $user->name)" required autocomplete="name" />
-                            <x-admin.form-field col="col-md-6" name="email" id="email" type="email" label="البريد الإلكتروني" :value="old('email', $user->email)" dir="ltr" autocomplete="email" />
+                            <x-admin.form-field col="col-md-6" name="phone_number" id="phone_number" type="tel" label="رقم الهاتف" :value="old('phone_number', $user->phone_number)" dir="ltr" inputmode="tel" placeholder="9XXXXXXX" autocomplete="tel"
+                                help="يدخل به المستخدم إلى التطبيق برمز تحقق يصله في رسالة" />
+                        </div>
+                        <div class="row">
+                            <x-admin.form-field col="col-md-6" name="email" id="email" type="email" label="البريد الإلكتروني" :value="old('email', $user->email)" dir="ltr" autocomplete="email"
+                                help="لدخول لوحة التحكم" />
                         </div>
                         <div class="row">
                             <x-admin.form-field col="col-md-6" name="password" id="password" type="password" label="كلمة المرور الجديدة" dir="ltr"
@@ -53,26 +58,7 @@
                 @endif
 
                 <x-admin.card title="الأدوار" icon="shield-lock" subtitle="تسري على هذه المنظمة فقط، ولا تتغير أدوار المستخدم في المنظمات الأخرى">
-                    <div class="row g-2">
-                        @foreach($roles as $role)
-                            <div class="col-md-6 col-xxl-4">
-                                <label class="toggle-row" for="role_{{ $role->id }}">
-                                    <span class="tr-text">
-                                        <span class="tr-label d-block"><span class="ltr">{{ $role->name }}</span></span>
-                                        <span class="tr-desc d-block">{{ __('الصلاحيات: :count', ['count' => $role->permissions->count()]) }}</span>
-                                    </span>
-                                    <span class="switch">
-                                        <input type="checkbox" role="switch" name="roles[]" value="{{ $role->name }}" id="role_{{ $role->id }}"
-                                               @checked(in_array($role->name, $checkedRoles))>
-                                        <span class="track"></span>
-                                    </span>
-                                </label>
-                            </div>
-                        @endforeach
-                    </div>
-                    @error('roles')
-                        <div class="invalid-feedback d-block mt-2">{{ $message }}</div>
-                    @enderror
+                    @include('admin.users._roles')
                 </x-admin.card>
             </div>
 
@@ -85,7 +71,7 @@
                         <dd>
                             <div class="d-flex flex-wrap gap-1">
                                 @forelse($userRoles as $roleName)
-                                    <span class="pill pill-brand pill-sm">{{ $roleName }}</span>
+                                    <span class="pill pill-brand pill-sm">{{ \App\Support\AdminLabels::role($roleName) }}</span>
                                 @empty
                                     <span class="text-muted">—</span>
                                 @endforelse

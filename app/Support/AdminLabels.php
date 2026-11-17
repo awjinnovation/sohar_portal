@@ -177,6 +177,35 @@ class AdminLabels
         'manager' => 'مدير',
     ];
 
+    /**
+     * Built-in roles (RolesAndPermissionsSeeder::ROLES): name and what the
+     * role opens, for the user forms. Roles added in the panel show their
+     * own name.
+     */
+    public const ROLES = [
+        'admin' => ['مدير المنظمة', 'كل الصلاحيات داخل المنظمة'],
+        'event-manager' => ['مدير الفعاليات', 'الفعاليات والتذاكر والإعلانات'],
+        'ticket-manager' => ['مدير التذاكر والبوابات', 'التذاكر والبوابات ومتابعة الدخول'],
+        'content-manager' => ['مدير المحتوى', 'المحتوى والأماكن والإعلانات والإعدادات'],
+        'finance-manager' => ['المدير المالي', 'المدفوعات والمحافظ وطلبات الاسترداد'],
+        'viewer' => ['مطّلع', 'يعرض لوحة المعلومات والمدفوعات دون تعديل'],
+        'staff' => ['موظف بوابة', 'يمسح التذاكر ويبيعها من التطبيق'],
+        'vendor-staff' => ['موظف تاجر', 'يحصّل المدفوعات من المحافظ في التطبيق'],
+        'user' => ['مستخدم', 'دون صلاحيات إضافية'],
+    ];
+
+    /** Arabic name of a role (translated for the EN panel), else its own name. */
+    public static function role(string $name): string
+    {
+        return isset(self::ROLES[$name]) ? __(self::ROLES[$name][0]) : $name;
+    }
+
+    /** What a built-in role opens, or null for a role added in the panel. */
+    public static function roleDescription(string $name): ?string
+    {
+        return isset(self::ROLES[$name]) ? __(self::ROLES[$name][1]) : null;
+    }
+
     /** Bootstrap badge HTML for a [label, color] map entry. */
     public static function badge(array $map, ?string $key): string
     {

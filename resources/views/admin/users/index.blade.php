@@ -69,7 +69,7 @@
                 <td>
                     <div class="d-flex flex-wrap gap-1">
                         @forelse($user->roles as $role)
-                            <span class="pill pill-brand pill-sm">{{ $role->name }}</span>
+                            <span class="pill pill-brand pill-sm">{{ \App\Support\AdminLabels::role($role->name) }}</span>
                         @empty
                             <span class="text-muted small">{{ __('بلا دور') }}</span>
                         @endforelse
