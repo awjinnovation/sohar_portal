@@ -53,6 +53,12 @@ const ar = {
   admits: 'يدخل بها',
   idRequired: 'تُطلب الهوية',
   saveTicket: 'حفظ التذكرة صورةً',
+  downloadPdf: 'تنزيل التذكرة PDF',
+  downloadAllPdf: 'تنزيل كل التذاكر في ملف PDF',
+  sharePdf: 'مشاركة ملف PDF (واتساب وغيره)',
+  saveAllImages: 'حفظ كل التذاكر صورًا',
+  exportPreparing: 'جارٍ تجهيز التذاكر',
+  exportFailed: 'تعذّر تجهيز الملف. أعد المحاولة، أو احفظ كل تذكرة على حدة.',
   status: { active: 'صالحة', used: 'مستخدمة', expired: 'منتهية', cancelled: 'ملغاة', refunded: 'مستردة' } as Record<string, string>,
 
   // sign in
@@ -138,6 +144,12 @@ const en: Strings = {
   admits: 'Admits',
   idRequired: 'ID required',
   saveTicket: 'Save ticket as image',
+  downloadPdf: 'Download ticket as PDF',
+  downloadAllPdf: 'Download all tickets as one PDF',
+  sharePdf: 'Share PDF (WhatsApp and more)',
+  saveAllImages: 'Save all tickets as images',
+  exportPreparing: 'Preparing your tickets',
+  exportFailed: 'Could not prepare the file. Try again, or save each ticket on its own.',
   status: { active: 'Valid', used: 'Used', expired: 'Expired', cancelled: 'Cancelled', refunded: 'Refunded' },
 
   yourPhone: 'Your phone number',

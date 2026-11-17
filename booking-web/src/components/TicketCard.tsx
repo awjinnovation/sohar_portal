@@ -3,7 +3,8 @@ import type { Lang, Ticket } from '../api';
 import type { Strings } from '../i18n';
 import { Icon } from '../icons';
 import { qrMatrix, qrPath } from '../qr';
-import { saveTicket } from '../saveTicket';
+import { saveTicket, type TicketImage } from '../saveTicket';
+import { needsRing, textOn } from '../typeColor';
 
 const STATUS_CLASS: Record<string, string> = {
   active: 'pill-success',
@@ -12,6 +13,36 @@ const STATUS_CLASS: Record<string, string> = {
   cancelled: 'pill-error',
   refunded: 'pill-error',
 };
+
+export interface TicketContext {
+  eventTitle: string;
+  brand: string;
+  filePrefix: string;
+  lang: Lang;
+  t: Strings;
+}
+
+/** What the saved image (or PDF page) of [ticket] shows: the card's content. */
+export function ticketImage(ticket: Ticket, c: TicketContext): TicketImage {
+  const { t } = c;
+  return {
+    fileName: `${c.filePrefix}_ticket_${ticket.number || ticket.id}.png`.replace(/[^\w.-]+/g, '-'),
+    dir: c.lang === 'ar' ? 'rtl' : 'ltr',
+    brand: c.brand,
+    event: c.eventTitle,
+    typeName: ticket.type_name,
+    typeColor: ticket.type_color,
+    status: t.status[ticket.status] ?? ticket.status,
+    statusValid: ticket.status === 'active',
+    when: ticket.when_label,
+    number: ticket.number,
+    qr: ticket.qr_code,
+    extras: [
+      ticket.admits > 1 && ticket.admits_label ? `${t.admits} ${ticket.admits_label}` : null,
+      ticket.requires_id ? t.idRequired : null,
+    ].filter((x): x is string => !!x),
+  };
+}
 
 /** One ticket: type, day, entry QR (drawn here from the code), number, save as image. */
 export function TicketCard(props: { ticket: Ticket; eventTitle: string; brand: string; filePrefix: string; lang: Lang; t: Strings }) {
@@ -24,28 +55,10 @@ export function TicketCard(props: { ticket: Ticket; eventTitle: string; brand: s
     return { size: m.length, d: qrPath(m) };
   }, [ticket.qr_code]);
 
-  const extras = [
-    ticket.admits > 1 && ticket.admits_label ? `${t.admits} ${ticket.admits_label}` : null,
-    ticket.requires_id ? t.idRequired : null,
-  ].filter((x): x is string => !!x);
-
   const onSave = async () => {
     setSaving(true);
     try {
-      await saveTicket({
-        fileName: `${filePrefix}_ticket_${ticket.number || ticket.id}.png`.replace(/[^\w.-]+/g, '-'),
-        dir: lang === 'ar' ? 'rtl' : 'ltr',
-        brand,
-        event: eventTitle,
-        typeName: ticket.type_name,
-        typeColor: ticket.type_color,
-        status: statusLabel,
-        statusValid: valid,
-        when: ticket.when_label,
-        number: ticket.number,
-        qr: ticket.qr_code,
-        extras,
-      });
+      await saveTicket(ticketImage(ticket, { eventTitle, brand, filePrefix, lang, t }));
     } catch {
       window.print();
     } finally {
@@ -56,7 +69,16 @@ export function TicketCard(props: { ticket: Ticket; eventTitle: string; brand: s
   return (
     <article className="s-card vb-ticket" id={`ticket-${ticket.id}`} data-ticket-status={ticket.status}>
       <div className="vb-ticket-head">
-        <span className="vb-badge" style={{ '--type-color': ticket.type_color } as CSSProperties}>
+        <span
+          className="vb-badge"
+          style={
+            {
+              '--type-color': ticket.type_color,
+              '--type-text': textOn(ticket.type_color),
+              ...(needsRing(ticket.type_color) ? { '--type-ring': 'inset 0 0 0 1px #D1D5DB' } : {}),
+            } as CSSProperties
+          }
+        >
           <Icon name="ticket-perforated" />
           {ticket.type_name}
         </span>

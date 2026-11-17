@@ -41,6 +41,9 @@ import i_fileEarmarkText from 'bootstrap-icons/icons/file-earmark-text.svg?raw';
 import i_envelope from 'bootstrap-icons/icons/envelope.svg?raw';
 import i_telephone from 'bootstrap-icons/icons/telephone.svg?raw';
 import i_wifiOff from 'bootstrap-icons/icons/wifi-off.svg?raw';
+import i_fileEarmarkPdf from 'bootstrap-icons/icons/file-earmark-pdf.svg?raw';
+import i_share from 'bootstrap-icons/icons/share.svg?raw';
+import i_images from 'bootstrap-icons/icons/images.svg?raw';
 
 const ICONS = {
   'ticket-perforated': i_ticketPerforated,
@@ -81,6 +84,9 @@ const ICONS = {
   'envelope': i_envelope,
   'telephone': i_telephone,
   'wifi-off': i_wifiOff,
+  'file-earmark-pdf': i_fileEarmarkPdf,
+  share: i_share,
+  images: i_images,
 } as const;
 
 export type IconName = keyof typeof ICONS;

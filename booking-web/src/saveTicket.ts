@@ -1,4 +1,6 @@
+import { jpegPagesToPdf } from './pdf';
 import { qrMatrix } from './qr';
+import { needsRing, textOn } from './typeColor';
 
 export interface TicketImage {
   fileName: string;
@@ -53,8 +55,8 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-/** Draws the ticket card (same content as on screen) and returns a PNG. */
-export async function renderTicket(t: TicketImage): Promise<Blob> {
+/** Draws the ticket card (same content as on screen) on a canvas, W × H CSS px at SCALE. */
+async function drawTicket(t: TicketImage): Promise<HTMLCanvasElement> {
   await document.fonts?.ready;
   const fontText = `${cssVar(t.dir === 'rtl' ? '--font-ar' : '--font-en', 'system-ui')}, system-ui, sans-serif`;
   const fontNum = `${cssVar('--font-num', 'system-ui')}, ui-monospace, monospace`;
@@ -94,7 +96,12 @@ export async function renderTicket(t: TicketImage): Promise<Blob> {
   roundRect(ctx, rtl ? W - PAD - badgeW : PAD, y, badgeW, 28, 14);
   ctx.fillStyle = t.typeColor || '#314F99';
   ctx.fill();
-  ctx.fillStyle = '#FFFFFF';
+  if (needsRing(t.typeColor)) {
+    ctx.strokeStyle = '#D1D5DB';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  ctx.fillStyle = textOn(t.typeColor || '#314F99');
   ctx.textAlign = 'center';
   ctx.fillText(t.typeName, rtl ? W - PAD - badgeW / 2 : PAD + badgeW / 2, y + 19, badgeW - 16);
 
@@ -166,28 +173,71 @@ export async function renderTicket(t: TicketImage): Promise<Blob> {
   ctx.fillStyle = '#6B7280';
   ctx.fillText(t.brand, W / 2, y + 8, inner);
 
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob'))), 'image/png'));
+  return canvas;
+}
+
+function toBlob(canvas: HTMLCanvasElement, type: 'image/png' | 'image/jpeg', quality?: number): Promise<Blob> {
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob'))), type, quality));
+}
+
+/** The ticket card (same content as on screen) as a PNG. */
+export async function renderTicket(t: TicketImage): Promise<Blob> {
+  return toBlob(await drawTicket(t), 'image/png');
+}
+
+const isTouch = () => !!window.matchMedia?.('(pointer: coarse)').matches;
+
+/** The share sheet (WhatsApp, Save Image, Files…); false when the browser cannot share files. */
+export async function shareFiles(files: File[], title: string): Promise<boolean> {
+  if (!navigator.canShare?.({ files })) return false;
+  try {
+    await navigator.share({ files, title });
+  } catch (e) {
+    if ((e as Error).name !== 'AbortError') throw e;
+  }
+  return true;
+}
+
+export const canShareFiles = (type: string) => !!navigator.canShare?.({ files: [new File([new Uint8Array(1)], 'x', { type })] });
+
+/** Saves [blob] to the device (Downloads; iOS opens it to save or share). */
+export function downloadBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 /** Phones: the share sheet (Save Image / Photos). Elsewhere: a download. */
 export async function saveTicket(t: TicketImage): Promise<void> {
   const blob = await renderTicket(t);
-  const file = new File([blob], t.fileName, { type: 'image/png' });
-  const touch = window.matchMedia?.('(pointer: coarse)').matches;
-  if (touch && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: t.event });
-      return;
-    } catch (e) {
-      if ((e as Error).name === 'AbortError') return;
-    }
+  if (isTouch() && (await shareFiles([new File([blob], t.fileName, { type: 'image/png' })], t.event))) return;
+  downloadBlob(blob, t.fileName);
+}
+
+/** Every ticket in one PDF, one ticket per page (the page is the ticket's size). */
+export async function ticketsPdf(tickets: TicketImage[], title: string): Promise<Blob> {
+  const pages = [];
+  for (const t of tickets) {
+    const canvas = await drawTicket(t);
+    const jpeg = new Uint8Array(await (await toBlob(canvas, 'image/jpeg', 0.92)).arrayBuffer());
+    pages.push({ jpeg, pixelWidth: canvas.width, pixelHeight: canvas.height, width: canvas.width / SCALE, height: canvas.height / SCALE });
   }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = t.fileName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  return jpegPagesToPdf(pages, title);
+}
+
+/** Every ticket as a PNG: phones get one share sheet (Save to Photos), others a download each. */
+export async function saveAllTickets(tickets: TicketImage[], title: string): Promise<void> {
+  const files: File[] = [];
+  for (const t of tickets) files.push(new File([await renderTicket(t)], t.fileName, { type: 'image/png' }));
+  if (isTouch() && (await shareFiles(files, title))) return;
+  for (const [i, f] of files.entries()) {
+    // Browsers drop rapid back-to-back downloads; space them out.
+    if (i > 0) await new Promise((r) => setTimeout(r, 400));
+    downloadBlob(f, f.name);
+  }
 }

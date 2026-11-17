@@ -4,6 +4,7 @@ import { BookingForm, type Order } from './components/BookingForm';
 import { Layout, Note, type Tone } from './components/Layout';
 import { SignIn } from './components/SignIn';
 import { TicketCard } from './components/TicketCard';
+import { TicketsExport } from './components/TicketsExport';
 import { HOME_URL } from './config';
 import { initialLang, strings, type Strings } from './i18n';
 import { Icon, type IconName } from './icons';
@@ -374,6 +375,7 @@ export function App() {
           <h2 className="vb-section-title">
             <Icon name="qr-code" /> {t.yourTickets} <span className="muted num">({tickets.length})</span>
           </h2>
+          <TicketsExport tickets={tickets} eventTitle={event.title} brand={tenant.name} filePrefix={tenant.file_prefix} lang={lang} t={t} />
           <div data-visitor-tickets={tickets.length}>
             {tickets.map((ticket) => (
               <TicketCard key={ticket.id} ticket={ticket} eventTitle={event.title} brand={tenant.name} filePrefix={tenant.file_prefix} lang={lang} t={t} />
