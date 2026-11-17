@@ -54,7 +54,7 @@ class TicketTypesAdminTest extends TestCase
         $family = EventTicketType::where('event_id', $event->id)->where('key', 'family')->firstOrFail();
         $this->assertSame([4500, 4, 20, 5, 'family', ['ar' => 'تذكرة عائلية', 'en' => 'Family']],
             [$family->price_minor, $family->admits, $family->capacity, $family->per_order_max, $family->category, $family->name]);
-        $this->assertSame('#E5883C', collect($res->json('data'))->firstWhere('key', 'family')['color']);
+        $this->assertSame('#F97316', collect($res->json('data'))->firstWhere('key', 'family')['color']); // category default (v1.2)
 
         // Validation.
         $this->actingAs($admin)->postJson($base, $this->payload())->assertStatus(422)->assertJsonValidationErrors('key');

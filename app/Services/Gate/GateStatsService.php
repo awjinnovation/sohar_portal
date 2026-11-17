@@ -2,6 +2,7 @@
 
 namespace App\Services\Gate;
 
+use App\Models\EventTicketType;
 use App\Models\Gate;
 use App\Models\GateDevice;
 use App\Models\GateScan;
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\DB;
  * in      = direction in  and result valid|reentry_ok
  * out     = direction out and result valid
  * rejects = every other result
+ *
+ * `by_type` (v1.2) splits the same figures per ticket type (people: a
+ * family ticket admitting 4 gives 4 entries), each type with its colour.
  */
 class GateStatsService
 {
@@ -66,8 +70,91 @@ class GateStatsService
             'out_today' => (int) ($totals->o ?? 0),
             'rejects_today' => (int) ($totals->r ?? 0),
             'by_hour' => $byHour,
+            'by_type' => $this->byType($base()),
             'recent' => $recent,
         ];
+    }
+
+    /**
+     * In / out / rejects per ticket type over [$scans] (scans without a
+     * ticket, e.g. unknown codes, are left out). Types are the tickets'
+     * own; a ticket without one is grouped under its legacy key.
+     *
+     * @return list<array{type_id: ?int, key: string, name: array{en: string, ar: string}, name_text: string, category: string, color: string, in: int, out: int, rejects: int, event?: ?string}>
+     */
+    public function byType(Builder $scans, bool $withEvent = false): array
+    {
+        $rows = $this->typeRows($scans, ['tickets.event_id']);
+        if ($rows->isEmpty()) {
+            return [];
+        }
+        $locale = app()->getLocale();
+        $types = EventTicketType::with('event:id,title,title_ar')
+            ->whereIn('id', $rows->pluck('type_id')->filter()->unique()->values())
+            ->get()->keyBy('id');
+        $events = $withEvent
+            ? \App\Models\Event::whereIn('id', $rows->whereNull('type_id')->pluck('event_id')->filter()->unique()->values())->get(['id', 'title', 'title_ar'])->keyBy('id')
+            : collect();
+        $title = fn ($e) => $e ? ($locale === 'ar' ? ($e->title_ar ?: $e->title) : $e->title) : null;
+
+        $out = [];
+        foreach ($rows as $r) {
+            $type = $r->type_id ? $types->get((int) $r->type_id) : null;
+            $key = $type ? 'id:'.$type->id : 'key:'.$r->type_key.($withEvent ? '|'.$r->event_id : '');
+            $out[$key] ??= ($type ? [
+                'type_id' => $type->id,
+                'key' => $type->key,
+                'name' => ['en' => (string) ($type->name['en'] ?? '') ?: $type->key, 'ar' => (string) ($type->name['ar'] ?? '') ?: $type->key],
+                'name_text' => $type->nameText($locale),
+                'category' => $type->category,
+                'color' => $type->colorValue(),
+            ] : [
+                'type_id' => null,
+                'key' => (string) $r->type_key,
+                'name' => ['en' => (string) $r->type_key, 'ar' => (string) $r->type_key],
+                'name_text' => (string) $r->type_key,
+                'category' => 'general',
+                'color' => EventTicketType::CATEGORY_COLORS['general'],
+            ]) + ['in' => 0, 'out' => 0, 'rejects' => 0] + ($withEvent ? ['event' => $title($type ? $type->event : $events->get((int) $r->event_id))] : []);
+            $out[$key]['in'] += (int) $r->i;
+            $out[$key]['out'] += (int) $r->o;
+            $out[$key]['rejects'] += (int) $r->r;
+        }
+
+        return collect($out)->sort(fn ($a, $b) => [$b['in'], $a['name_text']] <=> [$a['in'], $b['name_text']])->values()->all();
+    }
+
+    /** Scans joined to their tickets, grouped by ticket type (+ [$extra] columns). */
+    private function typeRows(Builder $scans, array $extra = [])
+    {
+        $cols = array_merge(['tickets.ticket_type_id', 'tickets.ticket_type'], $extra);
+        $select = 'tickets.ticket_type_id as type_id, tickets.ticket_type as type_key';
+        foreach ($extra as $c) {
+            $select .= ", $c as ".str_replace(['tickets.', 'gate_scans.'], '', $c);
+        }
+
+        return $scans->toBase()
+            ->join('tickets', 'tickets.id', '=', 'gate_scans.ticket_id')
+            ->selectRaw($select.', '.$this->sumIn('gate_scans.').' as i, '.$this->sumOut('gate_scans.').' as o, '.$this->sumRejects('gate_scans.').' as r')
+            ->groupBy($cols)
+            ->get();
+    }
+
+    /** @return array<string, list<array{type_id: ?int, key: string, in: int}>> gate id ('none' = no gate) → entries per type */
+    private function gateTypes(Tenant $tenant, string $date): array
+    {
+        $out = [];
+        foreach ($this->typeRows($this->scansOn($tenant, $date), ['gate_scans.gate_id']) as $r) {
+            if ((int) $r->i <= 0) {
+                continue;
+            }
+            $gate = (string) ($r->gate_id ?? 'none');
+            $key = $r->type_id ? 'id:'.$r->type_id : 'key:'.$r->type_key;
+            $out[$gate][$key] ??= ['type_id' => $r->type_id ? (int) $r->type_id : null, 'key' => (string) $r->type_key, 'in' => 0];
+            $out[$gate][$key]['in'] += (int) $r->i;
+        }
+
+        return array_map(fn ($rows) => collect($rows)->sortByDesc('in')->values()->all(), $out);
     }
 
     /** Live admin dashboard payload (polled every 15 s). */
@@ -81,8 +168,9 @@ class GateStatsService
         $perGate = $this->scansOn($tenant, $date)->toBase()
             ->selectRaw('gate_id, '.$this->sumIn().' as i, '.$this->sumOut().' as o, '.$this->sumRejects().' as r, max(scanned_at) as last_at')
             ->groupBy('gate_id')->get()->keyBy(fn ($r) => (string) ($r->gate_id ?? 'none'));
+        $gateTypes = $this->gateTypes($tenant, $date);
 
-        $gateRows = $gates->map(function (Gate $g) use ($perGate, $devices, $tenant, $locale) {
+        $gateRows = $gates->map(function (Gate $g) use ($perGate, $gateTypes, $devices, $tenant, $locale) {
             $r = $perGate->get((string) $g->id);
             $gd = $devices->where('gate_id', $g->id);
 
@@ -98,6 +186,7 @@ class GateStatsService
                 'devices' => $gd->count(),
                 'devices_online' => $gd->filter(fn (GateDevice $d) => $d->connectivity() === 'online')->count(),
                 'last_scan_at' => $r?->last_at ? TenantTime::iso(Carbon::parse($r->last_at, 'UTC'), $tenant) : null,
+                'types' => $gateTypes[(string) $g->id] ?? [],
             ];
         })->values();
 
@@ -108,6 +197,7 @@ class GateStatsService
                 'in' => (int) $legacy->i, 'out' => (int) $legacy->o, 'rejects' => (int) $legacy->r,
                 'devices' => 0, 'devices_online' => 0,
                 'last_scan_at' => $legacy->last_at ? TenantTime::iso(Carbon::parse($legacy->last_at, 'UTC'), $tenant) : null,
+                'types' => $gateTypes['none'] ?? [],
             ]);
         }
 
@@ -160,6 +250,7 @@ class GateStatsService
             'gates' => $gateRows->all(),
             'series' => $this->series($tenant, $date, $gateRows, $zone),
             'reasons' => $reasons->all(),
+            'by_type' => $this->byType($this->scansOn($tenant, $date), true),
             'conflicts' => $conflicts->all(),
             'recent' => $recent->all(),
         ];
@@ -252,19 +343,20 @@ class GateStatsService
         return $device ? $q->where('device_id', $device->id) : $q;
     }
 
-    private function sumIn(): string
+    /** [$p] = column prefix (e.g. `gate_scans.`) for joined queries. */
+    private function sumIn(string $p = ''): string
     {
-        return "coalesce(sum(case when direction = 'in' and result in ('valid','reentry_ok') then 1 else 0 end), 0)";
+        return "coalesce(sum(case when {$p}direction = 'in' and {$p}result in ('valid','reentry_ok') then 1 else 0 end), 0)";
     }
 
-    private function sumOut(): string
+    private function sumOut(string $p = ''): string
     {
-        return "coalesce(sum(case when direction = 'out' and result = 'valid' then 1 else 0 end), 0)";
+        return "coalesce(sum(case when {$p}direction = 'out' and {$p}result = 'valid' then 1 else 0 end), 0)";
     }
 
-    private function sumRejects(): string
+    private function sumRejects(string $p = ''): string
     {
-        return "coalesce(sum(case when result not in ('valid','reentry_ok') then 1 else 0 end), 0)";
+        return "coalesce(sum(case when {$p}result not in ('valid','reentry_ok') then 1 else 0 end), 0)";
     }
 
     /** Bucket index of scanned_at from a bound window start (UTC), per driver. */

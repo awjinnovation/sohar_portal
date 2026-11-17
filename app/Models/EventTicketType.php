@@ -22,12 +22,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class EventTicketType extends Model
 {
-    use \App\Tenancy\BelongsToTenant;
     use \App\Models\Concerns\BustsPublicApiCache;
+    use \App\Tenancy\BelongsToTenant;
 
     public const CATEGORIES = ['general', 'family', 'vip', 'child', 'senior', 'student', 'group', 'other'];
 
     public const VISIBILITY_PUBLIC = 'public';
+
     public const VISIBILITY_BOX_OFFICE = 'box_office';
 
     public const VISIBILITIES = [self::VISIBILITY_PUBLIC, self::VISIBILITY_BOX_OFFICE];
@@ -39,20 +40,47 @@ class EventTicketType extends Model
      * = no date, `admits` entries on every day the event runs (a season pass).
      */
     public const VALIDITY_DATE = 'date';
+
     public const VALIDITY_ANY_DAY = 'any_day';
+
     public const VALIDITY_ALL_DAYS = 'all_days';
 
     public const VALIDITIES = [self::VALIDITY_DATE, self::VALIDITY_ANY_DAY, self::VALIDITY_ALL_DAYS];
 
     /** Sales channels: the visitor app sees public types, the gate box office sees both. */
     public const CHANNEL_APP = 'app';
+
     public const CHANNEL_BOX_OFFICE = 'box_office';
 
-    /** Default colour per category (when the type has none). */
+    /**
+     * Default colour per category (when the type has none): green for
+     * general admission, yellow for children… The organizer usually sets
+     * the colour of the printed ticket / wristband instead (v1.2); gate apps
+     * and the gate statistics draw each type in its colour.
+     */
     public const CATEGORY_COLORS = [
-        'general' => '#2F8E80', 'family' => '#E5883C', 'vip' => '#B8860B', 'child' => '#3B82F6',
-        'senior' => '#8B5CF6', 'student' => '#0EA5E9', 'group' => '#DB2777', 'other' => '#6B7280',
+        'general' => '#16A34A', 'family' => '#F97316', 'vip' => '#7C3AED', 'child' => '#FACC15',
+        'senior' => '#0EA5E9', 'student' => '#2563EB', 'group' => '#DB2777', 'other' => '#6B7280',
     ];
+
+    /**
+     * Preset swatches of the admin editor: common printed ticket / wristband
+     * colours, hex => Arabic name (translated with __()).
+     */
+    public const SWATCHES = [
+        '#16A34A' => 'أخضر', '#FACC15' => 'أصفر', '#FFFFFF' => 'أبيض', '#F97316' => 'برتقالي',
+        '#DC2626' => 'أحمر', '#2563EB' => 'أزرق', '#0EA5E9' => 'سماوي', '#7C3AED' => 'بنفسجي',
+        '#DB2777' => 'وردي', '#92400E' => 'بني', '#6B7280' => 'رمادي', '#111827' => 'أسود',
+    ];
+
+    /**
+     * Text on a light badge. Max-contrast rule (same as the apps): dark text
+     * when its contrast (L + 0.05) / 0.05 beats white's 1.05 / (L + 0.05),
+     * i.e. relative luminance L > 0.179.
+     */
+    public const TEXT_ON_LIGHT = '#111827';
+
+    public const LIGHT_LUMINANCE = 0.179;
 
     /** Material Symbols / Bootstrap icon hint per category (apps map it). */
     public const CATEGORY_ICONS = [
@@ -156,6 +184,58 @@ class EventTicketType extends Model
     public function colorValue(): string
     {
         return $this->color ?: (self::CATEGORY_COLORS[$this->category] ?? self::CATEGORY_COLORS['other']);
+    }
+
+    /** WCAG relative luminance of `#RRGGBB` / `#RGB` (0 = black, 1 = white); null when unreadable. */
+    public static function luminance(?string $hex): ?float
+    {
+        $h = ltrim(trim((string) $hex), '#');
+        if (strlen($h) === 3) {
+            $h = $h[0].$h[0].$h[1].$h[1].$h[2].$h[2];
+        }
+        if (strlen($h) === 8) {
+            $h = substr($h, 2); // AARRGGBB
+        }
+        if (strlen($h) !== 6 || ! ctype_xdigit($h)) {
+            return null;
+        }
+        $c = array_map(function (string $p) {
+            $v = hexdec($p) / 255;
+
+            return $v <= 0.03928 ? $v / 12.92 : (($v + 0.055) / 1.055) ** 2.4;
+        }, str_split($h, 2));
+
+        return 0.2126 * $c[0] + 0.7152 * $c[1] + 0.0722 * $c[2];
+    }
+
+    /** A light colour (yellow, white, green…) takes dark text (max-contrast rule). */
+    public static function isLightColor(?string $hex): bool
+    {
+        return (self::luminance($hex) ?? 0) > self::LIGHT_LUMINANCE;
+    }
+
+    /** Text / icon colour on a badge of [$hex]: dark on light colours, else white. */
+    public static function textColorFor(?string $hex): string
+    {
+        return self::isLightColor($hex) ? self::TEXT_ON_LIGHT : '#FFFFFF';
+    }
+
+    /** Very light colours (white) also need a border to be seen on a white page. */
+    public static function needsBorder(?string $hex): bool
+    {
+        return (self::luminance($hex) ?? 0) > 0.8;
+    }
+
+    /**
+     * Inline CSS variables of a type badge (`.vb-badge`, `.bo-badge`):
+     * the colour, its text colour and a ring for white. Null = general.
+     */
+    public static function badgeStyle(?string $hex): string
+    {
+        $hex = $hex ?: self::CATEGORY_COLORS['general'];
+
+        return '--type-color: '.$hex.'; --type-text: '.self::textColorFor($hex).';'
+            .(self::needsBorder($hex) ? ' --type-ring: inset 0 0 0 1px #D1D5DB;' : '');
     }
 
     /** Within the sales window right now (tenant wall-clock). */

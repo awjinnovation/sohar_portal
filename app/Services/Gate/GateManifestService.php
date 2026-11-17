@@ -60,18 +60,57 @@ class GateManifestService
             });
     }
 
-    /** Cheap version string: changes whenever a ticket in scope is added / used / cancelled. */
+    /**
+     * Cheap version string: changes whenever a ticket in scope is added /
+     * used / cancelled, or one of their ticket types changes (name, colour…).
+     */
     public function version(Tenant $tenant, string $date, ?Gate $gate = null): string
     {
         $agg = $this->ticketsFor($date, $gate)
             ->toBase()
             ->selectRaw('count(*) as c, max(tickets.updated_at) as u, coalesce(sum(tickets.check_in_count), 0) as k, sum(case when tickets.status = ? then 1 else 0 end) as a', ['active'])
             ->first();
+        $types = $this->typesQuery($date, $gate)->toBase()
+            ->selectRaw('count(*) as c, max(event_ticket_types.updated_at) as u')
+            ->first();
 
         return substr(sha1(implode('|', [
             'v1', $tenant->id, $date, $gate?->id, $gate?->event_id,
             $agg->c ?? 0, $agg->u ?? '', $agg->k ?? 0, $agg->a ?? 0, $this->salt($tenant, $date),
+            $types->c ?? 0, $types->u ?? '',
         ])), 0, 16);
+    }
+
+    /** The ticket types of the tickets in scope (manifest `types`). */
+    private function typesQuery(string $date, ?Gate $gate): Builder
+    {
+        return EventTicketType::query()
+            ->whereIn('event_ticket_types.id', $this->ticketsFor($date, $gate)->whereNotNull('tickets.ticket_type_id')->select('tickets.ticket_type_id'));
+    }
+
+    /**
+     * Manifest `types` (v1.2): what an offline device needs to show the
+     * same type badge, colour and ID note as an online scan, and to count
+     * entries per type. Entries point at them with `y`.
+     *
+     * @return list<array{id: int, key: string, event_id: int, name: array{en: string, ar: string}, category: string, color: string, admits: int, requires_id: bool, min_age: ?int, max_age: ?int, validity: string}>
+     */
+    private function types(string $date, ?Gate $gate): array
+    {
+        return $this->typesQuery($date, $gate)->orderBy('event_ticket_types.event_id')->orderBy('event_ticket_types.sort')->orderBy('event_ticket_types.id')->get()
+            ->map(fn (EventTicketType $t) => [
+                'id' => $t->id,
+                'key' => $t->key,
+                'event_id' => (int) $t->event_id,
+                'name' => ['en' => (string) ($t->name['en'] ?? '') ?: $t->key, 'ar' => (string) ($t->name['ar'] ?? '') ?: $t->key],
+                'category' => $t->category,
+                'color' => $t->colorValue(),
+                'admits' => max(1, (int) $t->admits),
+                'requires_id' => (bool) $t->requires_id,
+                'min_age' => $t->min_age,
+                'max_age' => $t->max_age,
+                'validity' => $t->validityValue(),
+            ])->values()->all();
     }
 
     /**
@@ -79,7 +118,10 @@ class GateManifestService
      * (all_days): today's admitted entries, so they are `active` again every
      * day. Undated tickets add `v` (any_day | all_days).
      *
-     * @return array{version: string, generated_at: string, date: string, salt: string, gate_id: ?int, count: int, tickets: list<array{h: string, s: string, t: ?string, e: int, d: string, a: int, u: int, v?: string}>}
+     * Entries add `y` = the ticket type id (absent for tickets without one),
+     * described once in the top-level `types`.
+     *
+     * @return array{version: string, generated_at: string, date: string, salt: string, gate_id: ?int, count: int, types: list<array>, tickets: list<array{h: string, s: string, t: ?string, y?: int, e: int, d: string, a: int, u: int, v?: string}>}
      */
     public function build(Tenant $tenant, string $date, ?Gate $gate = null): array
     {
@@ -89,7 +131,7 @@ class GateManifestService
 
         $this->ticketsFor($date, $gate)
             ->toBase()
-            ->select(['tickets.id', 'tickets.qr_code', 'tickets.status', 'tickets.ticket_type', 'tickets.validity', 'tickets.event_id', 'tickets.booking_date', 'tickets.check_in_count', 'tickets.max_check_ins'])
+            ->select(['tickets.id', 'tickets.qr_code', 'tickets.status', 'tickets.ticket_type', 'tickets.ticket_type_id', 'tickets.validity', 'tickets.event_id', 'tickets.booking_date', 'tickets.check_in_count', 'tickets.max_check_ins'])
             ->orderBy('tickets.id')
             ->chunk(2000, function ($rows) use (&$tickets, $salt, $date, $today) {
                 foreach ($rows as $row) {
@@ -108,6 +150,7 @@ class GateManifestService
                         'h' => self::hash($salt, $row->qr_code),
                         's' => $status,
                         't' => $row->ticket_type,
+                    ] + ($row->ticket_type_id ? ['y' => (int) $row->ticket_type_id] : []) + [
                         'e' => (int) $row->event_id,
                         'd' => $row->booking_date ? substr((string) $row->booking_date, 0, 10) : $date,
                         // Multi-entry (docs/ticket_types_contract.md): people admitted / entries used (today, for a season pass).
@@ -126,6 +169,7 @@ class GateManifestService
             'salt' => $salt,
             'gate_id' => $gate?->id,
             'count' => count($tickets),
+            'types' => $this->types($date, $gate),
             'tickets' => $tickets,
         ];
     }

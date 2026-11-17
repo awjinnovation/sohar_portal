@@ -123,19 +123,34 @@ class GateSalesController extends Controller
     }
 
     /**
-     * POST /orders/{id}/receipt (multipart: image, idempotency_key) — photo of
-     * the card terminal receipt of a `pos` order (§9). 201 with the verdict;
-     * 200 when the same key (or the same photo) was already sent.
+     * POST /orders/{id}/receipt (multipart or JSON: image?, idempotency_key,
+     * approval_code?, card_last4?, note?) — photo of the card terminal
+     * receipt of a `pos` order (§9), or without `image` the payment confirmed
+     * by hand (unless photos are required: 422 RECEIPT_PHOTO_REQUIRED).
+     * 201 with the verdict; 200 when the same key (or the same photo) was
+     * already sent.
      */
     public function receipt(Request $request, int $id, CardTerminalService $terminal): JsonResponse
     {
         $data = $request->validate([
-            'image' => ['required', 'file', 'mimetypes:'.implode(',', array_keys(CardTerminalService::MIMES)), 'max:'.CardTerminalService::MAX_IMAGE_KB],
+            'image' => ['nullable', 'file', 'mimetypes:'.implode(',', array_keys(CardTerminalService::MIMES)), 'max:'.CardTerminalService::MAX_IMAGE_KB],
             'idempotency_key' => ['required', 'string', 'max:100'],
+            'approval_code' => ['nullable', 'string', 'max:30', function (string $attribute, mixed $value, \Closure $fail) {
+                if (CardTerminalService::manualApprovalCode((string) $value) === null) {
+                    $fail(__('box_office.errors.approval_code_invalid'));
+                }
+            }],
+            'card_last4' => ['nullable', 'digits:4'],
+            'note' => ['nullable', 'string', 'max:200'],
         ]);
         $tenant = $this->context->get();
+        $image = $request->file('image');
 
-        [$order, $receipt, $created] = $terminal->submit($tenant, $this->order($request, $id), $this->device($request), $this->staff($request), $data['image'], $data['idempotency_key']);
+        [$order, $receipt, $created] = $terminal->submit(
+            $tenant, $this->order($request, $id), $this->device($request), $this->staff($request),
+            $image instanceof \Illuminate\Http\UploadedFile ? $image : null, $data['idempotency_key'],
+            ['approval_code' => $data['approval_code'] ?? null, 'card_last4' => $data['card_last4'] ?? null, 'note' => $data['note'] ?? null],
+        );
 
         return $this->ok([
             'order' => $this->boxOffice->toApi($order, $tenant),

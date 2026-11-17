@@ -7,13 +7,22 @@
 <x-admin.card title="إيصالات جهاز البطاقة" icon="receipt-cutoff" :subtitle="__('يقرأ النظام كل صورة ويطابقها مع الطلب ومع الإيصالات المقبولة من قبل.')">
     @forelse($order->receipts->sortByDesc('id') as $receipt)
         <div class="d-flex flex-wrap gap-3 py-3 {{ $loop->last ? '' : 'border-bottom' }}" data-receipt="{{ $receipt->id }}" data-verdict="{{ $receipt->verdict }}">
+            @if($receipt->hasPhoto())
             <a href="{{ route('admin.gates.sales.receipt-image', [$order, $receipt]) }}" target="_blank" rel="noopener" class="d-block flex-shrink-0">
                 <img src="{{ route('admin.gates.sales.receipt-image', [$order, $receipt]) }}" alt="{{ __('صورة الإيصال') }}" loading="lazy"
                      class="rounded border" style="width: 120px; height: 160px; object-fit: cover; background: #f4f4f4">
             </a>
+            @else
+            {{-- Confirmed by staff without a photo (§9): only what they typed. --}}
+            <div class="rounded border d-flex flex-column align-items-center justify-content-center text-muted flex-shrink-0 small text-center p-2" data-no-photo
+                 style="width: 120px; height: 160px; background: var(--surface-low, #f4f4f4)">
+                <i class="bi bi-camera-video-off fs-3 mb-1" aria-hidden="true"></i>{{ __('أُكِّد الدفع دون صورة') }}
+            </div>
+            @endif
             <div class="flex-grow-1" style="min-width: 220px">
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                     <x-admin.status-pill :variant="$verdictVariant[$receipt->verdict] ?? 'neutral'" :label="__('box_office.receipt_verdicts.'.$receipt->verdict)" />
+                    @unless($receipt->hasPhoto())<x-admin.status-pill variant="neutral" :label="__('دون صورة')" size="sm" />@endunless
                     @if($receipt->accepted)<x-admin.status-pill variant="success" :label="__('مقبول للطلب')" size="sm" />@endif
                     @if($receipt->decision)<x-admin.status-pill variant="neutral" :label="$decisionLabel[$receipt->decision] ?? $receipt->decision" size="sm" />@endif
                     <span class="text-muted small num"><span class="ltr">{{ $fmt($receipt->created_at) }}</span> · {{ $receipt->staff?->name ?? '—' }}</span>
@@ -23,7 +32,7 @@
                         @foreach($receipt->reasons as $r)
                             <li class="{{ ($r['level'] ?? '') === 'reject' ? 'text-danger' : 'text-warning-emphasis' }}" data-reason="{{ $r['code'] ?? '' }}">
                                 {{ __('box_office.receipt_reasons.'.($r['code'] ?? ''), (array) ($r['data'] ?? [])) }}
-                                @if(($r['code'] ?? '') !== '' && in_array($r['code'], ['duplicate_image', 'duplicate_receipt'], true) && $receipt->duplicateOf)
+                                @if(($r['code'] ?? '') !== '' && in_array($r['code'], ['duplicate_image', 'duplicate_receipt', 'possible_duplicate'], true) && $receipt->duplicateOf)
                                     <a href="{{ route('admin.gates.sales.show', $receipt->duplicateOf) }}" class="ms-1">{{ __('عرض الطلب') }}</a>
                                 @endif
                             </li>
@@ -37,8 +46,13 @@
                     <dt>{{ __('رمز الموافقة') }}</dt><dd class="font-monospace ltr text-start">{{ $receipt->approval_code ?? '—' }}</dd>
                     <dt>{{ __('الرقم المرجعي') }}</dt><dd class="font-monospace ltr text-start">{{ $receipt->rrn ?? '—' }}</dd>
                     <dt>{{ __('البطاقة') }}</dt><dd class="font-monospace ltr text-start">{{ trim(($receipt->extracted['card_scheme'] ?? '').' '.($receipt->card_last4 ? '•••• '.$receipt->card_last4 : '')) ?: '—' }}</dd>
-                    @if($receipt->ai_status !== 'ok')
+                    @if(! $receipt->hasPhoto())
+                        <dt>{{ __('الفحص الآلي') }}</dt><dd>{{ __('لا يوجد، فلا صورة للإيصال') }}</dd>
+                    @elseif($receipt->ai_status !== 'ok')
                         <dt>{{ __('الفحص الآلي') }}</dt><dd>{{ $receipt->ai_status === 'budget' ? __('بلغ حدّه الشهري') : __('غير متاح') }}</dd>
+                    @endif
+                    @if($receipt->note)
+                        <dt>{{ __('ملاحظة الموظف') }}</dt><dd>{{ $receipt->note }}</dd>
                     @endif
                     @if($receipt->decision_note)
                         <dt>{{ __('ملاحظة المشرف') }}</dt><dd>{{ $receipt->decision_note }} <span class="text-muted">· {{ $receipt->decider?->name }}</span></dd>
@@ -58,6 +72,6 @@
             </div>
         </div>
     @empty
-        <p class="text-muted mb-0">{{ __('لم يُرسل الموظف صورة إيصال بعد.') }}</p>
+        <p class="text-muted mb-0">{{ __('لم يُرسل الموظف صورة إيصال ولم يؤكد الدفع بعد.') }}</p>
     @endforelse
 </x-admin.card>

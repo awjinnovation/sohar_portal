@@ -26,6 +26,7 @@
         'sources' => collect($L::SOURCES)->map(fn ($v) => __($v)),
         'refresh_failed' => __('تعذّر التحديث، وستُعاد المحاولة'),
         'ai_cached' => __('من الذاكرة المؤقتة'),
+        'share' => __(':percent من الدخول'),
     ];
 @endphp
 @section('page-actions')
@@ -93,6 +94,12 @@
         </div>
     </div>
 
+    {{-- v1.2: entries per ticket type, each in the type's colour (the colour of its printed ticket or wristband). --}}
+    <x-admin.card title="الدخول حسب نوع التذكرة" icon="ticket-perforated" subtitle="عدد الأشخاص الذين دخلوا بكل نوع من البوابات كلها، بلون النوع" :flush="true" id="gTypesCard">
+        <ul class="tx-list" id="gTypes"></ul>
+        <div id="gTypesEmpty" hidden><x-admin.empty-state icon="ticket-perforated" title="لا يوجد دخول بعد" text="سيظهر هنا عدد الداخلين بكل نوع من التذاكر." /></div>
+    </x-admin.card>
+
     <h2 class="h6 fw-bold mt-2 mb-3"><i class="bi bi-door-open text-primary"></i> {{ __('البوابات') }}</h2>
     <div class="gate-grid mb-4" id="gGates"></div>
 
@@ -134,6 +141,12 @@
     .gate-card .gc-foot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); gap: 8px; flex-wrap: wrap; }
     .reason-bar { height: 6px; border-radius: 3px; background: var(--surface-high, #E5E7EB); overflow: hidden; margin-top: 6px; }
     .reason-bar i { display: block; height: 100%; background: var(--error, #DC2626); }
+    .type-swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; box-shadow: inset 0 0 0 1px rgba(17, 24, 39, .12); }
+    .type-swatch.is-white, .type-bar i.is-white, .gc-types i.is-white { box-shadow: inset 0 0 0 1px var(--hairline-strong, #D1D5DB); }
+    .type-bar { height: 8px; border-radius: 4px; background: var(--surface-high, #E5E7EB); overflow: hidden; margin-top: 6px; }
+    .type-bar i { display: block; height: 100%; border-radius: 4px; }
+    .gate-card .gc-types { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-high, #E5E7EB); gap: 1px; }
+    .gate-card .gc-types i { display: block; height: 100%; min-width: 3px; }
 </style>
 @endpush
 
@@ -157,9 +170,30 @@
         if (hint !== undefined) { var h = el.querySelector('.stat-hint'); if (!h) { h = document.createElement('div'); h.className = 'stat-hint'; el.appendChild(h); } h.textContent = hint; }
     };
     var palette = function () { return [css('--brand', '#2F8E80'), css('--accent', '#E5883C'), css('--info', '#2563EB'), css('--points', '#7C3AED'), '#0EA5E9', '#DB2777', '#65A30D', '#B45309']; };
+    // Ticket type colours (v1.2): very light ones (white) get a border.
+    var lum = function (hex) {
+        var h = String(hex || '').replace('#', ''); if (h.length === 3) h = h.replace(/./g, '$&$&');
+        if (!/^[0-9a-f]{6}$/i.test(h)) return 0;
+        var c = [0, 2, 4].map(function (i) { var v = parseInt(h.substr(i, 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    var white = function (hex) { return lum(hex) > 0.8 ? ' is-white' : ''; };
+    var safeColor = function (hex) { return /^#[0-9a-f]{3,8}$/i.test(String(hex || '')) ? hex : '#6B7280'; };
+    var typeMatch = function (types, g) { return types.filter(function (t) { return g.type_id != null ? t.type_id === g.type_id : (t.type_id == null && t.key === g.key); })[0]; };
     var resultLabel = function (r, dir) { return r === 'valid' && dir === 'out' ? T.exit : (T.results[r] || r); };
     var resultTone = function (r, dir) { if (r === 'valid' && dir === 'out') return 'neutral'; var v = T.variants[r] || 'neutral'; return v === 'error' ? 'error' : v; };
     var resultIcon = function (r, dir) { if (dir === 'out') return 'box-arrow-right'; return { valid: 'check-lg', reentry_ok: 'arrow-repeat' }[r] || 'x-lg'; };
+
+    // Thin stacked colour bar of a gate's entries by ticket type (hidden without entries).
+    function gateTypes(g, all) {
+        var rows = (g.types || []).filter(function (x) { return x.in > 0; });
+        var sum = rows.reduce(function (n, x) { return n + x.in; }, 0);
+        if (!sum) return '';
+        return '<div class="gc-types" role="img" aria-label="' + esc(rows.map(function (x) { var t = typeMatch(all, x); return (t ? t.name_text : x.key) + ': ' + x.in; }).join(document.documentElement.lang === 'ar' ? '، ' : ', ')) + '">' + rows.map(function (x) {
+            var t = typeMatch(all, x), color = safeColor(t ? t.color : null), name = t ? t.name_text : x.key;
+            return '<i class="' + white(color).trim() + '" title="' + esc(name + ': ' + fmt(x.in)) + '" style="flex:' + x.in + ' 1 0;background:' + esc(color) + '"></i>';
+        }).join('') + '</div>';
+    }
 
     var chart = null;
     function renderChart(s) {
@@ -198,6 +232,7 @@
                 '<div class="gc-head"><span class="gc-code">' + esc(g.code) + '</span><div class="min-w-0"><div class="gc-name text-truncate">' + esc(g.name) + '</div>' +
                 '<div class="gc-sub">' + esc(T.directions[g.direction] || g.direction) + ' · ' + esc(g.event || T.all_events) + (g.allow_reentry ? ' · ' + esc(T.reentry) : '') + (g.active ? '' : ' · ' + esc(T.closed)) + '</div></div></div>' +
                 '<div class="gc-nums"><div><b class="text-success">' + fmt(g.in) + '</b><span>' + esc(T.in) + '</span></div><div><b>' + fmt(g.out) + '</b><span>' + esc(T.out) + '</span></div><div><b class="text-danger">' + fmt(g.rejects) + '</b><span>' + esc(T.rejects) + '</span></div></div>' +
+                gateTypes(g, s.by_type || []) +
                 '<div class="gc-foot"><span><i class="bi bi-upc-scan"></i> ' + esc(dev) + '</span><span>' + esc(g.last_scan_at ? T.last_scan.replace(':time', hm(g.last_scan_at)) : T.no_scans) + '</span></div></div>';
         }).join('');
 
@@ -221,6 +256,20 @@
                 (r.offline ? ' · <i class="bi bi-cloud-slash"></i> ' + esc(T.offline) : '') + '</div></div><div class="tx-amt num">' + esc(hm(r.scanned_at)) + '</div></li>';
         }).join('');
         document.getElementById('gRecentEmpty').hidden = s.recent.length > 0;
+
+        // Entries by ticket type: the event is named only when several events appear.
+        var types = (s.by_type || []).filter(function (t) { return t.in > 0; });
+        var totalIn = types.reduce(function (n, t) { return n + t.in; }, 0) || 1;
+        var events = {}; types.forEach(function (t) { if (t.event) events[t.event] = 1; });
+        var manyEvents = Object.keys(events).length > 1;
+        document.getElementById('gTypes').innerHTML = types.map(function (t) {
+            var color = safeColor(t.color), pct = Math.round(t.in * 100 / totalIn);
+            return '<li class="tx-item d-block" data-type-key="' + esc(t.key) + '"><div class="d-flex align-items-center gap-2"><span class="type-swatch' + white(color) + '" style="background:' + esc(color) + '"></span>' +
+                '<span class="fw-bold flex-grow-1 text-truncate">' + esc(t.name_text) + (manyEvents && t.event ? ' <span class="text-muted small fw-normal">· ' + esc(t.event) + '</span>' : '') + '</span>' +
+                '<span class="num fw-bold">' + fmt(t.in) + '</span><span class="text-muted small num" style="min-width:3.2em;text-align:end">' + pct + '%</span></div>' +
+                '<div class="type-bar" title="' + esc(T.share.replace(':percent', pct + '%')) + '"><i class="' + white(color).trim() + '" style="width:' + Math.max(2, pct) + '%;background:' + esc(color) + '"></i></div></li>';
+        }).join('');
+        document.getElementById('gTypesEmpty').hidden = types.length > 0;
 
         document.getElementById('gUpdated').textContent = T.updated.replace(':time', hm(s.generated_at));
         renderChart(s);

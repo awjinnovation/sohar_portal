@@ -21,6 +21,21 @@
   function fmt(str, n) { return str.replace(':count', n).replace(':age', n); }
   function money(v) { return '<span class="money" dir="ltr"><span class="cur">' + esc(cfg.currency) + '</span>' + esc(v) + '</span>'; }
   function field(name) { return form.querySelector('[data-f="' + name + '"]'); }
+  // WCAG relative luminance (same rule as EventTicketType::luminance and the apps).
+  function luminance(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) h = h.replace(/./g, '$&$&');
+    if (!/^[0-9a-f]{6}$/i.test(h)) return 0;
+    var c = [0, 2, 4].map(function (i) { var v = parseInt(h.substr(i, 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  // Max-contrast rule: dark text when (L + 0.05) / 0.05 beats 1.05 / (L + 0.05), i.e. L > 0.179.
+  function lightClass(hex) { var l = luminance(hex); return (l > 0.179 ? ' is-light' : '') + (l > 0.8 ? ' is-white' : ''); }
+  var swatches = Array.prototype.slice.call(document.querySelectorAll('[data-tt-swatch]'));
+  function syncSwatches() {
+    var v = String(field('color').value || '').toUpperCase();
+    swatches.forEach(function (b) { b.setAttribute('aria-pressed', !colorDefault.checked && b.getAttribute('data-tt-swatch').toUpperCase() === v ? 'true' : 'false'); });
+  }
 
   function render() {
     if (!types.length) { list.innerHTML = '<div class="text-muted small">' + esc(T.empty) + '</div>'; return; }
@@ -43,7 +58,7 @@
       var left = t.available == null ? T.unlimited : t.available;
       return '<div class="tt-item' + (t.is_active ? '' : ' is-off') + '" data-id="' + t.id + '" data-key="' + esc(t.key) + '">' +
         '<span class="tt-drag"><i class="bi bi-grip-vertical"></i></span>' +
-        '<span class="tt-ico" style="background:' + esc(t.color) + '"><i class="bi bi-' + esc(cat.icon) + '"></i></span>' +
+        '<span class="tt-ico' + lightClass(t.color) + '" style="background:' + esc(t.color) + '"><i class="bi bi-' + esc(cat.icon) + '"></i></span>' +
         '<div class="tt-main"><div class="tt-name">' + esc(name) + ' <code class="ltr">' + esc(t.key) + '</code></div>' +
         '<div class="tt-badges">' + badges.join('') + '</div></div>' +
         '<div class="tt-stats"><span><b class="num">' + esc(t.sold) + '</b>' + esc(T.sold) + '</span><span><b class="num">' + esc(left) + '</b>' + esc(T.left) + '</span><span><b>' + money(t.revenue) + '</b>' + esc(T.revenue) + '</span></div>' +
@@ -81,7 +96,8 @@
     field('requires_id').checked = !!v.requires_id;
     field('is_active').checked = v.is_active !== false;
     colorDefault.checked = !v.color;
-    field('color').value = v.color || cfg.colors[v.category || 'general'] || '#2F8E80';
+    field('color').value = v.color || cfg.colors[v.category || 'general'] || '#16A34A';
+    syncSwatches();
     errorBox.classList.add('d-none');
     form.querySelectorAll('.is-invalid').forEach(function (el) { el.classList.remove('is-invalid'); });
   }
@@ -133,7 +149,19 @@
   field('category').addEventListener('change', function () {
     if (colorDefault.checked) field('color').value = cfg.colors[field('category').value] || '#6B7280';
   });
-  field('color').addEventListener('input', function () { colorDefault.checked = false; });
+  field('color').addEventListener('input', function () { colorDefault.checked = false; syncSwatches(); });
+  colorDefault.addEventListener('change', function () {
+    if (colorDefault.checked) field('color').value = cfg.colors[field('category').value] || '#6B7280';
+    syncSwatches();
+  });
+  // Preset colours of printed tickets / wristbands (v1.2).
+  swatches.forEach(function (b) {
+    b.addEventListener('click', function () {
+      field('color').value = b.getAttribute('data-tt-swatch').toLowerCase();
+      colorDefault.checked = false;
+      syncSwatches();
+    });
+  });
   field('validity').addEventListener('change', syncCapacityLabel);
   field('name_en').addEventListener('input', function () {
     if (editingId || field('key').dataset.touched) return;

@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Photo of a card terminal receipt for a gate box office order
  * (docs/gate_sales_contract.md §9), with what the server read from it and
- * its verdict. The image lives on the private `local` disk.
+ * its verdict. The image lives on the private `local` disk. A `manual`
+ * receipt has no photo: staff confirmed the payment by hand (the photo is
+ * optional unless `gate_sales.pos_receipt_photo_required`), with the
+ * approval code and card digits they typed, if any; it always needs review.
  *
  * @property string $verdict verified|review|rejected
+ * @property string $source photo|manual
  */
 class BoxOfficeReceipt extends Model
 {
@@ -22,8 +26,13 @@ class BoxOfficeReceipt extends Model
 
     public const REJECTED = 'rejected';
 
+    public const SOURCE_PHOTO = 'photo';
+
+    /** Confirmed by staff without a photo. */
+    public const SOURCE_MANUAL = 'manual';
+
     protected $fillable = [
-        'order_id', 'device_id', 'staff_user_id', 'idempotency_key', 'disk', 'path', 'sha256', 'mime', 'size',
+        'order_id', 'device_id', 'staff_user_id', 'idempotency_key', 'source', 'note', 'disk', 'path', 'sha256', 'mime', 'size',
         'verdict', 'reasons', 'ai_status', 'ai_model', 'extracted', 'amount_minor', 'receipt_date', 'terminal_id',
         'approval_code', 'rrn', 'card_last4', 'accepted', 'rrn_key', 'auth_key', 'duplicate_of_order_id',
         'decision', 'decided_by', 'decided_at', 'decision_note',
@@ -38,6 +47,11 @@ class BoxOfficeReceipt extends Model
         'accepted' => 'boolean',
         'decided_at' => 'datetime',
     ];
+
+    public function hasPhoto(): bool
+    {
+        return $this->source !== self::SOURCE_MANUAL && $this->path !== null && $this->path !== '';
+    }
 
     public function order()
     {
@@ -70,6 +84,8 @@ class BoxOfficeReceipt extends Model
             'verdict' => $this->verdict,
             'verdict_text' => __('box_office.receipt_verdicts.'.$this->verdict),
             'accepted' => (bool) $this->accepted,
+            'source' => $this->source ?: self::SOURCE_PHOTO,
+            'has_photo' => $this->hasPhoto(),
             'reasons' => array_map(fn ($r) => [
                 'code' => (string) ($r['code'] ?? ''),
                 'level' => (string) ($r['level'] ?? 'review'),
@@ -89,6 +105,7 @@ class BoxOfficeReceipt extends Model
                 ? ['order_id' => $this->duplicate_of_order_id, 'reference' => BoxOfficeOrder::withoutTenantScope()->whereKey($this->duplicate_of_order_id)->value('reference')]
                 : null,
             'ai' => $this->ai_status,
+            'note' => $this->note,
             'decision' => $this->decision,
             'created_at' => \App\Support\TenantTime::iso($this->created_at, $tenant),
         ];

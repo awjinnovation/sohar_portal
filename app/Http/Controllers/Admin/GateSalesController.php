@@ -132,7 +132,7 @@ class GateSalesController extends Controller
     /** The receipt photo, from the private disk (docs/gate_sales_contract.md §9). */
     public function receiptImage(BoxOfficeOrder $order, BoxOfficeReceipt $receipt)
     {
-        abort_unless((int) $receipt->order_id === (int) $order->id, 404);
+        abort_unless((int) $receipt->order_id === (int) $order->id && $receipt->hasPhoto(), 404);
         $disk = Storage::disk($receipt->disk);
         abort_unless($disk->exists($receipt->path), 404);
 

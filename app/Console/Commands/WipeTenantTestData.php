@@ -144,7 +144,7 @@ class WipeTenantTestData extends Command
         // Card terminal receipt photos (box office §9) go once their rows are gone.
         $receiptFiles = DB::table('box_office_receipts')->where('tenant_id', $tenant->id)->get(['disk', 'path']);
         $deleted = DB::transaction(fn () => $this->wipe($tenant, $keep));
-        $receiptFiles->each(fn ($f) => \Illuminate\Support\Facades\Storage::disk($f->disk)->delete($f->path));
+        $receiptFiles->filter(fn ($f) => $f->disk && $f->path)->each(fn ($f) => \Illuminate\Support\Facades\Storage::disk($f->disk)->delete($f->path));
         PublicApiCache::bump($tenant->id);
 
         $this->table(['Data', 'Deleted'], collect($deleted)->map(fn ($n, $label) => [$label, number_format($n)])->values()->all());

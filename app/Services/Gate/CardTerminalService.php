@@ -46,6 +46,14 @@ use Illuminate\Support\Str;
  * receipt accepted for another order. Accepted receipts hold unique keys, so
  * two gates cannot accept the same receipt at the same moment.
  *
+ * Without a photo (allowed unless `gate_sales.pos_receipt_photo_required`;
+ * e.g. in poor light): staff confirm the payment by hand, optionally with
+ * the approval code and the card's last 4 digits. That receipt (`manual`) is
+ * always `review` (`no_photo`, plus `possible_duplicate` when the typed
+ * approval code and the amount match a receipt accepted for another order
+ * that day) and follows `pos_accept_unverified` like any review. It reserves
+ * no duplicate keys: a code typed by hand never blocks a genuine slip.
+ *
  * Payment: a Payment with method `pos` completed through the normal
  * fulfillment (tickets once, points, the order marked paid; an order that
  * expired meanwhile is completed when its seats are still free, else it
@@ -76,24 +84,31 @@ class CardTerminalService
     // ------------------------------------------------------------------
 
     /**
+     * A receipt photo, or (no $image) a payment confirmed by hand with the
+     * optional $manual fields `approval_code` (normalized), `card_last4`, `note`.
+     *
+     * @param  array{approval_code?: ?string, card_last4?: ?string, note?: ?string}  $manual
      * @return array{0: BoxOfficeOrder, 1: BoxOfficeReceipt, 2: bool} order, receipt, created (false = replay)
      */
-    public function submit(Tenant $tenant, BoxOfficeOrder $order, GateDevice $device, User $staff, UploadedFile $image, string $key): array
+    public function submit(Tenant $tenant, BoxOfficeOrder $order, GateDevice $device, User $staff, ?UploadedFile $image, string $key, array $manual = []): array
     {
         if (! $order->isCardTerminal()) {
             throw new ApiException('WRONG_PAYMENT_METHOD', __('box_office.errors.wrong_payment_method'), 409);
+        }
+        if ($image === null && BoxOfficeService::settings($tenant)['pos_photo_required']) {
+            throw new ApiException('RECEIPT_PHOTO_REQUIRED', __('box_office.errors.receipt_photo_required'), 422);
         }
 
         try {
             // One photo at a time per order: a retry while the first is being read waits for it.
             return Cache::lock('box_office_receipt:'.$order->id, 120)
-                ->block(60, fn () => $this->submitLocked($tenant, $order, $device, $staff, $image, $key));
+                ->block(60, fn () => $this->submitLocked($tenant, $order, $device, $staff, $image, $key, $manual));
         } catch (LockTimeoutException) {
             throw new ApiException('RECEIPT_BUSY', __('box_office.errors.receipt_busy'), 409);
         }
     }
 
-    private function submitLocked(Tenant $tenant, BoxOfficeOrder $order, GateDevice $device, User $staff, UploadedFile $image, string $key): array
+    private function submitLocked(Tenant $tenant, BoxOfficeOrder $order, GateDevice $device, User $staff, ?UploadedFile $image, string $key, array $manual): array
     {
         if ($replay = BoxOfficeReceipt::withoutTenantScope()->where('order_id', $order->id)->where('idempotency_key', $key)->first()) {
             return [$order->fresh(), $replay, false];
@@ -105,15 +120,19 @@ class CardTerminalService
             throw new ApiException('ORDER_NOT_PENDING', __('box_office.errors.order_not_pending'), 409, ['status' => $order->status]);
         }
 
+        if ($image === null) {
+            $this->guardAttempts($order);
+
+            return $this->confirmManually($tenant, $order, $device, $staff, $key, $manual);
+        }
+
         $bytes = (string) $image->get();
         $sha = hash('sha256', $bytes);
         // The same photo again for this order: same answer, no new attempt.
         if ($same = BoxOfficeReceipt::withoutTenantScope()->where('order_id', $order->id)->where('sha256', $sha)->orderByDesc('id')->first()) {
             return [$order->fresh(), $same, false];
         }
-        if ($order->receipts()->count() >= self::MAX_ATTEMPTS) {
-            throw new ApiException('RECEIPT_ATTEMPTS', __('box_office.errors.receipt_attempts'), 429, ['max' => self::MAX_ATTEMPTS]);
-        }
+        $this->guardAttempts($order);
 
         $mime = (string) $image->getMimeType();
         $path = sprintf('box-office-receipts/%d/%s/%s.%s', $tenant->id, now()->format('Y/m'), Str::uuid(), self::MIMES[$mime] ?? 'jpg');
@@ -127,6 +146,8 @@ class CardTerminalService
             'device_id' => $device->id,
             'staff_user_id' => $staff->id,
             'idempotency_key' => $key,
+            'source' => BoxOfficeReceipt::SOURCE_PHOTO,
+            'note' => self::note($manual['note'] ?? null),
             'disk' => self::DISK,
             'path' => $path,
             'sha256' => $sha,
@@ -150,6 +171,12 @@ class CardTerminalService
             return [$order->fresh(), $replay, false];
         }
 
+        return $this->decide($tenant, $order, $receipt);
+    }
+
+    /** Pay the order now when the verdict allows it (verified, or review with `pos_accept_unverified`). */
+    private function decide(Tenant $tenant, BoxOfficeOrder $order, BoxOfficeReceipt $receipt): array
+    {
         $accept = $receipt->verdict === BoxOfficeReceipt::VERIFIED
             || ($receipt->verdict === BoxOfficeReceipt::REVIEW && BoxOfficeService::settings($tenant)['pos_accept_unverified']);
         if ($accept) {
@@ -157,6 +184,80 @@ class CardTerminalService
         }
 
         return [$order->fresh(), $receipt->fresh(), true];
+    }
+
+    private function guardAttempts(BoxOfficeOrder $order): void
+    {
+        if ($order->receipts()->count() >= self::MAX_ATTEMPTS) {
+            throw new ApiException('RECEIPT_ATTEMPTS', __('box_office.errors.receipt_attempts'), 429, ['max' => self::MAX_ATTEMPTS]);
+        }
+    }
+
+    /**
+     * Staff confirm the payment without a photo: a `manual` receipt for the
+     * order total, dated today, with what they typed. Always `review`.
+     */
+    private function confirmManually(Tenant $tenant, BoxOfficeOrder $order, GateDevice $device, User $staff, string $key, array $manual): array
+    {
+        $code = self::manualApprovalCode($manual['approval_code'] ?? null);
+        $judged = $this->judgeManual($tenant, $order, $code);
+
+        $receipt = new BoxOfficeReceipt([
+            'order_id' => $order->id,
+            'device_id' => $device->id,
+            'staff_user_id' => $staff->id,
+            'idempotency_key' => $key,
+            'source' => BoxOfficeReceipt::SOURCE_MANUAL,
+            'note' => self::note($manual['note'] ?? null),
+            'ai_status' => 'skipped',
+            'amount_minor' => (int) $order->total_minor,
+            'receipt_date' => TenantTime::today($tenant),
+            'approval_code' => $code,
+            'card_last4' => self::last4($manual['card_last4'] ?? null),
+            'verdict' => BoxOfficeReceipt::REVIEW,
+            'reasons' => $judged['reasons'],
+            'duplicate_of_order_id' => $judged['duplicate_of'],
+        ]);
+        $receipt->tenant_id = $tenant->id;
+        try {
+            $receipt->save();
+        } catch (UniqueConstraintViolationException) {
+            $replay = BoxOfficeReceipt::withoutTenantScope()->where('order_id', $order->id)->where('idempotency_key', $key)->firstOrFail();
+
+            return [$order->fresh(), $replay, false];
+        }
+
+        return $this->decide($tenant, $order, $receipt);
+    }
+
+    /**
+     * `no_photo`, plus `possible_duplicate` when the typed approval code and
+     * the order total match a receipt accepted for another order on the
+     * order's day or today (review only: the code was typed by hand).
+     *
+     * @return array{reasons: list<array>, duplicate_of: ?int}
+     */
+    public function judgeManual(Tenant $tenant, BoxOfficeOrder $order, ?string $code): array
+    {
+        $reasons = [['code' => 'no_photo', 'level' => 'review']];
+        $duplicateOf = null;
+        if ($code !== null) {
+            $dates = $this->allowedDates($tenant, $order);
+            $used = BoxOfficeReceipt::withoutTenantScope()->where('tenant_id', $tenant->id)->where('accepted', true)
+                ->where('order_id', '!=', $order->id)->where('approval_code', $code)->where('amount_minor', (int) $order->total_minor)
+                ->where(function ($q) use ($dates) {
+                    foreach ($dates as $d) {
+                        $q->orWhereDate('receipt_date', $d);
+                    }
+                })
+                ->orderByDesc('id')->first();
+            if ($used) {
+                $duplicateOf = (int) $used->order_id;
+                $reasons[] = ['code' => 'possible_duplicate', 'level' => 'review', 'data' => ['reference' => $this->reference($duplicateOf)]];
+            }
+        }
+
+        return ['reasons' => $reasons, 'duplicate_of' => $duplicateOf];
     }
 
     // ------------------------------------------------------------------
@@ -319,6 +420,12 @@ class CardTerminalService
      */
     private function accept(BoxOfficeOrder $order, BoxOfficeReceipt $receipt, ?User $by): BoxOfficeOrder
     {
+        if ($receipt->source === BoxOfficeReceipt::SOURCE_MANUAL) {
+            // Typed by hand: reserves nothing (keys stay null, which unique indexes allow many times).
+            $receipt->forceFill(['accepted' => true, 'rrn_key' => null, 'auth_key' => null])->save();
+
+            return $this->pay($order, $receipt->fresh(), $by);
+        }
         [$rrnKey, $authKey] = self::keys([
             'amount_minor' => $receipt->amount_minor, 'receipt_date' => $receipt->receipt_date?->toDateString(),
             'terminal_id' => $receipt->terminal_id, 'approval_code' => $receipt->approval_code, 'rrn' => $receipt->rrn,
@@ -415,6 +522,21 @@ class CardTerminalService
         $v = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $value));
 
         return strlen($v) >= $min ? substr($v, 0, $max) : null;
+    }
+
+    /** Approval code typed by staff: letters and digits, 4–12 of them, upper case; null otherwise. */
+    public static function manualApprovalCode(?string $value): ?string
+    {
+        $v = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $value));
+
+        return strlen($v) >= 4 && strlen($v) <= 12 ? $v : null;
+    }
+
+    private static function note(?string $value): ?string
+    {
+        $v = trim((string) $value);
+
+        return $v === '' ? null : mb_substr($v, 0, 200);
     }
 
     public static function last4(?string $value): ?string

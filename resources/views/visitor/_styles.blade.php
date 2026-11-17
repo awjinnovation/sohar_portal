@@ -32,7 +32,7 @@
     .vb-type.is-off { opacity: .55; }
     .vb-type-meta { min-width: 0; }
     .vb-type-name { font-weight: 700; font-size: 15.5px; display: flex; align-items: center; gap: 8px; }
-    .vb-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+    .vb-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px rgba(17, 24, 39, .15); }
     .vb-type-sub { font-size: 13px; margin-top: 2px; }
     .vb-type-sub .money { font-weight: 700; color: var(--text); }
     .vb-stepper { display: flex; align-items: center; gap: 6px; flex: none; direction: ltr; }
@@ -47,7 +47,7 @@
     .vb-secure { text-align: center; font-size: 13px; margin: 10px 0 0; }
     .vb-ticket { padding: 16px; }
     .vb-ticket-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .vb-badge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; font-weight: 700; font-size: 13px; color: #fff; background: var(--type-color, var(--brand)); }
+    .vb-badge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; font-weight: 700; font-size: 13px; color: var(--type-text, #fff); background: var(--type-color, var(--brand)); box-shadow: var(--type-ring, none); }
     .vb-ticket-event { font-weight: 800; font-size: 16px; }
     .vb-ticket-when { font-size: 13.5px; margin: 2px 0 12px; display: flex; gap: 6px; align-items: center; }
     .vb-ticket .qr-panel { width: min(100%, 240px); }

@@ -21,7 +21,7 @@
     .bo-secure { text-align: center; font-size: 13px; margin: 10px 0 0; }
     .bo-ticket { padding: 16px; }
     .bo-ticket-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
-    .bo-badge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; font-weight: 700; font-size: 13px; color: #fff; background: var(--type-color, var(--brand)); }
+    .bo-badge { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; font-weight: 700; font-size: 13px; color: var(--type-text, #fff); background: var(--type-color, var(--brand)); box-shadow: var(--type-ring, none); }
     .bo-ticket .qr-panel { width: min(100%, 240px); }
     .bo-ticket-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; }
 </style>

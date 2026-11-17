@@ -110,7 +110,10 @@
             <x-admin.card title="الدفع بجهاز البطاقة" icon="credit-card">
                 @if($order->needs_review)
                     <div class="alert alert-warning small d-flex gap-2 align-items-start" data-needs-review><i class="bi bi-receipt-cutoff"></i>
-                        <span>{{ __('صدرت التذاكر بإيصال لم يُفحص كاملًا. راجع صورة الإيصال وبياناته، ثم سجّل المراجعة أو ألغِ العملية.') }}</span></div>
+                        @php($acceptedReceipt = $order->receipts->where('accepted', true)->sortByDesc('id')->first())
+                        <span>{{ $acceptedReceipt && ! $acceptedReceipt->hasPhoto()
+                            ? __('صدرت التذاكر دون صورة للإيصال. طابق المبلغ ورمز الموافقة مع تقرير جهاز البطاقة، ثم سجّل المراجعة أو ألغِ العملية.')
+                            : __('صدرت التذاكر بإيصال لم يُفحص كاملًا. راجع صورة الإيصال وبياناته، ثم سجّل المراجعة أو ألغِ العملية.') }}</span></div>
                     <form method="POST" action="{{ route('admin.gates.sales.review', $order) }}" class="mb-3">
                         @csrf
                         <input type="text" name="note" class="form-control form-control-sm mb-2" maxlength="500" placeholder="{{ __('ملاحظة (اختيارية)') }}" aria-label="{{ __('ملاحظة') }}">

@@ -77,6 +77,13 @@
     .tt-item.sortable-ghost { opacity: .35; }
     .tt-drag { cursor: grab; color: var(--muted, #6B7280); font-size: 18px; padding: 4px; }
     .tt-ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; color: #fff; font-size: 19px; flex: none; }
+    .tt-ico.is-light { color: #111827; }
+    .tt-ico.is-white { box-shadow: inset 0 0 0 1px var(--hairline-strong, #D1D5DB); }
+    .tt-swatches { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tt-swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; box-shadow: 0 0 0 1px rgba(17, 24, 39, .12); padding: 0; cursor: pointer; }
+    .tt-swatch.is-light { box-shadow: 0 0 0 1px var(--hairline-strong, #D1D5DB); }
+    .tt-swatch[aria-pressed="true"] { outline: 2px solid var(--brand, #2F8E80); outline-offset: 2px; }
+    .tt-swatch:focus-visible { outline: 2px solid var(--brand, #2F8E80); outline-offset: 2px; }
     .tt-main { flex: 1; min-width: 0; }
     .tt-name { font-weight: 700; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
     .tt-name code { font-size: 11.5px; }
@@ -134,7 +141,14 @@
                         <div class="d-flex gap-2 align-items-center">
                             <input type="color" class="form-control form-control-color" id="tt_color" data-f="color" aria-label="{{ __('اللون') }}">
                             <div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="tt_color_default"><label class="form-check-label small" for="tt_color_default">{{ __('لون الفئة') }}</label></div>
-                        </div></div>
+                        </div>
+                        {{-- v1.2: colours of printed tickets / wristbands, so the gate app and the gate statistics match them. --}}
+                        <div class="tt-swatches" id="ttSwatches" role="group" aria-label="{{ __('ألوان جاهزة') }}">
+                            @foreach(\App\Models\EventTicketType::SWATCHES as $hex => $label)
+                                <button type="button" class="tt-swatch{{ \App\Models\EventTicketType::needsBorder($hex) ? ' is-light' : '' }}" data-tt-swatch="{{ $hex }}" style="background: {{ $hex }}" title="{{ __($label) }}" aria-label="{{ __($label) }}" aria-pressed="false"></button>
+                            @endforeach
+                        </div>
+                        <div class="form-text">{{ __('اختر لون التذكرة المطبوعة أو السوار ليطابقه لون النوع في تطبيق البوابة والإحصاءات.') }}</div></div>
                     <div class="col-md-6">
                         <label class="toggle-row mb-2" for="tt_requires_id">
                             <span class="tr-text"><span class="tr-label d-block">{{ __('يتحقق موظف البوابة من الهوية أو العمر') }}</span></span>

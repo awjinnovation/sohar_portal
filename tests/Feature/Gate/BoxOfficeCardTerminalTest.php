@@ -416,4 +416,123 @@ class BoxOfficeCardTerminalTest extends GateTestCase
         $this->assertSame(['rrn:123456789012', 'auth:-|AB12|1000|2026-11-05'],
             CardTerminalService::keys(['rrn' => '123456789012', 'approval_code' => 'AB12', 'terminal_id' => null, 'amount_minor' => 1000, 'receipt_date' => '2026-11-05']));
     }
+
+    // ------------------------------------------------------------ without a photo
+
+    /** POST /receipt as JSON without an image (manual confirmation). */
+    private function confirmWithoutPhoto(string $token, int $orderId, array $fields = [], ?string $key = null)
+    {
+        return $this->gate('POST', "/api/v1/gate/sales/orders/$orderId/receipt", array_merge(['idempotency_key' => $key ?? (string) Str::uuid()], $fields), $token, ['Accept-Language' => 'en']);
+    }
+
+    #[Test]
+    public function a_payment_can_be_confirmed_without_a_photo_and_is_flagged_for_review(): void
+    {
+        [, $token] = $this->sellingDevice();
+        $this->gate('GET', '/api/v1/gate/session', [], $token)->assertJsonPath('data.settings.sales.pos_photo_required', false);
+        $orderId = $this->posOrder($token, $this->event())->json('data.order.id');
+        $key = (string) Str::uuid();
+
+        $res = $this->confirmWithoutPhoto($token, $orderId, ['approval_code' => 'ab-12 34', 'card_last4' => '4321', 'note' => 'Too dark for a photo'], $key)
+            ->assertCreated()
+            ->assertJsonPath('data.receipt.verdict', 'review')
+            ->assertJsonPath('data.receipt.accepted', true)
+            ->assertJsonPath('data.receipt.source', 'manual')
+            ->assertJsonPath('data.receipt.has_photo', false)
+            ->assertJsonPath('data.receipt.approval_code', 'AB1234')
+            ->assertJsonPath('data.receipt.card_last4', '4321')
+            ->assertJsonPath('data.receipt.amount_minor', 1000)
+            ->assertJsonPath('data.receipt.note', 'Too dark for a photo')
+            ->assertJsonPath('data.receipt.reasons.0.text', 'Payment confirmed without a receipt photo.')
+            ->assertJsonPath('data.order.status', 'paid')
+            ->assertJsonPath('data.order.needs_review', true)
+            ->assertJsonCount(2, 'data.order.tickets');
+        $this->assertSame(['no_photo'], $this->codes($res));
+        $this->assertSame(0, $this->aiCalls, 'nothing to read without a photo');
+
+        $receipt = BoxOfficeReceipt::firstOrFail();
+        $this->assertNull($receipt->path);
+        $this->assertNull($receipt->sha256);
+        $this->assertNull($receipt->rrn_key, 'a typed code reserves nothing');
+        $this->assertNull($receipt->auth_key);
+        $this->assertSame(Payment::METHOD_POS, Payment::findOrFail(BoxOfficeOrder::findOrFail($orderId)->payment_id)->method);
+
+        // Replay: same receipt, 200; the order is no longer pending for a new one.
+        $this->confirmWithoutPhoto($token, $orderId, [], $key)->assertOk()->assertJsonPath('data.receipt.id', $receipt->id);
+        $this->confirmWithoutPhoto($token, $orderId)->assertStatus(409)->assertJsonPath('code', 'ORDER_NOT_PENDING');
+
+        // The fields are optional; bad ones are refused.
+        $other = $this->posOrder($token, $this->event())->json('data.order.id');
+        $this->confirmWithoutPhoto($token, $other, ['approval_code' => 'A1'])->assertStatus(422)->assertJsonPath('code', 'VALIDATION_ERROR');
+        $this->confirmWithoutPhoto($token, $other, ['card_last4' => '12'])->assertStatus(422);
+        $this->confirmWithoutPhoto($token, $other)->assertCreated()->assertJsonPath('data.receipt.approval_code', null)->assertJsonPath('data.order.status', 'paid');
+
+        // Several manual receipts never collide on the (null) duplicate keys.
+        $third = $this->posOrder($token, $this->event())->json('data.order.id');
+        $this->confirmWithoutPhoto($token, $third)->assertCreated()->assertJsonPath('data.order.status', 'paid');
+    }
+
+    #[Test]
+    public function the_organizer_can_require_the_photo_or_hold_unphotographed_sales(): void
+    {
+        [, $token] = $this->sellingDevice();
+        $event = $this->event();
+
+        $this->tenant->putSetting('gate_sales.pos_receipt_photo_required', true)->save();
+        $this->gate('GET', '/api/v1/gate/session', [], $token)->assertJsonPath('data.settings.sales.pos_photo_required', true);
+        $orderId = $this->posOrder($token, $event)->json('data.order.id');
+        $this->confirmWithoutPhoto($token, $orderId)->assertStatus(422)->assertJsonPath('code', 'RECEIPT_PHOTO_REQUIRED');
+        $this->assertSame(0, BoxOfficeReceipt::count());
+        $this->reads = $this->slip('1.000');
+        $this->sendReceipt($token, $orderId)->assertCreated()->assertJsonPath('data.receipt.verdict', 'verified')->assertJsonPath('data.receipt.has_photo', true);
+
+        // Optional again, but every unchecked receipt waits for a supervisor.
+        $this->tenant->putSetting('gate_sales.pos_receipt_photo_required', false)->putSetting('gate_sales.pos_accept_unverified', false)->save();
+        $held = $this->posOrder($token, $event)->json('data.order.id');
+        $this->confirmWithoutPhoto($token, $held)->assertCreated()
+            ->assertJsonPath('data.receipt.verdict', 'review')
+            ->assertJsonPath('data.receipt.accepted', false)
+            ->assertJsonPath('data.order.status', 'pending');
+
+        // A supervisor approves it in the admin: paid, no review left.
+        $admin = User::factory()->create();
+        $this->grantRole($admin, 'admin');
+        $order = BoxOfficeOrder::findOrFail($held);
+        $receipt = $order->latestReceipt();
+        $this->actingAs($admin)->get(route('admin.gates.sales.show', $order))->assertOk()
+            ->assertSee('data-no-photo', false)->assertSee('data-reason="no_photo"', false)->assertSee('دون صورة');
+        $this->actingAs($admin)->get(route('admin.gates.sales.receipt-image', [$order, $receipt]))->assertNotFound();
+        $this->actingAs($admin)->post(route('admin.gates.sales.receipt-approve', [$order, $receipt]))->assertSessionHas('success');
+        $this->assertSame('paid', $order->fresh()->status);
+        $this->assertFalse($order->fresh()->needs_review);
+        $this->actingAs($admin)->get(route('admin.branding.edit'))->assertOk()->assertSee('gate_sales][pos_receipt_photo_required', false);
+    }
+
+    #[Test]
+    public function a_typed_approval_code_already_used_today_is_flagged_not_rejected(): void
+    {
+        [, $token] = $this->sellingDevice();
+        $event = $this->event();
+
+        // A genuine slip with approval code XY9876 paid a first order.
+        $this->reads = $this->slip('1.000', ['approval_code' => 'XY9876']);
+        $first = $this->posOrder($token, $event)->json('data.order.id');
+        $this->sendReceipt($token, $first)->assertJsonPath('data.receipt.verdict', 'verified');
+
+        // The same code typed for another order of the same amount: paid, flagged with the other order.
+        $second = $this->posOrder($token, $event)->json('data.order.id');
+        $res = $this->confirmWithoutPhoto($token, $second, ['approval_code' => 'xy9876'])->assertCreated()
+            ->assertJsonPath('data.order.status', 'paid')
+            ->assertJsonPath('data.order.needs_review', true)
+            ->assertJsonPath('data.receipt.duplicate_of.order_id', $first);
+        $this->assertSame(['no_photo', 'possible_duplicate'], $this->codes($res));
+
+        // Typed again for a third order: the manual one counts too.
+        $third = $this->posOrder($token, $event)->json('data.order.id');
+        $this->assertContains('possible_duplicate', $this->codes($this->confirmWithoutPhoto($token, $third, ['approval_code' => 'XY9876'])));
+
+        // A different amount is not a match.
+        $bigger = $this->posOrder($token, $event, ['quantity' => 3])->json('data.order.id');
+        $this->assertSame(['no_photo'], $this->codes($this->confirmWithoutPhoto($token, $bigger, ['approval_code' => 'XY9876'])));
+    }
 }
