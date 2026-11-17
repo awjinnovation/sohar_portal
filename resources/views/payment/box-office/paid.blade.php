@@ -23,6 +23,8 @@
         <div>{{ $t('سجّل الدخول إلى تطبيق', 'Sign in to the') }} {{ $appName }} {{ $t('برقم الهاتف', 'app with') }} <span class="ltr num">{{ $maskedPhone }}</span> {{ $t('لتجد تذاكرك فيه.', 'to find your tickets there.') }}</div>
     </div>
 
+    @include('partials.ticket-export', ['cards' => '[data-tickets-issued] .bo-ticket', 'count' => $tickets->count(), 'lang' => $lang,
+        'file' => $brand?->localizedName('en') ?: 'event', 'title' => $appName.' · '.$t('تذاكرك', 'Your tickets')])
     <div data-tickets-issued="{{ $tickets->count() }}">
         @foreach($tickets as $index => $ticket)
             @php
@@ -32,7 +34,7 @@
             @endphp
             <article class="s-card bo-ticket">
                 <div class="bo-ticket-head">
-                    <span class="bo-badge" style="--type-color: {{ $type?->colorValue() ?? \App\Models\EventTicketType::CATEGORY_COLORS['general'] }}"><i class="bi bi-ticket-perforated"></i>{{ $typeName }}</span>
+                    <span class="bo-badge" style="{{ \App\Models\EventTicketType::badgeStyle($type?->colorValue()) }}"><i class="bi bi-ticket-perforated"></i>{{ $typeName }}</span>
                     <span class="muted num">{{ $t('تذكرة', 'Ticket') }} {{ $index + 1 }}/{{ $tickets->count() }}</span>
                 </div>
                 <div class="qr-panel" aria-label="{{ $t('رمز QR للدخول', 'Entry QR code') }}">{!! QrCode::size(240)->margin(1)->errorCorrection('M')->generate($ticket->qr_code) !!}</div>

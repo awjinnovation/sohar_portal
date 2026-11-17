@@ -65,8 +65,10 @@
         </div>
     </article>
 
+    @include('partials.ticket-export', ['cards' => '#ticketCard', 'count' => 1, 'lang' => $lang,
+        'file' => $brand?->localizedName('en') ?: 'event', 'title' => \App\View\PublicPage::pick($event, 'title', $lang)])
     <div class="actions no-print">
-        <button class="btn btn-primary" type="button" id="saveTicket"><i class="bi bi-download"></i> {{ $t('حفظ التذكرة صورةً', 'Save ticket as image') }}</button>
+        <button class="btn btn-tonal" type="button" id="saveTicket"><i class="bi bi-download"></i> {{ $t('حفظ التذكرة صورةً', 'Save ticket as image') }}</button>
         @if(! empty($downloadUrl))
             <a href="{{ $downloadUrl }}{{ str_contains($downloadUrl, '?') ? '&' : '?' }}lang={{ $lang }}" class="btn btn-tonal"><i class="bi bi-collection"></i> {{ $t('كل تذاكر الطلب', 'All tickets in this order') }}</a>
         @endif

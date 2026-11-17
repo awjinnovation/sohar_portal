@@ -71,6 +71,8 @@
 
     @if($tickets->isNotEmpty())
         <h2 class="vb-section-title"><i class="bi bi-qr-code"></i> {{ $t('تذاكرك', 'Your tickets') }} <span class="muted num">({{ $tickets->count() }})</span></h2>
+        @include('partials.ticket-export', ['cards' => '[data-visitor-tickets] .vb-ticket', 'count' => $tickets->count(), 'lang' => $lang,
+            'file' => $brand?->localizedName('en') ?: 'event', 'title' => $title.' · '.$t('تذاكرك', 'Your tickets')])
         <div data-visitor-tickets="{{ $tickets->count() }}">
             @foreach($tickets as $ticket)
                 @php
@@ -84,7 +86,7 @@
                 @endphp
                 <article class="s-card vb-ticket" id="ticket-{{ $ticket->id }}" data-ticket-status="{{ $ticket->status }}">
                     <div class="vb-ticket-head">
-                        <span class="vb-badge" style="--type-color: {{ $type?->colorValue() ?? \App\Models\EventTicketType::CATEGORY_COLORS['general'] }}"><i class="bi bi-ticket-perforated"></i>{{ $type ? $type->nameText($lang) : $ticket->ticket_type }}</span>
+                        <span class="vb-badge" style="{{ \App\Models\EventTicketType::badgeStyle($type?->colorValue()) }}"><i class="bi bi-ticket-perforated"></i>{{ $type ? $type->nameText($lang) : $ticket->ticket_type }}</span>
                         <span class="pill {{ $valid ? 'pill-success' : $stClass }}">{{ $stLabel }}</span>
                     </div>
                     <div class="vb-ticket-event">{{ $title }}</div>
@@ -101,7 +103,7 @@
                             <span class="pill pill-warning"><i class="bi bi-person-vcard"></i>{{ $t('تُطلب الهوية', 'ID required') }}</span>
                         @endif
                     </div>
-                    <button type="button" class="btn btn-tonal vb-save" data-save-ticket="ticket-{{ $ticket->id }}"
+                    <button type="button" class="btn btn-tonal vb-save" data-html2canvas-ignore data-save-ticket="ticket-{{ $ticket->id }}"
                             data-file="{{ \Illuminate\Support\Str::slug($brand?->localizedName('en') ?: 'event') }}_ticket_{{ $ticket->ticket_number ?: $ticket->id }}.png">
                         <i class="bi bi-download"></i> {{ $t('حفظ التذكرة صورةً', 'Save ticket as image') }}
                     </button>

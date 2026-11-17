@@ -26,7 +26,9 @@ Route::get('/payment/redirect/{transaction_id}', [PaymentController::class, 'red
 Route::post('/payment/fake/{transaction_id}', [PaymentController::class, 'fakeComplete'])->middleware('signed')->name('payment.fake.complete');
 Route::match(['get', 'post'], '/payment/success', [PaymentController::class, 'success'])->name('payment.success');
 Route::match(['get', 'post'], '/payment/cancel', [PaymentController::class, 'cancel'])->name('payment.cancel');
-Route::get('/payment/download/{transactionId}', [PaymentController::class, 'downloadTicket'])->middleware('signed')->name('payment.download');
+// The success, box office and ticket pages append "&lang=…" after the
+// signature; the language only changes the display, so it is not checked.
+Route::get('/payment/download/{transactionId}', [PaymentController::class, 'downloadTicket'])->middleware('signed:lang')->name('payment.download');
 Route::get('/ticket/{qrCode}', [PaymentController::class, 'downloadSingleTicket'])->name('payment.ticket.single');
 
 // Gate box office payment link (docs/gate_sales_contract.md §4) — public, the token is the secret.

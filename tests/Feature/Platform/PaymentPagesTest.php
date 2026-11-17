@@ -68,6 +68,32 @@ class PaymentPagesTest extends TestCase
     }
 
     #[Test]
+    public function tickets_page_opens_with_the_language_appended_and_offers_one_pdf(): void
+    {
+        $user = $this->makeUser();
+        [$txId, $url] = $this->gatewayCheckout($user, $this->makeEvent(null, ['price' => '2.000']), 3);
+        $this->post($this->fakeCompleteUrl($url), ['result' => 'success'])->assertRedirect();
+
+        // The success page links here with "&lang=…" after the signature.
+        $signed = \Illuminate\Support\Facades\URL::temporarySignedRoute('payment.download', now()->addDay(), ['transactionId' => $txId]);
+        $this->get($signed.'&lang=en')->assertOk()
+            ->assertSee('data-ticket-export', false)
+            ->assertSee('data-cards=".ticket-mini"', false)
+            ->assertSee('Download all tickets as one PDF')
+            ->assertSee('Save all tickets as images')
+            ->assertSee('js/ticket-export.js', false);
+        // Still signed: another transaction id, or no signature, is refused.
+        $this->get(str_replace($txId, 'TXN-other', $signed).'&lang=en')->assertForbidden();
+        $this->get(route('payment.download', ['transactionId' => $txId]))->assertForbidden();
+
+        // One ticket: a PDF of it, no "all images".
+        $ticket = Ticket::where('transaction_id', $txId)->first();
+        $this->get('/ticket/'.$ticket->qr_code.'?lang=en')->assertOk()
+            ->assertSee('Download ticket as PDF')
+            ->assertDontSee('Save all tickets as images');
+    }
+
+    #[Test]
     public function public_ticket_page_shows_used_and_cancelled_tickets_with_their_status(): void
     {
         $user = $this->makeUser();

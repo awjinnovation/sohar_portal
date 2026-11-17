@@ -21,6 +21,10 @@
         </dl>
     </section>
 
+    @if($tickets->isNotEmpty())
+        @include('partials.ticket-export', ['cards' => '.ticket-mini', 'count' => $tickets->count(), 'lang' => $lang,
+            'file' => $brand?->localizedName('en') ?: 'event', 'title' => ($brand?->localizedName($lang) ?? '').' · '.$t('تذاكرك', 'Your tickets')])
+    @endif
     @forelse($tickets as $index => $ticket)
         @php $start = $ticket->event?->start_time?->copy()->setTimezone($tz); @endphp
         <a href="{{ route('payment.ticket.single', ['qrCode' => $ticket->qr_code, 'lang' => $lang]) }}" class="s-card ticket-mini" style="text-decoration:none; color: inherit; display:flex">
@@ -31,7 +35,7 @@
                 @if($start)<div class="s num">{{ $start->locale($lang)->translatedFormat('j F') }} · {{ $start->format('H:i') }}</div>@endif
                 <div style="margin-top:6px"><span class="pill {{ $ticket->status === 'active' ? 'pill-success' : 'pill-neutral' }}"><span class="dot"></span>{{ $ticket->status === 'active' ? $t('صالحة', 'Valid') : $t('مستخدمة', 'Used') }}</span></div>
             </div>
-            <i class="bi bi-chevron-left dir-icon muted"></i>
+            <i class="bi bi-chevron-left dir-icon muted" data-html2canvas-ignore></i>
         </a>
     @empty
         <div class="note info"><i class="bi bi-info-circle"></i><div>{{ $t('لا توجد تذاكر لهذا الطلب.', 'No tickets were found for this order.') }}</div></div>
