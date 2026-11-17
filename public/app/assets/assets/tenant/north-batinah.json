@@ -1,0 +1,142 @@
+{
+  "success": true,
+  "data": {
+    "tenant": {
+      "slug": "north-batinah",
+      "name": {"en": "Suhar Festival", "ar": "مهرجان صحار"},
+      "tagline": {"en": "Suhar Festival events, tickets and services in one app", "ar": "فعاليات مهرجان صحار وتذاكره وخدماته في تطبيق واحد"},
+      "default_locale": "ar",
+      "locales": ["ar", "en"],
+      "currency": "OMR",
+      "currency_decimals": 3,
+      "timezone": "Asia/Muscat",
+      "support": {"email": "info@example.om", "phone": "", "whatsapp": "", "website": "https://services.bng.gov.om:8989"},
+      "social": {"instagram": "", "x": "", "tiktok": "", "youtube": ""},
+      "legal": {
+        "terms_url": "https://services.bng.gov.om:8989/index.php/terms-and-conditions?lang={lang}",
+        "privacy_url": "https://services.bng.gov.om:8989/index.php/privacy-policy?lang={lang}"
+      }
+    },
+    "branding": {
+      "logo_url": "assets/tenant/north-batinah/logo.png",
+      "logo_on_primary_url": "assets/tenant/north-batinah/logo_on_primary.png",
+      "icon_url": "assets/tenant/north-batinah/mark.png",
+      "splash_url": "",
+      "onboarding": [
+        {
+          "image_url": "assets/tenant/north-batinah/onboarding_1.jpg",
+          "title": {"en": "Welcome to Suhar Festival", "ar": "مرحبًا بكم في مهرجان صحار"},
+          "body": {"en": "Discover the festival events and daily shows at Sohar Entertainment Centre, and book your tickets from your phone.", "ar": "تعرّف على فعاليات المهرجان وعروضه اليومية في مركز صحار الترفيهي، واحجز تذاكرك من هاتفك."}
+        },
+        {
+          "image_url": "assets/tenant/north-batinah/onboarding_2.jpg",
+          "title": {"en": "Explore Events", "ar": "استكشف الفعاليات"},
+          "body": {"en": "Browse through exciting events, add them to your favorites, and never miss what matters to you.", "ar": "تصفّح الفعاليات، وأضف ما يهمّك منها إلى المفضلة حتى لا يفوتك."}
+        },
+        {
+          "image_url": "assets/tenant/north-batinah/onboarding_3.jpg",
+          "title": {"en": "QR Code Access", "ar": "الدخول برمز QR"},
+          "body": {"en": "Use QR codes for quick event check-ins, special offers, and exclusive content access.", "ar": "استخدم رمز QR لتدخل الفعاليات سريعًا، وتصل إلى العروض الخاصة والمحتوى الحصري."}
+        }
+      ]
+    },
+    "theme": {
+      "mode": "system",
+      "colors": {
+        "primary": "#314F99", "on_primary": "#FFFFFF",
+        "secondary": "#F9A40D", "on_secondary": "#1A1A1A",
+        "background": "#F7F8FA", "surface": "#FFFFFF", "on_surface": "#111827",
+        "muted": "#6B7280", "outline": "#E5E7EB",
+        "success": "#16A34A", "warning": "#F59E0B", "error": "#DC2626",
+        "wallet_card_start": "#314F99", "wallet_card_end": "#1F3468"
+      },
+      "font_family_ar": "Cairo",
+      "font_family_en": "Cairo",
+      "font_family_numeric": "Inter",
+      "corner_radius": 16,
+      "density": "comfortable",
+      "header_style": "gradient",
+      "header_gradient": ["#314F99", "#24397A"],
+      "header_image_url": null
+    },
+    "modules": {
+      "events": true, "tickets": true, "calendar": true, "map": true, "vendors": true,
+      "announcements": true, "favorites": true, "notifications": true,
+      "wallet": true, "topup": true, "deposits": true, "points": true, "refunds": true,
+      "ticket_transfer": false, "staff_scanner": true,
+      "ai_assistant": true, "ai_plan": true, "places": true, "content": true, "radi": true
+    },
+    "navigation": ["home", "events", "tickets", "map", "more"],
+    "home_blocks": ["wallet_card", "quick_actions", "ai_assistant", "announcements", "featured_events", "happening_today", "places_featured", "places_map_teaser", "collection:services", "map_teaser", "categories"],
+    "quick_actions": ["topup", "pay", "tickets", "ai", "points"],
+    "ai": {
+      "assistant_name": {
+        "en": "Ask Sohar",
+        "ar": "اسأل صحار"
+      },
+      "welcome": {
+        "en": "Welcome to Suhar Festival! Ask me about events, shows, tickets or parking.",
+        "ar": "أهلًا بك في مهرجان صحار. اسألني عن الفعاليات والعروض والتذاكر ومواقف السيارات."
+      },
+      "suggestions": [
+        {
+          "en": "What's on this weekend?",
+          "ar": "ما فعاليات عطلة نهاية الأسبوع؟"
+        },
+        {
+          "en": "When does Suhar Festival start?",
+          "ar": "متى يبدأ مهرجان صحار؟"
+        },
+        {
+          "en": "Plan a family evening at the festival",
+          "ar": "خطّط أمسية عائلية في المهرجان"
+        },
+        {
+          "en": "Where can I park?",
+          "ar": "أين أجد مواقف السيارات؟"
+        }
+      ]
+    },
+    "radi": {
+      "logo_url": "",
+      "external_url": "",
+      "title": {"en": "Radi", "ar": "راضي"},
+      "intro": {
+        "en": "North Al Batinah Governorate's programme for measuring visitor satisfaction. Rate your Suhar Festival experience in less than a minute.",
+        "ar": "برنامج محافظة شمال الباطنة لقياس رضا الزوار. قيّم تجربتك في مهرجان صحار في أقل من دقيقة."
+      },
+      "aspects": [
+        {"key": "organization", "label": {"en": "Organization", "ar": "التنظيم"}},
+        {"key": "cleanliness", "label": {"en": "Cleanliness", "ar": "النظافة"}},
+        {"key": "facilities", "label": {"en": "Services and facilities", "ar": "الخدمات والمرافق"}},
+        {"key": "events", "label": {"en": "Events and shows", "ar": "الفعاليات والعروض"}},
+        {"key": "entry", "label": {"en": "Entry and tickets", "ar": "الدخول والتذاكر"}},
+        {"key": "app", "label": {"en": "The app", "ar": "التطبيق"}}
+      ]
+    },
+    "merchant": {"confirm_threshold_minor": 20000},
+    "auth": {"country_code": "968", "phone_length": 8, "phone_hint": "9123 4567"},
+    "map": {"center": {"lat": 24.348, "lng": 56.716}, "zoom": 13, "venue": {"en": "Sohar Entertainment Centre", "ar": "مركز صحار الترفيهي"}},
+    "wallet": {
+      "topup_presets_minor": [5000, 10000, 20000, 50000],
+      "min_topup_minor": 1000, "max_topup_minor": 500000, "max_balance_minor": 1000000,
+      "refunds": {"enabled": true, "window_days": 14, "fee_minor": 0, "min_minor": 1000, "methods": ["original_payment", "bank_transfer"]},
+      "topup_bonus": []
+    },
+    "points": {
+      "label": {"en": "Points", "ar": "نقاط"},
+      "earn_per_currency_unit": 10,
+      "redeem_value_minor_per_point": 10,
+      "min_redeem_points": 100,
+      "expiry_days": 365,
+      "earn_on_checkin": false,
+      "tiers": [
+        {"code": "bronze", "name": {"en": "Bronze", "ar": "برونزي"}, "min_points": 0, "multiplier": 1.0, "color": "#B87333"},
+        {"code": "silver", "name": {"en": "Silver", "ar": "فضي"}, "min_points": 1000, "multiplier": 1.25, "color": "#9CA3AF"},
+        {"code": "gold", "name": {"en": "Gold", "ar": "ذهبي"}, "min_points": 5000, "multiplier": 1.5, "color": "#D4A017"}
+      ]
+    },
+    "app": {"min_version": "6.0.0", "latest_version": "6.0.0", "force_update": false, "maintenance_mode": false,
+            "store_urls": {"ios": "", "android": ""}}
+  }
+}

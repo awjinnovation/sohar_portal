@@ -1,0 +1,134 @@
+{
+  "success": true,
+  "data": {
+    "tenant": {
+      "slug": "demo",
+      "name": {"en": "Demo Events", "ar": "فعاليات تجريبية"},
+      "tagline": {"en": "Concerts, markets and shows — all in one app", "ar": "حفلات وأسواق وعروض في تطبيق واحد"},
+      "default_locale": "en",
+      "locales": ["en", "ar"],
+      "currency": "OMR",
+      "currency_decimals": 3,
+      "timezone": "Asia/Muscat",
+      "support": {"email": "support@demo-events.example", "phone": "+96890000000", "whatsapp": "+96890000000", "website": "https://demo-events.example"},
+      "social": {"instagram": "https://instagram.com/demo.events", "x": "https://x.com/demoevents", "tiktok": "", "youtube": ""},
+      "legal": {"terms_url": "https://demo-events.example/terms?lang={lang}", "privacy_url": "https://demo-events.example/privacy?lang={lang}"}
+    },
+    "branding": {
+      "logo_url": "assets/tenant/demo/logo.png",
+      "logo_on_primary_url": "assets/tenant/demo/logo_on_primary.png",
+      "icon_url": "assets/tenant/demo/mark.png",
+      "splash_url": "",
+      "onboarding": [
+        {
+          "image_url": "assets/tenant/demo/onboarding_1.jpg",
+          "title": {"en": "Welcome to Demo Events", "ar": "أهلًا بك في فعاليات تجريبية"},
+          "body": {"en": "Find concerts, markets and shows happening near you.", "ar": "اعثر على الحفلات والأسواق والعروض القريبة منك."}
+        },
+        {
+          "image_url": "assets/tenant/demo/onboarding_2.jpg",
+          "title": {"en": "Tickets in your pocket", "ar": "تذاكرك في جيبك"},
+          "body": {"en": "Book in seconds and keep every ticket in one place.", "ar": "احجز في ثوانٍ واحتفظ بجميع تذاكرك في مكان واحد."}
+        },
+        {
+          "image_url": "assets/tenant/demo/onboarding_3.jpg",
+          "title": {"en": "Pay with your wallet", "ar": "ادفع بمحفظتك"},
+          "body": {"en": "Top up once, pay everywhere at the venue and earn points.", "ar": "اشحن مرة واحدة، وادفع في كل أرجاء المكان، واكسب النقاط."}
+        }
+      ]
+    },
+    "theme": {
+      "mode": "system",
+      "colors": {
+        "primary": "#4F46E5", "on_primary": "#FFFFFF",
+        "secondary": "#9333EA", "on_secondary": "#FFFFFF",
+        "background": "#F7F7FB", "surface": "#FFFFFF", "on_surface": "#111827",
+        "muted": "#6B7280", "outline": "#E5E7EB",
+        "success": "#16A34A", "warning": "#F59E0B", "error": "#DC2626",
+        "wallet_card_start": "#4338CA", "wallet_card_end": "#7C3AED"
+      },
+      "font_family_ar": "IBM Plex Sans Arabic",
+      "font_family_en": "Inter",
+      "font_family_numeric": "Inter",
+      "corner_radius": 12,
+      "density": "comfortable",
+      "header_style": "gradient",
+      "header_gradient": ["#4F46E5", "#7C3AED"],
+      "header_image_url": null
+    },
+    "modules": {
+      "events": true, "tickets": true, "calendar": true, "map": false, "vendors": true,
+      "announcements": true, "favorites": true, "notifications": true,
+      "wallet": true, "topup": true, "deposits": true, "points": true, "refunds": true,
+      "ticket_transfer": false, "staff_scanner": false,
+      "ai_assistant": true, "ai_plan": true, "places": true, "content": true, "radi": true
+    },
+    "navigation": ["home", "events", "wallet", "tickets", "more"],
+    "home_blocks": ["wallet_card", "quick_actions", "ai_assistant", "points_progress", "featured_events", "happening_today", "places_featured", "places_map_teaser", "collection:brands", "vendors", "announcements"],
+    "quick_actions": ["topup", "pay", "places", "tickets", "ai"],
+    "ai": {
+      "assistant_name": {
+        "en": "Ask Demo",
+        "ar": "المساعد التجريبي"
+      },
+      "welcome": {
+        "en": "Hi! Ask me about tonight's shows, tickets, your wallet or Stars.",
+        "ar": "أهلًا وسهلًا، اسألني عن عروض الليلة والتذاكر ومحفظتك ونجومك."
+      },
+      "suggestions": [
+        {
+          "en": "What's on tonight?",
+          "ar": "ما فعاليات الليلة؟"
+        },
+        {
+          "en": "Plan an evening for my family",
+          "ar": "خطّط أمسية لعائلتي"
+        },
+        {
+          "en": "How do refunds work?",
+          "ar": "كيف أسترد رصيدي؟"
+        }
+      ]
+    },
+    "radi": {
+      "logo_url": "",
+      "external_url": "",
+      "title": {"en": "Rate your visit", "ar": "قيّم زيارتك"},
+      "intro": {
+        "en": "It takes less than a minute, and your answers help us improve the next visit.",
+        "ar": "يستغرق التقييم أقل من دقيقة، وتساعدنا إجاباتك على تحسين الزيارة القادمة."
+      },
+      "aspects": [
+        {"key": "organization", "label": {"en": "Organization", "ar": "التنظيم"}},
+        {"key": "cleanliness", "label": {"en": "Cleanliness", "ar": "النظافة"}},
+        {"key": "facilities", "label": {"en": "Services and facilities", "ar": "الخدمات والمرافق"}},
+        {"key": "events", "label": {"en": "Events and shows", "ar": "الفعاليات والعروض"}},
+        {"key": "entry", "label": {"en": "Entry and tickets", "ar": "الدخول والتذاكر"}},
+        {"key": "app", "label": {"en": "The app", "ar": "التطبيق"}}
+      ]
+    },
+    "merchant": {"confirm_threshold_minor": 20000},
+    "auth": {"country_code": "968", "phone_length": 8, "phone_hint": "9123 4567"},
+    "map": {"center": {"lat": 23.5880, "lng": 58.3829}, "zoom": 13, "venue": {"en": "Demo Arena", "ar": "ساحة العروض"}},
+    "wallet": {
+      "topup_presets_minor": [2000, 5000, 10000, 25000],
+      "min_topup_minor": 1000, "max_topup_minor": 250000, "max_balance_minor": 500000,
+      "refunds": {"enabled": true, "window_days": 7, "fee_minor": 250, "min_minor": 1000, "methods": ["original_payment"]},
+      "topup_bonus": [{"min_minor": 10000, "bonus_percent": 5}, {"min_minor": 25000, "bonus_percent": 10}]
+    },
+    "points": {
+      "label": {"en": "Stars", "ar": "نجوم"},
+      "earn_per_currency_unit": 5,
+      "redeem_value_minor_per_point": 20,
+      "min_redeem_points": 50,
+      "expiry_days": 180,
+      "earn_on_checkin": true,
+      "tiers": [
+        {"code": "member", "name": {"en": "Member", "ar": "عضو"}, "min_points": 0, "multiplier": 1.0, "color": "#6366F1"},
+        {"code": "vip", "name": {"en": "VIP", "ar": "كبار الشخصيات"}, "min_points": 2000, "multiplier": 2.0, "color": "#A855F7"}
+      ]
+    },
+    "app": {"min_version": "6.0.0", "latest_version": "6.0.0", "force_update": false, "maintenance_mode": false,
+            "store_urls": {"ios": "", "android": ""}}
+  }
+}
