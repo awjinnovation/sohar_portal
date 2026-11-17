@@ -57,7 +57,7 @@ class CategoryController extends Controller
     {
         $category = Category::with(['events' => function ($query) {
             $query->where('is_active', true)
-                  ->orderBy('start_time');
+                  ->displayOrder();
         }])->find($id);
 
         if (!$category) {

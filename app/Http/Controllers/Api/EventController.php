@@ -44,7 +44,7 @@ class EventController extends Controller
             });
         }
 
-        $events = $query->orderBy('start_time')->paginate(20);
+        $events = $query->displayOrder()->paginate(20);
 
         return response()->json([
             'success' => true,
@@ -79,7 +79,7 @@ class EventController extends Controller
         $events = Event::with(['category', 'tags', 'mapLocation'])
             ->where('category_id', $categoryId)
             ->where('is_active', true)
-            ->orderBy('start_time')
+            ->displayOrder()
             ->paginate(20);
 
         return response()->json([
@@ -102,7 +102,7 @@ class EventController extends Controller
         $events = Event::with(['category', 'tags', 'mapLocation'])
             ->where('start_time', '>=', TenantTime::localNow())
             ->where('is_active', true)
-            ->orderBy('start_time')
+            ->displayOrder()
             ->limit(10)
             ->get();
 
@@ -124,7 +124,7 @@ class EventController extends Controller
                   ->whereDate('end_time', '>=', $today);
             })
             ->where('is_active', true)
-            ->orderBy('start_time')
+            ->displayOrder()
             ->get();
 
         return response()->json([
@@ -141,7 +141,7 @@ class EventController extends Controller
         $events = Event::with(['category', 'tags', 'mapLocation'])
             ->where('is_featured', true)
             ->where('is_active', true)
-            ->orderBy('start_time')
+            ->displayOrder()
             ->limit(10)
             ->get();
 
@@ -197,7 +197,7 @@ class EventController extends Controller
         $events = Event::with(['category', 'tags', 'mapLocation'])
             ->active()
             ->whereIn('id', $favoriteIds)
-            ->orderBy('start_time')
+            ->displayOrder()
             ->paginate(20);
 
         return response()->json([

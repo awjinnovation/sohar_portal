@@ -125,7 +125,7 @@
 
                 <x-admin.card title="النشر" icon="broadcast">
                     <x-admin.toggle name="is_active" id="is_active" label="نشط" description="تظهر الفعالية في التطبيق" :checked="old('is_active', $model ? $model->is_active : true)" />
-                    <x-admin.toggle name="is_featured" id="is_featured" label="مميز" description="تظهر في قسم الفعاليات المميزة" :checked="old('is_featured', $model?->is_featured)" />
+                    <x-admin.toggle name="is_featured" id="is_featured" label="مميز" description="تظهر في قسم الفعاليات المميزة وفي أول قوائم الفعاليات في التطبيق" :checked="old('is_featured', $model?->is_featured)" />
                     <x-slot:footer>
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary flex-grow-1" data-busy><i class="bi bi-check-lg"></i> {{ __('حفظ الفعالية') }}</button>

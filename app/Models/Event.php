@@ -216,6 +216,15 @@ class Event extends Model implements HasMedia
         return $query->where('is_featured', true);
     }
 
+    /**
+     * Order of event lists in the app and the API: featured events first
+     * (the organizer's main events, marked once in the admin), then by start.
+     */
+    public function scopeDisplayOrder($query)
+    {
+        return $query->orderByDesc('is_featured')->orderBy('start_time');
+    }
+
     public function scopeUpcoming($query)
     {
         return $query->where('start_time', '>', \App\Support\TenantTime::localNow());
