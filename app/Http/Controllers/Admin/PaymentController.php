@@ -42,9 +42,11 @@ class PaymentController extends Controller
             ->when($filters['review'], fn ($q) => $q->where('needs_review', true))
             ->when($filters['q'] !== '', function ($q) use ($filters) {
                 $term = $filters['q'];
-                $q->where(function ($w) use ($term) {
+                // The payer's phone whatever its format (+968 9123 4567 → 91234567).
+                $digits = preg_replace('/\D/', '', $term);
+                $q->where(function ($w) use ($term, $digits) {
                     $w->where('transaction_id', 'like', "%$term%")
-                        ->orWhereHas('user', fn ($u) => $u->where('phone_number', 'like', "%$term%"));
+                        ->orWhereHas('user', fn ($u) => $u->where('phone_number', 'like', '%'.($digits !== '' ? $digits : $term).'%'));
                 });
             })
             ->latest('id')

@@ -48,6 +48,7 @@
         ['title' => 'الفعاليات والتذاكر', 'items' => [
             ['admin.events.index', 'admin.events.*', 'calendar-event', 'الفعاليات', 'manage events'],
             ['admin.tickets.index', 'admin.tickets.*', 'ticket-perforated', 'التذاكر', 'manage tickets'],
+            ['admin.phone-lookup', 'admin.phone-lookup', 'telephone', 'البحث برقم الهاتف', ['manage tickets', 'view payments', 'manage gates']],
             ['admin.categories.index', 'admin.categories.*', 'grid', 'الفئات', 'manage events'],
             ['admin.event-tags.index', 'admin.event-tags.*', 'tags', 'الوسوم', 'manage events'],
         ]],

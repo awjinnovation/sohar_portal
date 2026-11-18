@@ -101,6 +101,9 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
             Route::resource('event-tags', Admin\EventTagController::class, ['as' => 'admin']);
         });
         Route::resource('tickets', Admin\TicketController::class, ['as' => 'admin'])->only(['index', 'show', 'update'])->middleware('can:manage tickets');
+        // A visitor's tickets, payments and gate orders by phone number: `manage tickets`,
+        // `view payments` or `manage gates` (checked in the controller, sections follow each).
+        Route::get('phone-lookup', [Admin\PhoneLookupController::class, 'index'])->name('admin.phone-lookup');
 
         // Gates: scanner devices + pairing, live gate dashboard, scan log (contract §B3)
         Route::middleware('can:manage gates')->prefix('gates')->name('admin.gates.')->group(function () {

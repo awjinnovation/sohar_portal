@@ -494,6 +494,36 @@ class AmwalGatewayTest extends TestCase
 
     // ------------------------------------------------------------------ refunds
 
+    #[Test]
+    public function an_admin_rechecks_a_pending_payment_with_amwal_from_the_payment_page(): void
+    {
+        $event = $this->makeEvent(null, ['price' => '2.500']);
+        $res = $this->api('POST', '/api/v1/payments/initialize', [
+            'event_id' => $event->id, 'booking_date' => now()->addDay()->format('Y-m-d'), 'quantity' => 1,
+        ], $this->makeUser())->assertCreated();
+        $this->get($res->json('payment_url'));
+        $payment = Payment::where('transaction_id', $res->json('transaction_id'))->firstOrFail();
+        $admin = $this->admin();
+
+        // The payment page offers the check for Amwal payments.
+        $this->actingAs($admin)->get(route('admin.payments.show', $payment))->assertOk()
+            ->assertSee(route('admin.payments.reconcile', $payment), false)
+            ->assertSee('تحقّق من البوابة الآن');
+
+        // Not paid at Amwal yet: nothing changes.
+        $this->actingAs($admin)->post(route('admin.payments.reconcile', $payment))
+            ->assertSessionHas('success', 'لم تتغير حالة الدفعة لدى البوابة.');
+        $this->assertSame('pending', $payment->fresh()->status);
+
+        // Paid at Amwal but the notification never arrived: the check completes it and issues the ticket.
+        $this->pay($payment->transaction_id.'_1', '2.500');
+        $this->actingAs($admin)->post(route('admin.payments.reconcile', $payment))
+            ->assertSessionHas('success', 'حُدّثت حالة الدفعة من البوابة.');
+        $this->assertSame('completed', $payment->fresh()->status);
+        $this->assertSame(1, Ticket::where('transaction_id', $payment->transaction_id)->count());
+        $this->assertContains('check_requested', $this->types($payment));
+    }
+
     private function paidTicket(array $actions = ['canVoid' => true, 'canRefund' => false]): Payment
     {
         $event = $this->makeEvent(null, ['price' => '2.500']);

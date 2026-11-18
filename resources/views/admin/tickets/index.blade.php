@@ -9,11 +9,15 @@
     $typeLabels = ['standard' => __('عادية'), 'vip' => 'VIP', 'child' => __('طفل'), 'adult' => __('بالغ'), 'family' => __('عائلية'), 'student' => __('طالب')];
 @endphp
 
+@section('page-actions')
+    <a href="{{ route('admin.phone-lookup') }}" class="btn"><i class="bi bi-telephone"></i> {{ __('البحث برقم الهاتف') }}</a>
+@endsection
+
 @section('content')
     @include('admin.partials.alerts')
 
     <x-admin.data-table title="جميع التذاكر" icon="ticket-perforated" :count="$tickets->total()" search="q"
-        search-placeholder="رقم التذكرة أو الاسم أو رقم المعاملة" :paginator="$tickets">
+        search-placeholder="رقم التذكرة أو الاسم أو الهاتف أو رقم المعاملة" :paginator="$tickets">
         <x-slot:filters>
             <select name="event_id" class="form-select" aria-label="{{ __('الفعالية') }}">
                 <option value="">{{ __('كل الفعاليات') }}</option>

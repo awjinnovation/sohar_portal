@@ -22,9 +22,12 @@ class TicketController extends Controller
             ->when($request->filled('event_id'), fn ($q) => $q->where('event_id', $request->integer('event_id')))
             ->when($request->filled('q'), function ($q) use ($request) {
                 $term = '%'.$request->input('q').'%';
+                // The holder's phone too, whatever its format (+968 9123 4567 → 91234567).
+                $digits = preg_replace('/\D/', '', (string) $request->input('q'));
                 $q->where(fn ($w) => $w->where('ticket_number', 'like', $term)
                     ->orWhere('holder_name', 'like', $term)
-                    ->orWhere('transaction_id', 'like', $term));
+                    ->orWhere('transaction_id', 'like', $term)
+                    ->when(strlen($digits) >= 4, fn ($p) => $p->orWhereHas('user', fn ($u) => $u->where('phone_number', 'like', '%'.$digits.'%'))));
             })
             ->latest()
             ->paginate(20)
