@@ -191,3 +191,6 @@ Artisan::command('box-office:expire', function (\App\Services\Gate\BoxOfficeServ
 })->purpose('Expire unpaid gate box office orders and release their seats');
 
 Schedule::command('box-office:expire')->everyMinute()->withoutOverlapping();
+
+// Scheduler heartbeat for the operations room (Admin → Operations room).
+Schedule::call(fn () => \App\Support\OpsSignals::put('beat:scheduler', time()))->everyMinute()->name('ops:heartbeat');

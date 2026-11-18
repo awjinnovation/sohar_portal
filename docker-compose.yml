@@ -162,18 +162,21 @@ x-net-sysctls: &net-sysctls
   net.ipv4.ip_local_port_range: "10240 65535"
   net.ipv4.tcp_tw_reuse: "1"
 
-# Queue worker (SMS jobs, …). To scale out, add another service with the same
-# definition, e.g. `worker-2: *worker` under services (Coolify names every
-# container, so `deploy.replicas` / `scale` are not allowed).
+# Queue workers: Laravel Horizon (config/horizon.php, MSR-347) runs one pool
+# per queue inside this container: `sms` (20 workers: login codes, box office
+# links), `payments` (3: webhooks, reconciliation, refunds) and `default` (2).
+# Sizes: HORIZON_SMS_PROCESSES / _PAYMENTS_ / _DEFAULT_ in the environment.
+# Coolify names every container, so `deploy.replicas` / `scale` are not allowed.
 x-worker: &worker
   build: *build
   restart: unless-stopped
-  # `payments` first (webhooks, reconciliation, refunds), then everything else.
-  # Payment jobs set their own tries/backoff; --tries applies to the others.
-  command: ["php", "/var/www/html/artisan", "queue:work", "redis", "--queue=payments,default", "--tries=3", "--max-time=3600", "--sleep=3"]
-  # queue:work finishes the running job on SIGTERM, then exits.
+  # Payment jobs set their own tries/backoff/timeout; the pool settings apply
+  # to the others. Workers restart themselves every hour (maxTime).
+  command: ["php", "/var/www/html/artisan", "horizon"]
+  # On SIGTERM Horizon lets every worker finish its running job, then exits.
+  # Payment jobs may run up to 150 s.
   stop_signal: SIGTERM
-  stop_grace_period: 60s
+  stop_grace_period: 170s
   environment:
     <<: *laravel-env
     AUTORUN_ENABLED: "true"
@@ -185,7 +188,8 @@ x-worker: &worker
     app:
       condition: service_healthy
   healthcheck:
-    test: ["CMD", "healthcheck-queue"]
+    # `php artisan horizon:status`: fails unless Horizon is running.
+    test: ["CMD", "healthcheck-horizon"]
     interval: 30s
     timeout: 5s
     retries: 3
@@ -224,8 +228,9 @@ services:
       retries: 5
       start_period: 90s
 
+  # One Horizon container only: a second one would start a second set of
+  # pools. For more workers raise HORIZON_*_PROCESSES instead.
   worker: *worker
-  # worker-2: *worker
 
   scheduler:
     build: *build

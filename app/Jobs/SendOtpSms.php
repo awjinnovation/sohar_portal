@@ -2,12 +2,19 @@
 
 namespace App\Jobs;
 
+use App\Support\OpsSignals;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class SendOtpSms implements ShouldQueue
+/**
+ * Its own `sms` queue with its own pool of workers (config/horizon.php), so a
+ * login code never waits behind payment jobs. Encrypted on the queue: the
+ * message holds the code, and Horizon keeps job payloads for its dashboard.
+ */
+class SendOtpSms implements ShouldBeEncrypted, ShouldQueue
 {
     use Queueable;
 
@@ -15,6 +22,8 @@ class SendOtpSms implements ShouldQueue
     public $message;
     /** otp | box_office — box office links are logged in full outside production. */
     public $purpose;
+    /** Unix time it was queued: the operations room shows how long SMS wait (null for jobs queued before this field). */
+    public $queuedAt;
 
     /**
      * Create a new job instance.
@@ -24,6 +33,8 @@ class SendOtpSms implements ShouldQueue
         $this->phone = $phone;
         $this->message = $message;
         $this->purpose = $purpose;
+        $this->queuedAt = time();
+        $this->onQueue('sms');
     }
 
     /**
@@ -43,6 +54,7 @@ class SendOtpSms implements ShouldQueue
                     'purpose' => $this->purpose ?? 'otp',
                     'message' => ($this->purpose ?? 'otp') !== 'otp' && ! app()->environment('production') ? $this->message : null,
                 ]));
+                OpsSignals::count('sms.skipped');
                 return;
             }
 
@@ -58,11 +70,13 @@ class SendOtpSms implements ShouldQueue
             ]);
 
             if ($response->successful()) {
+                $this->recordSent();
                 Log::info('SMS sent successfully', [
                     'phone' => $this->phone,
                     'response' => $response->body()
                 ]);
             } else {
+                OpsSignals::count('sms.failed');
                 Log::error('SMS sending failed', [
                     'phone' => $this->phone,
                     'status' => $response->status(),
@@ -76,6 +90,21 @@ class SendOtpSms implements ShouldQueue
             ]);
 
             throw $e;
+        }
+    }
+
+    /** Every attempt failed with an exception (an error response is counted in handle()). */
+    public function failed(?\Throwable $e): void
+    {
+        OpsSignals::count('sms.failed');
+    }
+
+    private function recordSent(): void
+    {
+        OpsSignals::count('sms.sent');
+        OpsSignals::put('sms:last_sent_at', time());
+        if ($this->queuedAt) {
+            OpsSignals::put('sms:last_wait', max(0, time() - (int) $this->queuedAt));
         }
     }
 }

@@ -70,7 +70,10 @@ return [
             'queue' => env('REDIS_QUEUE', 'default'),
             // Above the longest job timeout (payment jobs: 150 s).
             'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 300),
-            'block_for' => null,
+            // Idle workers wait on Redis (BLPOP) for up to this many seconds
+            // instead of sleeping between polls, so a job starts as soon as it
+            // is pushed (MSR-347). Each Horizon pool listens to one queue.
+            'block_for' => (int) env('REDIS_QUEUE_BLOCK_FOR', 5) ?: null,
             'after_commit' => false,
         ],
 

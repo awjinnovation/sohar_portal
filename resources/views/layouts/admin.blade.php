@@ -43,6 +43,7 @@
     $menuSections = [
         ['title' => 'نظرة عامة', 'items' => [
             ['admin.dashboard', 'admin.dashboard', 'grid-1x2', 'لوحة التحكم', null],
+            ['admin.ops-room', 'admin.ops-room', 'display', 'غرفة العمليات التقنية', \App\Http\Controllers\Admin\OpsRoomController::PERMISSIONS],
             ['admin.satisfaction.index', 'admin.satisfaction.*', 'emoji-smile', 'رضا الزوار', 'view satisfaction'],
         ]],
         ['title' => 'الفعاليات والتذاكر', 'items' => [

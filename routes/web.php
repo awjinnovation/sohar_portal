@@ -105,6 +105,11 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         // `view payments` or `manage gates` (checked in the controller, sections follow each).
         Route::get('phone-lookup', [Admin\PhoneLookupController::class, 'index'])->name('admin.phone-lookup');
 
+        // Operations room wall screen: tickets, SMS queue, ticket orders queue, busiest gates
+        // (`manage gates` or `manage tickets`, checked in the controller).
+        Route::get('ops-room', [Admin\OpsRoomController::class, 'index'])->name('admin.ops-room');
+        Route::get('ops-room/data', [Admin\OpsRoomController::class, 'data'])->middleware('throttle:60,1')->name('admin.ops-room.data');
+
         // Gates: scanner devices + pairing, live gate dashboard, scan log (contract §B3)
         Route::middleware('can:manage gates')->prefix('gates')->name('admin.gates.')->group(function () {
             Route::get('dashboard', [Admin\GateDashboardController::class, 'index'])->name('dashboard');

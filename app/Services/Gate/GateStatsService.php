@@ -343,18 +343,18 @@ class GateStatsService
         return $device ? $q->where('device_id', $device->id) : $q;
     }
 
-    /** [$p] = column prefix (e.g. `gate_scans.`) for joined queries. */
-    private function sumIn(string $p = ''): string
+    /** [$p] = column prefix (e.g. `gate_scans.`) for joined queries. Also used by the operations room. */
+    public function sumIn(string $p = ''): string
     {
         return "coalesce(sum(case when {$p}direction = 'in' and {$p}result in ('valid','reentry_ok') then 1 else 0 end), 0)";
     }
 
-    private function sumOut(string $p = ''): string
+    public function sumOut(string $p = ''): string
     {
         return "coalesce(sum(case when {$p}direction = 'out' and {$p}result = 'valid' then 1 else 0 end), 0)";
     }
 
-    private function sumRejects(string $p = ''): string
+    public function sumRejects(string $p = ''): string
     {
         return "coalesce(sum(case when {$p}result not in ('valid','reentry_ok') then 1 else 0 end), 0)";
     }

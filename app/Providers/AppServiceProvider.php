@@ -52,6 +52,11 @@ class AppServiceProvider extends ServiceProvider
         // Use custom Bootstrap 5 pagination view
         Paginator::useBootstrapFive();
 
+        // Queue worker heartbeat for the operations room: every loop of
+        // `queue:work` (also when idle) and after each job, at most every 10 s.
+        \Illuminate\Support\Facades\Queue::looping(fn () => \App\Support\OpsSignals::beat('worker'));
+        \Illuminate\Support\Facades\Queue::after(fn () => \App\Support\OpsSignals::beat('worker'));
+
         // Platform super-admins can do everything; a tenant `admin` can do
         // everything inside the current tenant except platform abilities.
         Gate::before(function (User $user, string $ability) {
