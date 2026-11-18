@@ -50931,7 +50931,7 @@ $S:6}
 A.bXg.prototype={
 $1(a){var s=A.Ic().b
 s=s==null?null:s.canvasKitBaseUrl
-return(s==null?"canvaskit/":s)+a},
+return(s==null?"https://www.gstatic.com/flutter-canvaskit/89c39edfdfae2949f6806e4a315c0c08522238b7/":s)+a},
 $S:41}
 A.ayb.prototype={
 gD(a){var s=this.a

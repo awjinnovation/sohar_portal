@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+# Created next to the `pay` package's pubspec.yaml asset by the editor's Dart tooling
+/public/*/assets/packages/pay_platform_interface/.dart_tool
+/public/*/assets/packages/pay_platform_interface/pubspec.lock
