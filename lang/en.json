@@ -1708,5 +1708,11 @@
     "مسح مرفوض اليوم": "Rejected scans today",
     "الطوابير": "Queues",
     "الطوابير والرسائل على مستوى المنصة، والتذاكر والبوابات لهذه الجهة": "Queues and SMS are platform-wide; tickets and gates are this organisation's",
-    "تطبيق الموظفين (بلا بوابة)": "Staff app (no gate)"
+    "تطبيق الموظفين (بلا بوابة)": "Staff app (no gate)",
+    "دون اتصال": "Offline",
+    "بيع دون اتصال": "Sold offline",
+    "وصل إلى النظام": "Reached the system",
+    "رمز الموافقة": "Approval code",
+    "البيع دون اتصال بالإنترنت": "Selling with no internet connection",
+    "عند انقطاع الاتصال يبيع الموظف التذاكر بجهاز البطاقة دون رقم هاتف ودون رسالة نصية، ويصدر التطبيق التذاكر برموز موقّعة تبدأ بـ OFF ويطبعها ويحفظ البيع على الجهاز، ثم يرسله إلى النظام عند عودة الاتصال. تُعلَّم المبيعات التي لا تحمل رمز الموافقة للمراجعة مقابل كشف جهاز البطاقة.": "When the connection drops, staff sell on the card terminal with no phone number and no SMS. The app issues tickets with signed codes starting with OFF, prints them and keeps the sale on the device, then sends it to the system when the connection returns. Sales without the terminal approval code are flagged for review against the terminal report."
 }

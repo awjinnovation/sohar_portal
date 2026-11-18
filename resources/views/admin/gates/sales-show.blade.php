@@ -50,7 +50,11 @@
                     <dt>{{ __('البوابة') }}</dt><dd>{{ $order->gate ? $order->gate->code.' · '.$order->gate->localizedName() : '—' }} @if($order->device)<span class="text-muted small">· {{ $order->device->name }}</span>@endif</dd>
                     <dt>{{ __('الموظف') }}</dt><dd>{{ $order->staff?->name ?? '—' }}</dd>
                     <dt>{{ __('تاريخ الإنشاء') }}</dt><dd class="num"><span class="ltr">{{ $fmt($order->created_at) }}</span></dd>
-                    <dt>{{ __('طريقة الدفع') }}</dt><dd data-method="{{ $order->payment_method }}"><i class="bi {{ $order->isCardTerminal() ? 'bi-credit-card' : 'bi-qr-code' }}"></i> {{ $order->isCardTerminal() ? __('جهاز البطاقة') : __('رابط الدفع') }}</dd>
+                    <dt>{{ __('طريقة الدفع') }}</dt><dd data-method="{{ $order->payment_method }}"><i class="bi {{ $order->isCardTerminal() ? 'bi-credit-card' : 'bi-qr-code' }}"></i> {{ $order->isCardTerminal() ? __('جهاز البطاقة') : __('رابط الدفع') }}@if($order->offline) <span class="pill pill-warning pill-sm" data-offline><i class="bi bi-wifi-off"></i> {{ __('بيع دون اتصال') }}</span>@endif</dd>
+                    @if($order->offline)
+                        <dt>{{ __('وصل إلى النظام') }}</dt><dd class="num"><span class="ltr">{{ $fmt($order->synced_at) }}</span></dd>
+                        <dt>{{ __('رمز الموافقة') }}</dt><dd class="num">{{ $order->meta['approval_code'] ?? '-' }}</dd>
+                    @endif
                     <dt>{{ $order->isCardTerminal() ? __('تُحجز التذاكر حتى') : __('تنتهي صلاحية الرابط') }}</dt><dd class="num"><span class="ltr">{{ $fmt($order->expires_at) }}</span></dd>
                     <dt>{{ __('تاريخ الدفع') }}</dt><dd class="num"><span class="ltr">{{ $fmt($order->paid_at) }}</span></dd>
                     @if($order->cancelled_at)

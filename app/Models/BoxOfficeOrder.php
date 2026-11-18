@@ -66,6 +66,8 @@ class BoxOfficeOrder extends Model
         'sms_sent_at' => 'datetime',
         'meta' => 'array',
         'needs_review' => 'boolean',
+        'offline' => 'boolean',
+        'synced_at' => 'datetime',
     ];
 
     protected $attributes = [

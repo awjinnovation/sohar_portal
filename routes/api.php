@@ -250,6 +250,10 @@ Route::prefix('v1/gate')->group(function () {
             Route::post('/heartbeat', [\App\Http\Controllers\Api\GateController::class, 'heartbeat']);
         });
 
+        // Sales made with no connection (docs/gate_sales_contract.md §10), sent when
+        // the device is back online: outside EnsureGateSales (the money was taken).
+        Route::post('/sales/offline', [\App\Http\Controllers\Api\GateOfflineSalesController::class, 'store'])->middleware('throttle:gate-sales-write');
+
         // Box office (docs/gate_sales_contract.md §3): staff sell tickets and
         // send the visitor a payment link. Needs gate_sales.enabled, a gate
         // with can_sell and a signed-in staff member with `sell tickets`.

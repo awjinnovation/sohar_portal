@@ -183,7 +183,10 @@ class GateController extends Controller
     {
         $data = $request->validate([
             'scans' => ['required', 'array', 'min:1', 'max:500'],
-            'scans.*.code_hash' => ['required', 'string', 'regex:/^[A-Fa-f0-9]{64}$/'],
+            'scans.*.code_hash' => ['required_without:scans.*.code', 'nullable', 'string', 'regex:/^[A-Fa-f0-9]{64}$/'],
+            // Offline-sold tickets (gate_sales_contract §10) are sent by code: the
+            // server may not know them yet, and their signed code creates them.
+            'scans.*.code' => ['nullable', 'string', 'max:120', 'regex:/^OFF-/i'],
             'scans.*.result_local' => ['required', 'string', Rule::in(ScanResult::ALL)],
             'scans.*.source' => ['nullable', 'string', Rule::in(['camera', 'hardware', 'wedge', 'manual'])],
             'scans.*.direction' => ['nullable', 'string', Rule::in(['in', 'out', 'entry', 'exit'])],
@@ -202,7 +205,8 @@ class GateController extends Controller
         foreach ($scans as $item) {
             try {
                 $outcome = $this->scanner->scan(new ScanInput(
-                    codeHash: $item['code_hash'],
+                    code: filled($item['code'] ?? null) ? $item['code'] : null,
+                    codeHash: filled($item['code'] ?? null) ? null : $item['code_hash'],
                     gate: $gate,
                     device: $device,
                     staff: $staff,

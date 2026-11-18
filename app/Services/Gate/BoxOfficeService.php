@@ -83,6 +83,8 @@ class BoxOfficeService
             'pos_terminal_ids' => self::terminalIds($s['pos_terminal_ids'] ?? ''),
             // Stored as `pos_receipt_photo_required`; off = staff may confirm a payment without a photo.
             'pos_photo_required' => (bool) ($s['pos_receipt_photo_required'] ?? false),
+            // §10: card terminal sales with no connection (offline ticket codes, no phone, no SMS).
+            'offline_enabled' => (bool) ($s['offline_enabled'] ?? false),
         ];
     }
 
@@ -127,12 +129,19 @@ class BoxOfficeService
     {
         $denial = $this->denial($tenant, $device);
 
-        return \Illuminate\Support\Arr::except(self::settings($tenant), ['pos_terminal_ids']) + [
+        $settings = self::settings($tenant);
+        // Offline sales (§10): the signing keys of today and the next days, only
+        // to devices of a gate that sells (the device signs its tickets with them).
+        $offline = $settings['enabled'] && $settings['offline_enabled'] && $device->gate?->can_sell && $device->gate?->active;
+
+        return \Illuminate\Support\Arr::except($settings, ['pos_terminal_ids']) + [
             'can_sell' => (bool) $device->gate?->can_sell,
             'available' => $denial === null,
             'unavailable_code' => $denial?->errorCode,
             'max_sms' => self::MAX_SMS,
             'pos_max_attempts' => CardTerminalService::MAX_ATTEMPTS,
+            'offline_enabled' => (bool) $offline,
+            'offline_keys' => $offline ? OfflineSaleCodes::keys($tenant) : (object) [],
         ];
     }
 
@@ -1007,10 +1016,13 @@ class BoxOfficeService
         }
     }
 
-    /** BO-YYMMDD-NNNN, sequential per tenant and gate day (retried on a concurrent clash). */
-    private function saveWithReference(BoxOfficeOrder $order, Tenant $tenant, GateDevice $device, string $key): void
+    /**
+     * BO-YYMMDD-NNNN, sequential per tenant and gate day (retried on a concurrent
+     * clash). $day: an offline sale's own day (§10), else today.
+     */
+    public function saveWithReference(BoxOfficeOrder $order, Tenant $tenant, GateDevice $device, string $key, ?string $day = null): void
     {
-        $prefix = 'BO-'.Carbon::parse(GateDay::today($tenant))->format('ymd').'-';
+        $prefix = 'BO-'.Carbon::parse($day ?? GateDay::today($tenant))->format('ymd').'-';
         for ($try = 1; ; $try++) {
             $last = BoxOfficeOrder::withoutTenantScope()->where('tenant_id', $tenant->id)->where('reference', 'like', $prefix.'%')->max('reference');
             $order->reference = $prefix.str_pad((string) ((int) substr((string) $last, -4) + 1), 4, '0', STR_PAD_LEFT);

@@ -2,7 +2,12 @@
 
 // Gate box office (App\Services\Gate\BoxOfficeService). Keep in sync with lang/ar/box_office.php.
 return [
+    // Tickets sold with no connection (§10) have no buyer name.
+    'offline_holder' => 'Gate visitor',
     'errors' => [
+        'offline_code_invalid' => 'Ticket code :number is not valid for this device or this day.',
+        'offline_type_unknown' => 'A ticket type of this sale is not known for this event.',
+        'offline_sale_incomplete' => 'The tickets of this sale do not match the quantities sold.',
         'sales_disabled' => 'Selling tickets at the gates is not enabled for this organizer.',
         'gate_cannot_sell' => 'This gate does not sell tickets. Ask an admin to enable selling for it.',
         'no_gate' => 'This device is not assigned to a gate.',

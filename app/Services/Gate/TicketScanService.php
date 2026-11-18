@@ -345,6 +345,12 @@ class TicketScanService
         if (! $ticket && self::normalizeSource($in->source) === 'manual') {
             $ticket = Ticket::where('ticket_number', strtoupper($code))->first();
         }
+        // Sold offline on a gate device whose sale has not reached the server
+        // yet (docs/gate_sales_contract.md §10): a correctly signed code makes
+        // the ticket; the sale attaches to it when it arrives.
+        if (! $ticket && OfflineSaleCodes::looksOffline($code) && ($p = OfflineSaleCodes::verify($tenant, $code))) {
+            $ticket = Ticket::where('ticket_number', $p['number'])->first() ?? app(OfflineSaleService::class)->materialize($tenant, $p);
+        }
 
         return $ticket;
     }

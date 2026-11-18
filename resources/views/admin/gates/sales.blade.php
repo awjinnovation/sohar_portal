@@ -138,7 +138,7 @@
                 <td class="small"><span class="text-nowrap">{{ $order->gate ? $order->gate->localizedName() : '—' }}</span>
                     <div class="cell-sub">{{ $order->staff?->name }}</div></td>
                 <td><x-admin.money :minor="(int) $order->total_minor" class="fw-bold" />
-                    <div class="cell-sub text-nowrap" data-method="{{ $order->payment_method }}"><i class="bi {{ $order->isCardTerminal() ? 'bi-credit-card' : 'bi-qr-code' }}"></i> {{ $order->isCardTerminal() ? __('جهاز البطاقة') : __('رابط الدفع') }}</div></td>
+                    <div class="cell-sub text-nowrap" data-method="{{ $order->payment_method }}"><i class="bi {{ $order->isCardTerminal() ? 'bi-credit-card' : 'bi-qr-code' }}"></i> {{ $order->isCardTerminal() ? __('جهاز البطاقة') : __('رابط الدفع') }}@if($order->offline) <span class="pill pill-warning pill-sm" data-offline><i class="bi bi-wifi-off"></i> {{ __('دون اتصال') }}</span>@endif</div></td>
                 <td><x-admin.status-pill :variant="$statusVariant[$order->status] ?? 'neutral'" :label="$statusLabel[$order->status] ?? $order->status" />
                     @if($order->needs_review)<div class="mt-1"><x-admin.status-pill variant="warning" :label="__('بحاجة إلى مراجعة')" size="sm" /></div>@endif</td>
                 <td class="num small text-muted text-nowrap"><span class="ltr">{{ $order->created_at->copy()->setTimezone($tz)->format('Y-m-d H:i') }}</span></td>
