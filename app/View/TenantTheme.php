@@ -74,6 +74,32 @@ class TenantTheme
         return self::$cache[$key] ??= self::build(fn (string $k, $d = null) => $tenant ? $tenant->setting($k, $d) : data_get(config('tenancy.defaults'), $k, $d), $tenant);
     }
 
+    /** public/fonts/<slug>.css of a font family (php artisan fonts:self-host). */
+    public static function fontSlug(string $family): string
+    {
+        return \Illuminate\Support\Str::slug($family);
+    }
+
+    /**
+     * The self-hosted CSS of [families], versioned by file time, or null when
+     * one of them has none (then Google Fonts serves them all, in one request).
+     *
+     * @return list<string>|null
+     */
+    public static function localFontCss(array $families): ?array
+    {
+        $urls = [];
+        foreach ($families as $family) {
+            $path = public_path('fonts/'.self::fontSlug($family).'.css');
+            if (! is_file($path)) {
+                return null;
+            }
+            $urls[] = asset('fonts/'.self::fontSlug($family).'.css').'?v='.filemtime($path);
+        }
+
+        return $urls;
+    }
+
     /** Build from an arbitrary settings document (used by the branding editor preview). */
     public static function fromSettings(array $settings): array
     {
@@ -194,6 +220,7 @@ class TenantTheme
             'pattern' => $s('theme.card_pattern_url') ? Tenant::assetUrl($s('theme.card_pattern_url')) : null,
             'fonts' => [
                 'ar' => $fontAr, 'en' => $fontEn, 'numeric' => $fontNum, 'url' => $fontsUrl,
+                'local' => self::localFontCss($families),
                 'ar_size' => self::FONTS[$fontAr]['size'] ?? 1.0, 'ar_height' => self::FONTS[$fontAr]['height'] ?? 1.0,
             ],
             'logo' => $logo,

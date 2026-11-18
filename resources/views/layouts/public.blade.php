@@ -23,7 +23,8 @@
     <title>@yield('title') · {{ $pbName }}</title>
     @if($tt['icon'])<link rel="icon" href="{{ $tt['icon'] }}">@endif
     @include('partials.theme-tokens', ['themeTenant' => $brand ?? null])
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    {{-- Only the icons these pages use (scripts/public-icons.py), from this server. --}}
+    <link rel="stylesheet" href="{{ asset('fonts/bootstrap-icons/public.css') }}?v={{ @filemtime(public_path('fonts/bootstrap-icons/public.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/public.css') }}?v={{ @filemtime(public_path('css/public.css')) }}">
     @stack('head')
 </head>

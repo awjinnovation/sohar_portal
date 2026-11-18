@@ -15,9 +15,17 @@
         'section-gap' => $tt['density'] === 'compact' ? '20px' : '24px',
     ];
 @endphp
+{{-- Fonts from this server when copied (php artisan fonts:self-host): no extra
+     connections before the first paint. Otherwise from Google Fonts. --}}
+@if($tt['fonts']['local'])
+@foreach($tt['fonts']['local'] as $fontCss)
+<link rel="stylesheet" href="{{ $fontCss }}">
+@endforeach
+@else
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="{{ $tt['fonts']['url'] }}">
+@endif
 <style id="tenant-tokens">
 :root {
 {!! \App\View\TenantTheme::vars($ttRoot) !!}{!! \App\View\TenantTheme::vars($tt['light']) !!}    color-scheme: light;
