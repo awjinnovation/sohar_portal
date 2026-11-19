@@ -19,6 +19,7 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Request as PsrRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Sleep;
@@ -242,6 +243,50 @@ class ThawaniGatewayTest extends TestCase
         $this->assertSame('cancelled', WalletTopup::first()->status);
         $event = PaymentEvent::where('payment_id', $payment->id)->where('type', 'cancelled')->firstOrFail();
         $this->assertSame(['redirect', 'visitor_cancelled'], [$event->source, $event->data['reason']]);
+    }
+
+    #[Test]
+    public function the_return_page_asks_thawani_even_right_after_an_app_poll(): void
+    {
+        $user = $this->makeUser();
+        $topup = $this->startTopup($user, 10000);
+        $this->get($topup['payment_url']);
+        $payment = Payment::firstOrFail();
+        $tx = $payment->transaction_id;
+
+        // The app polls while the visitor pays in the browser: not paid yet.
+        $this->api('GET', "/api/v1/wallet/topups/{$topup['topup_id']}", [], $user)->assertJsonPath('data.status', 'pending');
+        $this->pay('checkout_1');
+
+        // Back from Thawani a second later: the page asks Thawani itself instead of skipping because the app just asked.
+        $this->get("/payment/success?transaction_id=$tx")->assertOk()->assertDontSee('data-error-code', false);
+        $this->assertSame('completed', $payment->fresh()->status);
+        $this->assertSame(10000, $this->wallet($user)->balance_minor);
+    }
+
+    #[Test]
+    public function the_return_page_uses_the_webhooks_answer_instead_of_showing_processing(): void
+    {
+        $user = $this->makeUser();
+        $topup = $this->startTopup($user, 10000);
+        $this->get($topup['payment_url']);
+        $payment = Payment::firstOrFail();
+        $this->pay('checkout_1');
+
+        // Thawani's webhook is asking Thawani about this payment as the visitor comes back.
+        $lock = Cache::lock("payments:reconcile:{$payment->id}", 120);
+        $this->assertTrue($lock->get());
+        Sleep::whenFakingSleep(function () use ($lock, $payment) {
+            if ($lock->release()) {
+                app(ThawaniCheckout::class)->reconcile($payment, 'webhook', 'background');
+            }
+        });
+        $before = $this->sentCount('get_session');
+
+        $this->get("/payment/success?transaction_id={$payment->transaction_id}")->assertOk()->assertDontSee('data-error-code', false);
+
+        $this->assertSame('completed', $payment->fresh()->status);
+        $this->assertSame($before + 1, $this->sentCount('get_session')); // the webhook's question only; the page did not ask again
     }
 
     #[Test]

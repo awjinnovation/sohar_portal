@@ -321,6 +321,11 @@ class AmwalCheckout
      * approved (completeCallback or cloud notification). Applied like an API
      * answer; anything not approved falls back to asking the API.
      *
+     * Applied at once, without the check lock: a signed approval needs no
+     * gateway call, and fulfilment is row-locked and idempotent, so the
+     * visitor's return never waits behind the notification (or a scheduled
+     * check) asking Amwal about the same payment.
+     *
      * @param  array{reference: string, approved: bool, amount: mixed, currency_id: mixed, transaction_id: ?string, data: array}  $evidence
      */
     public function applySigned(Payment $payment, array $evidence, string $source, string $profile): Payment
@@ -334,26 +339,27 @@ class AmwalCheckout
             return $this->reconcile($payment, $source, $profile, false, $row?->session_id);
         }
 
-        return $this->locked($payment, $profile, function () use ($payment, $row, $evidence, $source) {
-            $payment = Payment::withoutTenantScope()->findOrFail($payment->id);
-            $row->forceFill(['status' => PaymentGatewaySession::PAID, 'last_checked_at' => now()])->save();
+        $payment = Payment::withoutTenantScope()->findOrFail($payment->id);
+        $row->forceFill(['status' => PaymentGatewaySession::PAID, 'last_checked_at' => now()])->save();
 
-            if ($payment->fulfilled_at || in_array($payment->status, ['completed', 'refunded'], true)) {
-                if ($row->session_id !== $payment->gateway_session_id) {
-                    $this->duplicateCapture($payment, $row, $source);
-                }
-
-                return $payment;
+        if ($payment->fulfilled_at || in_array($payment->status, ['completed', 'refunded'], true)) {
+            if ($row->session_id !== $payment->gateway_session_id) {
+                $this->duplicateCapture($payment, $row, $source);
             }
 
-            return $this->applyPaid($payment, $row, [
-                'amount_minor' => AmwalGateway::minor($evidence['amount']),
-                'currency_id' => (int) ($evidence['currency_id'] ?: AmwalGateway::CURRENCY_OMR),
-                'transaction_id' => $evidence['transaction_id'] ?: null,
-                'data' => $evidence['data'],
-                'via' => $source,
-            ], $this->config($payment, $row->mode), $source);
-        });
+            return $payment;
+        }
+
+        return $this->applyPaid($payment, $row, [
+            // "0.5" (OMR) and "500" (baisa) are the same amount; any other value is flagged by applyPaid().
+            'amount_minor' => AmwalGateway::amountMatches($evidence['amount'], (int) $payment->amount_minor)
+                ? (int) $payment->amount_minor
+                : AmwalGateway::minor($evidence['amount']),
+            'currency_id' => (int) ($evidence['currency_id'] ?: AmwalGateway::CURRENCY_OMR),
+            'transaction_id' => $evidence['transaction_id'] ?: null,
+            'data' => $evidence['data'],
+            'via' => $source,
+        ], $this->config($payment, $row->mode), $source);
     }
 
     private function applyPaid(Payment $payment, PaymentGatewaySession $row, array $paid, AmwalConfig $c, string $source): Payment
@@ -459,8 +465,8 @@ class AmwalCheckout
 
     /**
      * SmartBox completeCallback relayed by our page (query parameters). A
-     * valid hash with response code 00 completes the payment; otherwise the
-     * API is asked. Never throws.
+     * valid hash with response code 00 completes the payment at once (no
+     * gateway call, no waiting); otherwise the API is asked. Never throws.
      */
     public function handleReturn(Payment $payment, array $params): Payment
     {
@@ -485,7 +491,8 @@ class AmwalCheckout
                 ], 'redirect', 'interactive');
             }
 
-            return $this->reconcile($payment, 'redirect', 'interactive');
+            // No signed result: ask Amwal now (GatewayCheckouts::checkOnReturn()).
+            return GatewayCheckouts::checkOnReturn($payment, (int) config('payments.reconcile.return_wait_seconds', 10));
         } catch (\Throwable $e) {
             Log::info('Amwal return check failed', ['transaction_id' => $payment->transaction_id, 'error' => $e->getMessage()]);
 
@@ -531,9 +538,9 @@ class AmwalCheckout
 
         // Signature checked when it was stored (PaymentWebhookController::amwal).
         $approved = $event->signature_valid === true && (string) ($body['ResponseCode'] ?? '') === AmwalGateway::APPROVED;
-        if ($approved && AmwalGateway::minor($body['Amount'] ?? null) !== (int) $payment->amount_minor) {
-            // The notification's Amount format is not confirmed by Amwal (docs §6): the API decides first;
-            // only when it does not settle the payment is the notification's amount flagged as before.
+        if ($approved && ! AmwalGateway::amountMatches($body['Amount'] ?? null, (int) $payment->amount_minor)) {
+            // A real difference (not OMR vs baisa): the API decides first; only when it
+            // does not settle the payment is the notification's amount flagged as before.
             $this->recorder->record($payment, 'notification_amount_differs', 'webhook', [
                 'reference' => $reference, 'amount' => is_scalar($body['Amount'] ?? null) ? (string) $body['Amount'] : null,
                 'expected_minor' => (int) $payment->amount_minor,

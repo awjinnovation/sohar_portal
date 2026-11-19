@@ -82,6 +82,25 @@ class AmwalGateway
     }
 
     /**
+     * A signed amount (SmartBox callback, cloud notification) equals the
+     * payment's: in OMR ("0.5", "0.500") or in baisa ("500"). Amwal does not
+     * document the notification's format, so both mean the same amount; any
+     * other value is a real difference and Amwal's API is asked.
+     */
+    public static function amountMatches(mixed $amount, int $expectedMinor): bool
+    {
+        if (! is_numeric($amount)) {
+            return false;
+        }
+        if (self::minor($amount) === $expectedMinor) {
+            return true;
+        }
+        $value = (float) $amount;
+
+        return floor($value) === $value && (int) $value === $expectedMinor;
+    }
+
+    /**
      * The SmartBox.Checkout.configure object for our payment page (the
      * callbacks are added by the page). $dateTime = UTC.
      */

@@ -5,8 +5,8 @@ namespace App\Services\Payments;
 use App\Models\Payment;
 use App\Services\Payments\Gateway\AmwalGateway;
 use App\Services\Payments\Gateway\ThawaniGateway;
-use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * The checkout flow of the gateways that are checked through their API
@@ -36,25 +36,29 @@ class GatewayCheckouts
     }
 
     /**
-     * Return page: when a check is settling the payment right now (the
-     * gateway's notification, a scheduled check), wait for it to finish, up
-     * to $seconds, and return the payment as it then stands. Interactive
-     * checks skip a payment whose lock is taken, so without this wait the
-     * visitor saw "processing" a second before the payment completed.
+     * The visitor is back from the gateway without a signed result (Thawani's
+     * return never carries one; an Amwal return whose hash fails): ask the
+     * gateway now, once, even if the app polled a moment ago. When a check is
+     * already asking it (the webhook's, a scheduled one), its answer is
+     * awaited instead of asking twice, up to $waitSeconds. Never throws.
      */
-    public static function afterRunningCheck(Payment $payment, int $seconds): Payment
+    public static function checkOnReturn(Payment $payment, int $waitSeconds): Payment
     {
-        if (! self::for($payment) || $payment->fulfilled_at || $payment->status === 'completed') {
+        $checkout = self::for($payment);
+        if (! $checkout || ! $payment->isPending() || ! $payment->gateway_session_id) {
             return $payment;
         }
 
         try {
             // Same lock as ThawaniCheckout / AmwalCheckout::reconcile().
-            Cache::lock("payments:reconcile:{$payment->id}", 120)->block(max(1, $seconds), fn () => null);
-        } catch (LockTimeoutException) {
-            return $payment; // still running: the page shows what is known now
-        }
+            Cache::lock("payments:reconcile:{$payment->id}", 120)->block(max(1, $waitSeconds), fn () => null);
+            $payment = $payment->fresh() ?? $payment;
 
-        return $payment->fresh() ?? $payment;
+            return $payment->isPending() ? $checkout->reconcile($payment, 'redirect', 'interactive') : $payment;
+        } catch (\Throwable $e) {
+            Log::info('Return page check failed', ['transaction_id' => $payment->transaction_id, 'error' => $e->getMessage()]);
+
+            return $payment->fresh() ?? $payment;
+        }
     }
 }

@@ -180,6 +180,18 @@ class AmwalGatewayTest extends TestCase
     // ------------------------------------------------------------------ hashing
 
     #[Test]
+    public function an_amount_in_omr_or_baisa_is_the_same_amount(): void
+    {
+        foreach (['0.5', '0.500', '500', '000000000500', 0.5, 500] as $same) {
+            $this->assertTrue(AmwalGateway::amountMatches($same, 500), var_export($same, true));
+        }
+        foreach (['5', '0.05', '499', '0.499', '', null, 'abc'] as $different) {
+            $this->assertFalse(AmwalGateway::amountMatches($different, 500), var_export($different, true));
+        }
+    }
+
+
+    #[Test]
     public function the_secure_hash_matches_amwals_own_plugin(): void
     {
         // amwalpay-for-woocommerce: generateString() / generateStringForFilter().
@@ -322,7 +334,7 @@ class AmwalGatewayTest extends TestCase
     }
 
     #[Test]
-    public function the_return_page_waits_for_the_notification_that_is_completing_the_payment(): void
+    public function a_signed_return_completes_at_once_while_the_notification_is_still_checking(): void
     {
         $user = $this->makeUser();
         $topup = $this->startTopup($user, 4000);
@@ -331,21 +343,21 @@ class AmwalGatewayTest extends TestCase
         $ref = $payment->transaction_id.'_1';
         $this->pay($ref, '4.000');
 
-        // The cloud notification's job holds the payment while the visitor comes back (TXNDYNY0MRLUGLT, 2026-11-19).
-        $lock = Cache::lock("payments:reconcile:{$payment->id}", 120);
-        $this->assertTrue($lock->get());
-        Sleep::whenFakingSleep(function () use ($lock, $payment) {
-            if ($lock->release()) {
-                app(AmwalCheckout::class)->reconcile($payment, 'webhook', 'background');
-            }
-        });
+        // The cloud notification's job is asking Amwal about this payment as the visitor comes back (TXNDYNY0MRLUGLT, 2026-11-19).
+        $this->assertTrue(Cache::lock("payments:reconcile:{$payment->id}", 120)->get());
 
         $this->get($this->returnUrl($payment, $this->smartBoxCallback($ref, '4.000')))->assertOk()
             ->assertDontSee('data-error-code', false);
 
         $this->assertSame('completed', $payment->fresh()->status);
         $this->assertSame(4000, $this->wallet($user)->balance_minor);
-        $this->assertSame(1, $this->sentCount('get_transactions')); // the notification's check; the return added none
+        $this->assertSame(0, $this->sentCount('get_transactions')); // the signed approval was enough…
+        Sleep::assertNeverSlept(); // …and nothing waited for the notification
+
+        // The notification then finds it paid and changes nothing.
+        $this->postNotification($this->notification($ref, '4'))->assertOk();
+        $this->assertSame(4000, $this->wallet($user)->balance_minor);
+        $this->assertSame(1, WalletTransaction::where('type', 'topup')->count());
     }
 
     #[Test]
@@ -401,7 +413,25 @@ class AmwalGatewayTest extends TestCase
     }
 
     #[Test]
-    public function a_notification_with_an_unexpected_amount_lets_the_api_decide(): void
+    public function a_notification_amount_in_omr_or_baisa_completes_without_asking_amwal(): void
+    {
+        $user = $this->makeUser();
+        // Same amount, three ways of writing it (OMR, baisa, OMR with three decimals).
+        foreach (['2', '2000', '2.000'] as $i => $amount) {
+            $topup = $this->startTopup($user, 2000);
+            $this->get($topup['payment_url']);
+            $payment = Payment::latest('id')->firstOrFail();
+            $this->postNotification($this->notification($payment->transaction_id.'_1', $amount))->assertOk();
+            $payment->refresh();
+            $this->assertSame(['completed', false], [$payment->status, (bool) $payment->needs_review], "Amount $amount");
+            $this->assertNotContains('notification_amount_differs', $this->types($payment));
+            $this->assertSame(2000 * ($i + 1), $this->wallet($user)->balance_minor);
+        }
+        $this->assertSame(0, $this->sentCount('get_transactions'));
+    }
+
+    #[Test]
+    public function a_notification_with_a_different_amount_lets_the_api_decide(): void
     {
         $user = $this->makeUser();
         $topup = $this->startTopup($user, 4000);
@@ -409,19 +439,20 @@ class AmwalGatewayTest extends TestCase
         $payment = Payment::firstOrFail();
         $ref = $payment->transaction_id.'_1';
 
-        // Amount in another format (baisa): Amwal's API shows the right purchase, so it completes, unflagged.
+        // 3.5 for a 4 OMR payment: Amwal's API shows the right purchase, so it completes, unflagged.
         $this->pay($ref, '4.000');
-        $this->postNotification($this->notification($ref, '4000'))->assertOk();
+        $this->postNotification($this->notification($ref, '3.5'))->assertOk();
         $payment->refresh();
         $this->assertSame(['completed', false], [$payment->status, (bool) $payment->needs_review]);
         $this->assertContains('notification_amount_differs', $this->types($payment));
+        $this->assertSame(1, $this->sentCount('get_transactions'));
         $this->assertSame(4000, $this->wallet($user)->balance_minor);
 
         // The API has nothing: the signed notification's amount is flagged, as before.
         $other = $this->startTopup($user, 3000);
         $this->get($other['payment_url']);
         $second = Payment::where('transaction_id', '!=', $payment->transaction_id)->firstOrFail();
-        $this->postNotification($this->notification($second->transaction_id.'_1', '3000'))->assertOk();
+        $this->postNotification($this->notification($second->transaction_id.'_1', '2'))->assertOk();
         $second->refresh();
         $this->assertSame(['pending', true, 'amount_mismatch'], [$second->status, (bool) $second->needs_review, $second->review_reason]);
     }

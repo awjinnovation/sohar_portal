@@ -27,7 +27,11 @@ reconciler all call `ThawaniCheckout::reconcile()`, which reads the session from
 the Thawani API and applies it through `PaymentFulfillmentService` (row-locked,
 idempotent: tickets, wallet credit, deposits and points happen exactly once,
 whichever path arrives first). One check runs at a time per payment (cache
-lock). A webhook body is never trusted on its own. A session is always checked
+lock). A webhook body is never trusted on its own. Thawani's return carries
+no signed result, so the return page asks Thawani once, even right after an
+app poll; if the webhook's check is already asking, the page waits for that
+answer instead of showing "processing" (`GatewayCheckouts::checkOnReturn()`,
+MSR-352). A session is always checked
 on the host (UAT / production) it was created on, so switching a tenant to
 production does not strand open UAT payments.
 

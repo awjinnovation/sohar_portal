@@ -222,8 +222,8 @@ class PaymentController extends Controller
     }
 
     /**
-     * Thawani / Amwal return page: ask the gateway (throttled per payment),
-     * then show the result. Amwal's SmartBox callback (relayed by our page,
+     * Thawani / Amwal return page: apply Amwal's signed result, or ask the
+     * gateway once (GatewayCheckouts::checkOnReturn()), then show the result. Amwal's SmartBox callback (relayed by our page,
      * with its token) is verified and applied first — also when the payment
      * was cancelled meanwhile (e.g. its gate order expired while the visitor
      * was paying): a signed approval then completes it as a late capture
@@ -231,15 +231,17 @@ class PaymentController extends Controller
      */
     private function thawaniResult(Request $request, Payment $payment)
     {
-        // The gateway's notification may be completing this payment at this very moment.
-        $payment = \App\Services\Payments\GatewayCheckouts::afterRunningCheck($payment, (int) config('payments.reconcile.return_wait_seconds', 10));
-
-        $payment = $payment->gateway === AmwalGateway::NAME && ! $payment->fulfilled_at
-            && in_array($payment->status, ['pending', 'cancelled', 'failed'], true)
-            && hash_equals(AmwalCheckout::returnToken($payment->transaction_id), (string) $request->query('t', ''))
-            && $request->filled('merchantReference')
-            ? app(AmwalCheckout::class)->handleReturn($payment, $request->query())
-            : $this->thawaniCheck($payment);
+        $payment = match (true) {
+            // Amwal's signed approval completes the payment at once: no gateway call, no waiting.
+            $payment->gateway === AmwalGateway::NAME && ! $payment->fulfilled_at
+                && in_array($payment->status, ['pending', 'cancelled', 'failed'], true)
+                && hash_equals(AmwalCheckout::returnToken($payment->transaction_id), (string) $request->query('t', ''))
+                && $request->filled('merchantReference') => app(AmwalCheckout::class)->handleReturn($payment, $request->query()),
+            // The page reloading itself: a throttled check.
+            $request->filled('n') => $this->thawaniCheck($payment),
+            // Back from the gateway with no signed result (Thawani): ask it now, once.
+            default => \App\Services\Payments\GatewayCheckouts::checkOnReturn($payment, (int) config('payments.reconcile.return_wait_seconds', 10)),
+        };
 
         if ($payment->payment_type === Payment::TYPE_GATEWAY_TEST) {
             return $this->returnRedirect($payment); // the test page shows any outcome
