@@ -19,6 +19,14 @@ map "$status:$uri" $booking_cache_control {
     "~:/healthz$"                   "no-store";
 }
 
+# Search engines may index the event pages only (/e/123, any query); every other
+# address gets "noindex". $request_uri, since try_files rewrites $uri to
+# /index.html. An empty value sends no header.
+map $request_uri $booking_robots {
+    default                         "noindex";
+    "~^/e/[0-9]+/?(\?|$)"          "";
+}
+
 server {
     listen 80;
     server_name _;
@@ -51,7 +59,7 @@ server {
     add_header Permissions-Policy           "${PERMISSIONS_POLICY}" always;
     add_header Cross-Origin-Opener-Policy   "same-origin" always;
     add_header Strict-Transport-Security    "max-age=31536000" always;
-    add_header X-Robots-Tag                 "noindex" always;
+    add_header X-Robots-Tag                 $booking_robots always;
 
     location = /healthz {
         access_log off;

@@ -6,6 +6,7 @@ import { SignIn } from './components/SignIn';
 import { TicketCard } from './components/TicketCard';
 import { TicketsExport } from './components/TicketsExport';
 import { HOME_URL } from './config';
+import { setEventHead, setNoIndex } from './head';
 import { initialLang, strings, type Strings } from './i18n';
 import { Icon, type IconName } from './icons';
 import { loadAuth, loadGuest, loadPendingOtp, saveAuth, saveGuest, savePendingOtp, type Auth, type GuestState, type PendingOtp } from './storage';
@@ -132,11 +133,18 @@ export function App() {
         setData(payload);
         setLoad('ready');
         applyTheme(payload.tenant.theme);
-        document.title = `${payload.event.title || t.event} · ${payload.tenant.name}`;
+        // Title and description for search results; an event that has ended stays out of them.
+        const s = strings[payload.lang];
+        const name = payload.event.title || s.event;
+        const full = name === payload.tenant.name ? name : `${name} · ${payload.tenant.name}`;
+        setEventHead(s.seo_title(full), s.seo_description(name));
+        if (payload.event.ended) setNoIndex();
       })
       .catch((e) => {
         if ((e as Error).name === 'AbortError') return;
-        setLoad(e instanceof ApiError && e.status === 404 ? 'notfound' : 'error');
+        const notFound = e instanceof ApiError && e.status === 404;
+        if (notFound) setNoIndex();
+        setLoad(notFound ? 'notfound' : 'error');
       });
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
