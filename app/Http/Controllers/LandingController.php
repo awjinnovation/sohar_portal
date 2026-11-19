@@ -51,14 +51,19 @@ class LandingController extends Controller
     /**
      * robots.txt from APP_URL. Outside production (staging, a test domain)
      * nothing is indexed; in production the homepage is, private paths
-     * (admin, payment links, API) are not.
+     * (admin, payment links, API) are not. Either way crawlers may read the
+     * public event API (/api/v1/booking/events/), which the booking site
+     * (booking-web) loads in the browser: Googlebot renders its event pages
+     * with it, and without it they show "booking unavailable" in Google.
+     * Allow beats Disallow because it is the longer (more specific) rule.
      */
     public function robots(): Response
     {
         $base = rtrim((string) config('app.url'), '/');
+        $events = 'Allow: /api/v1/booking/events/';
         $lines = app()->isProduction()
-            ? ['User-agent: *', 'Allow: /', 'Disallow: /admin', 'Disallow: /api/', 'Disallow: /pay/', 'Disallow: /payment/', 'Disallow: /ticket/', '', 'Sitemap: '.$base.'/sitemap.xml']
-            : ['User-agent: *', 'Disallow: /'];
+            ? ['User-agent: *', 'Allow: /', $events, 'Disallow: /admin', 'Disallow: /api/', 'Disallow: /pay/', 'Disallow: /payment/', 'Disallow: /ticket/', '', 'Sitemap: '.$base.'/sitemap.xml']
+            : ['User-agent: *', $events, 'Disallow: /'];
 
         return response(implode("\n", $lines)."\n", 200, [
             'Content-Type' => 'text/plain; charset=UTF-8',
