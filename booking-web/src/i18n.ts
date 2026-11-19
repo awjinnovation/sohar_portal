@@ -10,7 +10,9 @@ const ar = {
   event: 'فعالية',
   // search results (Google): the page title and description
   seo_title: (event: string) => `حجز تذاكر ${event}`,
-  seo_description: (event: string) => `احجز تذاكر ${event} من الموقع، وادخل برمز QR من هاتفك.`,
+  seo_description: (event: string, dates?: string | null) =>
+    `احجز تذاكر ${event}${dates ? ` (${dates})` : ''} من الموقع الرسمي، وادخل برمز QR من هاتفك.`,
+  tags: 'كلمات البحث',
   otherLang: 'English',
 
   // notices
@@ -119,7 +121,9 @@ const en: Strings = {
   bookYourTicket: 'Book your ticket',
   event: 'Event',
   seo_title: (event: string) => `${event} tickets`,
-  seo_description: (event: string) => `Book ${event} tickets online and get in with the QR code on your phone.`,
+  seo_description: (event: string, dates?: string | null) =>
+    `Book ${event} tickets${dates ? ` (${dates})` : ''} on the official site, and get in with the QR code on your phone.`,
+  tags: 'Search words',
   otherLang: 'العربية',
 
   otp_sent: (masked: string) => `We texted a code to ${masked}.`,

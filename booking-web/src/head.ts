@@ -46,3 +46,32 @@ export function setIndexHead(title: string, description: string): void {
 export function setNoIndex(): void {
   meta('robots').content = 'noindex';
 }
+
+/** <meta name="keywords">: Google ignores it, other engines may read it. Empty removes it. */
+export function setKeywords(words: string[]): void {
+  if (words.length === 0) {
+    document.head.querySelector('meta[name="keywords"]')?.remove();
+    return;
+  }
+  meta('keywords').content = words.join(', ');
+}
+
+/**
+ * schema.org data for search engines (Google's event results), one
+ * <script type="application/ld+json"> in the head; null removes it. A data
+ * block, never run, so the CSP's script-src does not apply to it.
+ */
+export function setStructuredData(data: object | null): void {
+  let el = document.getElementById('event-jsonld');
+  if (!data) {
+    el?.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement('script');
+    el.id = 'event-jsonld';
+    el.setAttribute('type', 'application/ld+json');
+    document.head.appendChild(el);
+  }
+  el.textContent = JSON.stringify(data);
+}

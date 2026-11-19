@@ -6,7 +6,8 @@ import { SignIn } from './components/SignIn';
 import { TicketCard } from './components/TicketCard';
 import { TicketsExport } from './components/TicketsExport';
 import { HOME_URL } from './config';
-import { setEventHead, setIndexHead, setNoIndex } from './head';
+import { setEventHead, setIndexHead, setKeywords, setNoIndex, setStructuredData } from './head';
+import { eventSeo, eventTags } from './seo';
 import { initialLang, strings, type Strings } from './i18n';
 import { Icon, type IconName } from './icons';
 import { loadAuth, loadGuest, loadPendingOtp, saveAuth, saveGuest, savePendingOtp, type Auth, type GuestState, type PendingOtp } from './storage';
@@ -168,11 +169,12 @@ export function App() {
         setData(payload);
         setLoad('ready');
         applyTheme(payload.tenant.theme);
-        // Title and description for search results; an event that has ended stays out of them.
-        const s = strings[payload.lang];
-        const name = payload.event.title || s.event;
-        const full = name === payload.tenant.name ? name : `${name} · ${payload.tenant.name}`;
-        setEventHead(s.seo_title(full), s.seo_description(name));
+        // Title, description, keywords and schema.org Event for search results;
+        // an event that has ended stays out of them.
+        const seo = eventSeo(payload, strings[payload.lang], location.origin + location.pathname.replace(/\/$/, ''));
+        setEventHead(seo.title, seo.description);
+        setKeywords(seo.keywords);
+        setStructuredData(payload.event.ended ? null : seo.data);
         if (payload.event.ended) setNoIndex();
       })
       .catch((e) => {
@@ -487,6 +489,7 @@ export function App() {
   }
 
   const { tenant, event, ticket_types: types } = data;
+  const tags = eventTags(event);
   const onSale = types.some((type) => type.sales_open);
   const notes = [notice && { m: notice, style: NOTICE[notice.key] }, error && { m: error, style: ERROR[error.key] ?? ERROR.unavailable }].filter(
     (n): n is { m: Message; style: [Tone, IconName] } => !!n && !!n.style,
@@ -517,6 +520,14 @@ export function App() {
               </span>
             )}
           </div>
+          {event.description && <p className="vb-event-desc">{event.description}</p>}
+          {tags.length > 0 && (
+            <ul className="vb-tags" aria-label={t.tags}>
+              {tags.map((tag) => (
+                <li key={tag}>{tag}</li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 

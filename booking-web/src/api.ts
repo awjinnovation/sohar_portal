@@ -67,6 +67,14 @@ export interface EventPayload {
     venue: string | null;
     image_url: string | null;
     ended: boolean;
+    /** For search engines (absent from an API older than MSR-396). */
+    description?: string | null;
+    /** The event's and organizer's names in the other language. */
+    other_names?: string[];
+    /** Other names and search words typed by the organizer. */
+    search_terms?: string[];
+    starts_at?: string | null;
+    ends_at?: string | null;
   };
   ticket_types: TicketType[];
   dates: BookingDate[];
