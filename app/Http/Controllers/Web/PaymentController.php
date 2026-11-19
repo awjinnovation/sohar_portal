@@ -48,6 +48,9 @@ class PaymentController extends Controller
 
     public const ERR_PAYMENT_FAILED = 'payment_failed';
 
+    /** Amwal: this card attempt was declined; the payment stays open for another attempt. */
+    public const ERR_PAYMENT_DECLINED = 'payment_declined';
+
     public const ERR_SERVER_ERROR = 'server_error';
 
     public const ERR_GATEWAY_UNAVAILABLE = 'gateway_unavailable';
@@ -228,6 +231,9 @@ class PaymentController extends Controller
      */
     private function thawaniResult(Request $request, Payment $payment)
     {
+        // The gateway's notification may be completing this payment at this very moment.
+        $payment = \App\Services\Payments\GatewayCheckouts::afterRunningCheck($payment, (int) config('payments.reconcile.return_wait_seconds', 10));
+
         $payment = $payment->gateway === AmwalGateway::NAME && ! $payment->fulfilled_at
             && in_array($payment->status, ['pending', 'cancelled', 'failed'], true)
             && hash_equals(AmwalCheckout::returnToken($payment->transaction_id), (string) $request->query('t', ''))
@@ -242,12 +248,34 @@ class PaymentController extends Controller
         return match (true) {
             $payment->status === 'completed' => $this->successView($payment),
             // Amwal: a declined attempt can be paid again from a new SmartBox page.
-            $payment->isPending() => $this->errorView(self::ERR_NOT_COMPLETED, $payment, ['retryUrl' => $payment->gateway === AmwalGateway::NAME
-                ? app(\App\Services\Payments\PaymentGatewayManager::class)->paymentUrl($payment, array_filter(['lang' => $request->query('lang')]))
-                : $request->fullUrl()]),
+            $payment->isPending() && $this->amwalDeclined($request, $payment) => $this->errorView(self::ERR_PAYMENT_DECLINED, $payment, [
+                'retryUrl' => app(\App\Services\Payments\PaymentGatewayManager::class)->paymentUrl($payment, array_filter(['lang' => $request->query('lang')])),
+            ]),
+            // Paid or not yet confirmed: never offer a second payment here; the page reloads itself until the result is known.
+            $payment->isPending() => $this->errorView(self::ERR_NOT_COMPLETED, $payment, ['refreshUrl' => $this->refreshUrl($request, $payment)]),
             $payment->status === 'cancelled' => $this->returnRedirect($payment, ['payment' => 'cancelled']) ?? view('payment.cancel', ['payment' => $payment, 'code' => 'cancelled']),
             default => $this->returnRedirect($payment, ['payment' => 'failed']) ?? $this->errorView(self::ERR_PAYMENT_FAILED, $payment),
         };
+    }
+
+    /** SmartBox returned a decline code (display choice only: money is decided by the signed callback or Amwal's API). */
+    private function amwalDeclined(Request $request, Payment $payment): bool
+    {
+        return $payment->gateway === AmwalGateway::NAME
+            && $request->filled('responseCode')
+            && (string) $request->query('responseCode') !== AmwalGateway::APPROVED;
+    }
+
+    /** The status page reloading itself (a plain revisit: a throttled check, never a new attempt); null once it gave up. */
+    private function refreshUrl(Request $request, Payment $payment): ?string
+    {
+        $n = max(0, (int) $request->query('n', 0));
+        if ($n >= (int) config('payments.reconcile.return_refreshes', 10)) {
+            return null;
+        }
+        $lang = in_array($request->query('lang'), ['ar', 'en'], true) ? $request->query('lang') : null;
+
+        return route('payment.success', array_filter(['transaction_id' => $payment->transaction_id, 'lang' => $lang, 'n' => $n + 1]));
     }
 
     /** Throttled per payment (repeated reloads don't multiply gateway calls); never throws. */

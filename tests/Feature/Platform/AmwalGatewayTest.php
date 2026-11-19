@@ -18,6 +18,7 @@ use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Psr7\Request as PsrRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
@@ -277,7 +278,8 @@ class AmwalGatewayTest extends TestCase
         // Signed with another key: Amwal is asked instead, and has nothing.
         $this->get($this->returnUrl($payment, $this->smartBoxCallback($ref, '10.000', key: strrev(self::KEY))))->assertOk()
             ->assertSee('data-error-code="not_completed"', false)
-            ->assertSee('/payment/redirect/'.$payment->transaction_id, false); // "try again" reopens SmartBox
+            ->assertSee('http-equiv="refresh"', false) // the page reloads itself as a status check…
+            ->assertDontSee('/payment/redirect/'.$payment->transaction_id, false); // …and never offers a second payment
         $this->assertSame(1, $this->sentCount('get_transactions'));
 
         // A valid hash on a URL without our token is only a (throttled) status check.
@@ -304,7 +306,9 @@ class AmwalGatewayTest extends TestCase
         $payment = Payment::firstOrFail();
         $this->pay($payment->transaction_id.'_1', '5.000', '05');
 
-        $this->get($this->returnUrl($payment, $this->smartBoxCallback($payment->transaction_id.'_1', '5.000', '05')))->assertSee('not_completed');
+        $this->get($this->returnUrl($payment, $this->smartBoxCallback($payment->transaction_id.'_1', '5.000', '05')))
+            ->assertSee('data-error-code="payment_declined"', false)
+            ->assertSee('/payment/redirect/'.$payment->transaction_id, false); // "try again" opens a new SmartBox page
         $this->assertSame('pending', $payment->fresh()->status);
 
         // Second attempt approved; the app's poll finds it through the API.
@@ -315,6 +319,65 @@ class AmwalGatewayTest extends TestCase
 
         $this->assertSame(2, Ticket::where('transaction_id', $payment->transaction_id)->count());
         $this->assertSame($payment->transaction_id.'_2', $payment->fresh()->gateway_session_id);
+    }
+
+    #[Test]
+    public function the_return_page_waits_for_the_notification_that_is_completing_the_payment(): void
+    {
+        $user = $this->makeUser();
+        $topup = $this->startTopup($user, 4000);
+        $this->get($topup['payment_url']);
+        $payment = Payment::firstOrFail();
+        $ref = $payment->transaction_id.'_1';
+        $this->pay($ref, '4.000');
+
+        // The cloud notification's job holds the payment while the visitor comes back (TXNDYNY0MRLUGLT, 2026-11-19).
+        $lock = Cache::lock("payments:reconcile:{$payment->id}", 120);
+        $this->assertTrue($lock->get());
+        Sleep::whenFakingSleep(function () use ($lock, $payment) {
+            if ($lock->release()) {
+                app(AmwalCheckout::class)->reconcile($payment, 'webhook', 'background');
+            }
+        });
+
+        $this->get($this->returnUrl($payment, $this->smartBoxCallback($ref, '4.000')))->assertOk()
+            ->assertDontSee('data-error-code', false);
+
+        $this->assertSame('completed', $payment->fresh()->status);
+        $this->assertSame(4000, $this->wallet($user)->balance_minor);
+        $this->assertSame(1, $this->sentCount('get_transactions')); // the notification's check; the return added none
+    }
+
+    #[Test]
+    public function a_pending_return_page_reloads_itself_then_stops_without_offering_a_second_payment(): void
+    {
+        $user = $this->makeUser();
+        $topup = $this->startTopup($user, 4000);
+        $this->get($topup['payment_url']);
+        $payment = Payment::firstOrFail();
+        $tx = $payment->transaction_id;
+
+        $this->get("/payment/success?transaction_id=$tx&lang=ar")->assertOk()
+            ->assertSee('data-error-code="not_completed"', false)
+            ->assertSee('/payment/success?transaction_id='.$tx.'&amp;lang=ar&amp;n=1', false)
+            ->assertSee('فلا تدفع مرة أخرى')
+            ->assertDontSee('/payment/redirect/'.$tx, false);
+
+        // Paid meanwhile: the next reload shows the result.
+        $this->pay($tx.'_1', '4.000');
+        $this->travel(10)->seconds();
+        $this->get("/payment/success?transaction_id=$tx&lang=ar&n=1")->assertOk()->assertDontSee('data-error-code', false);
+        $this->assertSame('completed', $payment->fresh()->status);
+
+        // Never confirmed: after the last reload the page stops and says the order completes on its own.
+        $other = $this->startTopup($user, 2000);
+        $this->get($other['payment_url']);
+        $late = Payment::where('transaction_id', '!=', $tx)->firstOrFail();
+        $this->get("/payment/success?transaction_id={$late->transaction_id}&n=10")->assertOk()
+            ->assertSee('data-error-code="not_completed"', false)
+            ->assertDontSee('http-equiv="refresh"', false)
+            ->assertSee('لم يصل تأكيد البنك بعد')
+            ->assertDontSee('/payment/redirect/'.$late->transaction_id, false);
     }
 
     // ------------------------------------------------------------------ notifications

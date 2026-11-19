@@ -6,7 +6,8 @@
     // Codes from App\Http\Controllers\Web\PaymentController::ERR_* → [ar, en]
     $messages = [
         'not_pending' => ['لم تعد هذه العملية بانتظار الدفع.', 'This payment is no longer pending.'],
-        'not_completed' => ['لم تكتمل عملية الدفع بعد. ستظهر النتيجة في التطبيق خلال لحظات.', 'The payment is not completed yet. The app will show the result in a moment.'],
+        'not_completed' => ['نؤكّد الدفع مع البنك الآن، وتتحدّث هذه الصفحة تلقائيًّا.', 'We’re confirming the payment with the bank. This page updates on its own.'],
+        'payment_declined' => ['لم تُقبل البطاقة، ولم يُخصم أي مبلغ. يمكنك المحاولة مرة أخرى.', 'The card was declined and nothing was charged. You can try again.'],
         'no_response' => ['لم يصل رد من بوابة الدفع.', 'No response was received from the payment gateway.'],
         'verification_failed' => ['تعذر التحقق من رد بوابة الدفع.', 'The payment gateway response could not be verified.'],
         'payment_failed' => ['لم تنجح عملية الدفع. حاول مرة أخرى.', 'The payment failed. Please try again.'],
@@ -18,7 +19,16 @@
     [$msgAr, $msgEn] = $messages[$code] ?? $messages['server_error'];
     $shown = $t($msgAr, $msgEn);
     $pending = $code === 'not_completed';
+    if ($pending && empty($refreshUrl)) {
+        // The page stopped reloading itself: the confirmation is late, never a reason to pay again.
+        $shown = $t('لم يصل تأكيد البنك بعد، وسيكتمل طلبك تلقائيًّا فور وصوله.', 'The bank’s confirmation hasn’t arrived yet. Your order completes on its own as soon as it does.');
+    }
 @endphp
+@if($pending && ! empty($refreshUrl))
+    @push('head')
+        <meta http-equiv="refresh" content="3;url={{ $refreshUrl }}">
+    @endpush
+@endif
 @section('title', $pending ? $t('الدفع قيد المعالجة', 'Payment processing') : $t('تعذر إتمام الدفع', 'Payment problem'))
 @section('band-sub', $t('حالة الدفع', 'Payment status'))
 
@@ -39,5 +49,9 @@
     @if(isset($error) && config('app.debug'))
         <div class="note warn ltr" style="text-align:left"><i class="bi bi-bug"></i><div><b>Debug:</b> {{ $error }}</div></div>
     @endif
-    <div class="note info"><i class="bi bi-info-circle"></i><div>{{ $t('لا يُخصم أي مبلغ ما لم تكتمل العملية. عُد إلى التطبيق لتحاول مجددًا.', 'You are not charged for a payment that did not complete. Return to the app to try again.') }}</div></div>
+    @if($pending)
+        <div class="note info"><i class="bi bi-info-circle"></i><div>{{ $t('إذا خُصم المبلغ من بطاقتك فلا تدفع مرة أخرى، فطلبك يكتمل تلقائيًّا فور تأكيد الدفع.', 'If your card was charged, don’t pay again: your order completes on its own once the payment is confirmed.') }}</div></div>
+    @else
+        <div class="note info"><i class="bi bi-info-circle"></i><div>{{ $t('لا يُخصم أي مبلغ ما لم تكتمل العملية. عُد إلى التطبيق لتحاول مجددًا.', 'You are not charged for a payment that did not complete. Return to the app to try again.') }}</div></div>
+    @endif
 @endsection

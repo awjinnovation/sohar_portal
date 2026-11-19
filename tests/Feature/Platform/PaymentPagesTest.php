@@ -39,9 +39,11 @@ class PaymentPagesTest extends TestCase
         $this->get("/payment/success?transaction_id=$txId&lang=en")->assertOk()
             ->assertViewHas('code', 'not_completed')
             ->assertSee('data-error-code="not_completed"', false)
-            ->assertSee('The payment is not completed yet');
+            ->assertSee('confirmation hasn')
+            ->assertSee('If your card was charged, don');
         $this->get("/payment/success?transaction_id=$txId&lang=ar")->assertOk()
-            ->assertSee('لم تكتمل عملية الدفع بعد');
+            ->assertSee('لم يصل تأكيد البنك بعد')
+            ->assertSee('فلا تدفع مرة أخرى');
         $this->get('/payment/success')->assertOk()->assertViewHas('code', 'no_response');
         $this->post('/payment/success', ['encResp' => 'garbage'])->assertOk()->assertViewHas('code', 'verification_failed');
     }
