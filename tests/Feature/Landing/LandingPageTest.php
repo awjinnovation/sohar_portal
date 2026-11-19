@@ -91,12 +91,12 @@ class LandingPageTest extends TestCase
 
         // Not production (testing): nothing is indexed, but the booking site's event API may be read.
         $this->get('/robots.txt')->assertOk()->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
-            ->assertSee("User-agent: *\nAllow: /api/v1/booking/events/\nDisallow: /\n", false);
+            ->assertSee("User-agent: *\nAllow: /api/v1/booking/events/\nAllow: /api/v1/events$\nAllow: /api/v1/events?\nDisallow: /\n", false);
         $this->get('/')->assertSee('<meta name="robots" content="noindex, nofollow">', false);
 
         $this->app['env'] = 'production';
         $this->get('/robots.txt')->assertOk()
-            ->assertSee("Allow: /\nAllow: /api/v1/booking/events/\nDisallow: /admin", false)
+            ->assertSee("Allow: /\nAllow: /api/v1/booking/events/\nAllow: /api/v1/events$\nAllow: /api/v1/events?\nDisallow: /admin", false)
             ->assertSee('Sitemap: https://mawsim.awj.om/sitemap.xml', false);
         $this->get('/')->assertSee('<meta name="robots" content="index, follow">', false);
 
