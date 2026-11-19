@@ -112,6 +112,32 @@ class BookingApiTest extends TestCase
     }
 
     #[Test]
+    public function the_event_carries_its_other_names_search_words_description_and_times_for_search_engines(): void
+    {
+        $event = $this->makeEvent(null, [
+            'title' => 'Suhar Festival', 'title_ar' => 'مهرجان صحار',
+            'description' => 'Heritage and family events.', 'description_ar' => 'تراث وفعاليات عائلية.',
+            'search_terms' => "مهرجان صحار الخامس، Sohar Festival, sohar festival\nتذاكر مهرجان صحار ,  ",
+        ]);
+
+        $ar = $this->getJson($this->url($event).'?lang=ar')->assertOk()
+            ->assertJsonPath('data.event.title', 'مهرجان صحار')
+            ->assertJsonPath('data.event.description', 'تراث وفعاليات عائلية.')
+            ->assertJsonPath('data.event.search_terms', ['مهرجان صحار الخامس', 'Sohar Festival', 'تذاكر مهرجان صحار']);
+        $this->assertContains('Suhar Festival', $ar->json('data.event.other_names'));
+        $this->assertNotContains('مهرجان صحار', $ar->json('data.event.other_names'));
+        $this->assertSame($event->start_time->toIso8601String(), $ar->json('data.event.starts_at'));
+        $this->assertSame($event->end_time->toIso8601String(), $ar->json('data.event.ends_at'));
+
+        $en = $this->getJson($this->url($event).'?lang=en')->assertOk();
+        $this->assertContains('مهرجان صحار', $en->json('data.event.other_names'));
+        $this->assertNotContains('Suhar Festival', $en->json('data.event.other_names'));
+
+        $event->update(['search_terms' => null]);
+        $this->getJson($this->url($event).'?lang=ar&x=1')->assertOk()->assertJsonPath('data.event.search_terms', []);
+    }
+
+    #[Test]
     public function only_active_events_of_tenants_with_web_booking_on_are_offered(): void
     {
         $event = $this->makeEvent();

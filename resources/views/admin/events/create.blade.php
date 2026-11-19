@@ -47,6 +47,9 @@
                             </div>
                         </div>
                     </div>
+                    <x-admin.form-field name="search_terms" label="كلمات البحث" type="textarea" rows="2" class="mt-3" :value="old('search_terms', $model?->search_terms)"
+                        placeholder="مثل: مهرجان صحار الخامس، Sohar Festival، تذاكر مهرجان صحار"
+                        help="أسماء أخرى للفعالية وكلمات يبحث بها الناس، بالعربية والإنجليزية، تفصل بينها فاصلة. تظهر في موقع الحجز تحت الفعالية، وتقرؤها محركات البحث." />
                 </x-admin.card>
 
                 <x-admin.card title="الصور" icon="images" subtitle="تظهر الصورة الرئيسية في البطاقات، ويظهر المعرض في صفحة الفعالية">

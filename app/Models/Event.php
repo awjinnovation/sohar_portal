@@ -13,7 +13,7 @@ class Event extends Model implements HasMedia
 
     use InteractsWithMedia;
     protected $fillable = [
-        'title', 'title_ar', 'description', 'description_ar', 'category_id',
+        'title', 'title_ar', 'description', 'description_ar', 'search_terms', 'category_id',
         'start_time', 'end_time', 'location', 'location_ar', 'map_location_id',
         'image_url', 'images', 'price', 'currency', 'available_tickets', 'total_tickets',
         'organizer_name', 'organizer_name_ar', 'is_featured', 'is_active', 'pricing',
@@ -31,6 +31,26 @@ class Event extends Model implements HasMedia
         'pricing' => 'array',
         'deposit_minor' => 'integer',
     ];
+
+    /**
+     * Other names and search words the organizer typed (comma, Arabic comma
+     * or new line between them), trimmed and without repeats; at most 20.
+     *
+     * @return list<string>
+     */
+    public function searchTerms(): array
+    {
+        $terms = preg_split('/[,\x{060C}\n]+/u', (string) $this->search_terms) ?: [];
+        $seen = [];
+        foreach ($terms as $term) {
+            $term = trim(preg_replace('/\s+/u', ' ', $term) ?? '');
+            if ($term !== '' && ! isset($seen[mb_strtolower($term)])) {
+                $seen[mb_strtolower($term)] = $term;
+            }
+        }
+
+        return array_slice(array_values($seen), 0, 20);
+    }
 
     public function category()
     {

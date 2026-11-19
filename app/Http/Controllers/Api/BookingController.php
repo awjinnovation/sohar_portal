@@ -110,6 +110,15 @@ class BookingController extends Controller
                     'venue' => $venue ?: null,
                     'image_url' => $event->image_url,
                     'ended' => $event->hasEnded(),
+                    // For search engines (the booking site's title, description and
+                    // schema.org Event): the description in this language, the event's
+                    // and organizer's names in the other languages, the organizer's
+                    // search words, and the times with their offset.
+                    'description' => PublicPage::pick($event, 'description', $lang) ?: null,
+                    'other_names' => $this->otherNames($event, $tenant, $lang),
+                    'search_terms' => $event->searchTerms(),
+                    'starts_at' => $event->start_time?->toIso8601String(),
+                    'ends_at' => $event->end_time?->toIso8601String(),
                 ],
                 'ticket_types' => $types->map(fn (EventTicketType $t) => [
                     'id' => $t->id,
@@ -364,6 +373,27 @@ class BookingController extends Controller
     }
 
     /** @return array{0: Event, 1: Tenant, 2: string} the event (ResolveBookingEvent), its tenant, the language. */
+    /**
+     * The event's and organizer's names other than the one shown in $lang
+     * (e.g. "Suhar Festival" beside «مهرجان صحار»), without repeats.
+     *
+     * @return list<string>
+     */
+    private function otherNames(Event $event, Tenant $tenant, string $lang): array
+    {
+        $shown = mb_strtolower(trim(PublicPage::pick($event, 'title', $lang)));
+        $names = [];
+        foreach ([$event->title, $event->title_ar, $tenant->localizedName('ar'), $tenant->localizedName('en')] as $name) {
+            $name = trim((string) $name);
+            $key = mb_strtolower($name);
+            if ($name !== '' && $key !== $shown && $key !== mb_strtolower($tenant->slug) && ! isset($names[$key])) {
+                $names[$key] = $name;
+            }
+        }
+
+        return array_values($names);
+    }
+
     private function scope(Request $request): array
     {
         return [$request->attributes->get(ResolveBookingEvent::EVENT), $this->context->get(), app()->getLocale()];

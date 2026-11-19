@@ -141,6 +141,7 @@ class EventController extends Controller
             'title_ar' => 'required|max:255',
             'description' => 'required',
             'description_ar' => 'required',
+            'search_terms' => 'nullable|string|max:1000',
             'category_id' => ['required', $this->tenantExists('categories')],
             'start_time' => 'required|date',
             'end_time' => 'required|date|after:start_time',
