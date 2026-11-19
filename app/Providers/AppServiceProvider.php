@@ -118,6 +118,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('visitor-page', fn (Request $r) => Limit::none());
         RateLimiter::for('visitor-checkout', fn (Request $r) => Limit::perMinute(10)
             ->by('visitor-checkout:'.(\Illuminate\Support\Facades\Auth::guard('visitor')->id() ?: $r->ip())));
+        // Booking without signing in: per browser form, and loosely per address
+        // (behind Cloudflare many visitors may share one).
+        RateLimiter::for('guest-checkout', fn (Request $r) => [
+            Limit::perMinute(10)->by('guest-checkout:'.substr((string) $r->input('form_key'), 0, 64)),
+            Limit::perMinute(120)->by('guest-checkout-ip:'.$r->ip()),
+        ]);
+        RateLimiter::for('guest-tickets', fn (Request $r) => Limit::perMinute(60)
+            ->by('guest-tickets:'.$r->ip().'|'.substr((string) $r->query('transaction_id'), 0, 64)));
         // Gateway webhooks: generous (bursts at peak), per source IP.
         RateLimiter::for('payment-webhooks', fn (Request $r) => Limit::perMinute(1200)->by('pay-webhook:'.$r->ip()));
     }

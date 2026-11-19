@@ -108,3 +108,8 @@ button.pb-icon-btn { font: inherit; font-weight: 600; font-size: 13.5px; cursor:
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
 .nojs { padding: 24px; text-align: center; font-family: system-ui, sans-serif; }
+
+/* Sign in, or book without signing in */
+.vb-or { display: flex; align-items: center; gap: 12px; margin: 2px 4px; font-size: 13px; font-weight: 600; }
+.vb-or::before, .vb-or::after { content: ''; flex: 1; height: 1px; background: var(--hairline); }
+.vb-guest { margin-top: 2px; }

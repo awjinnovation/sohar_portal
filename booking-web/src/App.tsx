@@ -8,7 +8,7 @@ import { TicketsExport } from './components/TicketsExport';
 import { HOME_URL } from './config';
 import { initialLang, strings, type Strings } from './i18n';
 import { Icon, type IconName } from './icons';
-import { loadAuth, loadPendingOtp, saveAuth, savePendingOtp, type Auth, type PendingOtp } from './storage';
+import { loadAuth, loadGuest, loadPendingOtp, saveAuth, saveGuest, savePendingOtp, type Auth, type GuestState, type PendingOtp } from './storage';
 import { applyLang, applyTheme } from './theme';
 
 /** /e/{id} (also /e/{id}/) → id. */
@@ -47,6 +47,7 @@ const ERROR: Record<string, [Tone, IconName]> = {
   gateway_not_available: ['error', 'x-circle'],
   network: ['error', 'wifi-off'],
   session_ended: ['warn', 'clock-history'],
+  guest_checkout_off: ['warn', 'lock'],
   unavailable: ['error', 'x-circle'],
 };
 
@@ -101,6 +102,9 @@ export function App() {
   const [auth, setAuth] = useState<Auth | null>(loadAuth);
   const [pending, setPending] = useState<PendingOtp | null>(() => (loadAuth() ? null : loadPendingOtp()));
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
+  // Booking without signing in (this window only): the choice, its orders, and their tickets.
+  const [guest, setGuestState] = useState<GuestState>(loadGuest);
+  const [guestTickets, setGuestTickets] = useState<Ticket[]>([]);
   const [notice, setNotice] = useState<Message | null>(takePaymentResult);
   const [error, setError] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
@@ -169,16 +173,65 @@ export function App() {
     return () => ctrl.abort();
   }, [auth, load, loadTickets]);
 
+  const setGuest = useCallback((next: GuestState) => {
+    saveGuest(next);
+    setGuestState(next);
+  }, []);
+
+  // Booking without signing in: chosen in this window, offered by the event, and not signed in.
+  const guestAllowed = !!data?.payments?.guest;
+  const guestOn = !auth && guest.on && guestAllowed;
+
+  // Orders this window made without signing in, for this event.
+  const guestOrders = guest.orders.filter((o) => o.event_id === eventId);
+  const guestKey = guestOrders.map((o) => o.transaction_id).join(',');
+
+  const loadGuestTickets = useCallback(
+    async (signal?: AbortSignal) => {
+      if (eventId === null || !guestKey) return;
+      const orders = loadGuest().orders.filter((o) => o.event_id === eventId);
+      const found: Ticket[] = [];
+      const gone: string[] = [];
+      for (const order of orders) {
+        try {
+          const res = await api.guestTickets(eventId, order.transaction_id, order.token, lang, signal);
+          found.push(...res.tickets);
+          if (['cancelled', 'failed'].includes(res.status)) gone.push(order.transaction_id);
+        } catch (e) {
+          if ((e as Error).name === 'AbortError') return;
+          // Unknown or no longer shown here (booking.guest_view_hours): forget it.
+          if (e instanceof ApiError && (e.status === 404 || e.status === 410)) gone.push(order.transaction_id);
+        }
+      }
+      setGuestTickets(found);
+      if (gone.length) {
+        const current = loadGuest();
+        setGuest({ ...current, orders: current.orders.filter((o) => !gone.includes(o.transaction_id)) });
+      }
+    },
+    [eventId, guestKey, lang, setGuest],
+  );
+
+  useEffect(() => {
+    if (!guestKey || load !== 'ready') return;
+    const ctrl = new AbortController();
+    loadGuestTickets(ctrl.signal);
+    return () => ctrl.abort();
+  }, [guestKey, load, loadGuestTickets]);
+
   // Back from a successful payment before the tickets show: look again a few times.
   const polls = useRef(0);
+  const shownTickets = [...(tickets ?? []), ...guestTickets];
   useEffect(() => {
-    if (notice?.key !== 'payment_success' || !auth || tickets === null || tickets.length > 0 || polls.current >= 4) return;
+    if (notice?.key !== 'payment_success' || shownTickets.length > 0 || polls.current >= 6) return;
+    if (!(auth && tickets !== null) && !guestKey) return;
     const id = setTimeout(() => {
       polls.current += 1;
-      loadTickets();
+      if (auth) loadTickets();
+      if (guestKey) loadGuestTickets();
     }, 2000);
     return () => clearTimeout(id);
-  }, [notice, auth, tickets, loadTickets]);
+  }, [notice, auth, tickets, guestKey, shownTickets.length, loadTickets, loadGuestTickets]);
 
   // Bring a new message into view (they sit above the form on a phone).
   useEffect(() => {
@@ -251,13 +304,28 @@ export function App() {
 
   const checkout = (order: Order, gateway?: string) =>
     run(async () => {
-      if (!auth) return;
+      if (!auth && !guestOn) return;
+      const body = { lang, form_key: formKey, ...order, ...(gateway ? { gateway } : {}) };
       let res;
       try {
-        res = await api.checkout(eventId!, auth.token, { lang, form_key: formKey, ...order, ...(gateway ? { gateway } : {}) });
+        if (auth) {
+          res = await api.checkout(eventId!, auth.token, body);
+        } else {
+          res = await api.guestCheckout(eventId!, body);
+          // Kept before leaving for the gateway: this window shows the tickets when it comes back.
+          const current = loadGuest();
+          if (!current.orders.some((o) => o.transaction_id === res!.transaction_id)) {
+            setGuest({ on: true, orders: [...current.orders, { event_id: eventId!, transaction_id: res.transaction_id, token: res.guest_token }] });
+          }
+        }
       } catch (e) {
         // That gateway was switched off meanwhile: reload the event to show the ones that are on.
         if (e instanceof ApiError && e.code === 'GATEWAY_NOT_AVAILABLE') setReloadKey((k) => k + 1);
+        // Booking without signing in was switched off: back to signing in.
+        if (e instanceof ApiError && e.code === 'GUEST_CHECKOUT_OFF') {
+          setGuest({ ...loadGuest(), on: false });
+          setReloadKey((k) => k + 1);
+        }
         throw e;
       }
       if (res.status === 'pending' && res.payment_url) {
@@ -269,8 +337,22 @@ export function App() {
       setFormKey(newFormKey());
       setNotice({ key: 'payment_success' });
       polls.current = 0;
-      await loadTickets();
+      if (auth) await loadTickets();
+      else await loadGuestTickets();
     });
+
+  const bookAsGuest = () => {
+    setGuest({ ...loadGuest(), on: true });
+    setNotice(null);
+    setError(null);
+  };
+
+  const leaveGuest = () => {
+    // Orders already made stay listed in this window.
+    setGuest({ ...loadGuest(), on: false });
+    setNotice(null);
+    setError(null);
+  };
 
   const signOut = () => {
     const token = auth?.token;
@@ -370,22 +452,37 @@ export function App() {
         ))}
       </div>
 
-      {tickets && tickets.length > 0 && (
+      {shownTickets.length > 0 && (
         <>
           <h2 className="vb-section-title">
-            <Icon name="qr-code" /> {t.yourTickets} <span className="muted num">({tickets.length})</span>
+            <Icon name="qr-code" /> {t.yourTickets} <span className="muted num">({shownTickets.length})</span>
           </h2>
-          <TicketsExport tickets={tickets} eventTitle={event.title} brand={tenant.name} filePrefix={tenant.file_prefix} lang={lang} t={t} />
-          <div data-visitor-tickets={tickets.length}>
-            {tickets.map((ticket) => (
+          {guestTickets.length > 0 && (
+            <Note tone="warn" icon="file-earmark-pdf">
+              {t.guestSaveNow}
+            </Note>
+          )}
+          <TicketsExport tickets={shownTickets} eventTitle={event.title} brand={tenant.name} filePrefix={tenant.file_prefix} lang={lang} t={t} />
+          <div data-visitor-tickets={shownTickets.length}>
+            {shownTickets.map((ticket) => (
               <TicketCard key={ticket.id} ticket={ticket} eventTitle={event.title} brand={tenant.name} filePrefix={tenant.file_prefix} lang={lang} t={t} />
             ))}
           </div>
         </>
       )}
 
-      {!auth ? (
-        <SignIn tenant={tenant} t={t} pending={pending} busy={busy} onSend={sendCode} onVerify={verifyCode} onChangeNumber={changeNumber} />
+      {!auth && !guestOn ? (
+        <SignIn
+          tenant={tenant}
+          t={t}
+          pending={pending}
+          busy={busy}
+          guestAllowed={guestAllowed && !event.ended && onSale}
+          onSend={sendCode}
+          onVerify={verifyCode}
+          onChangeNumber={changeNumber}
+          onGuest={bookAsGuest}
+        />
       ) : event.ended ? (
         <Note tone="warn" icon="calendar-x">
           {t.ended}
@@ -395,7 +492,18 @@ export function App() {
           {t.closed}
         </Note>
       ) : (
-        <BookingForm key={formKey} data={data} t={t} hasTickets={!!tickets?.length} busy={busy} onSubmit={checkout} />
+        <BookingForm key={formKey} data={data} t={t} hasTickets={shownTickets.length > 0} guest={guestOn} busy={busy} onSubmit={checkout} />
+      )}
+
+      {guestOn && (
+        <div className="vb-who">
+          <span className="muted">
+            <Icon name="person-circle" /> {t.guestMode}
+          </span>
+          <button type="button" className="vb-link" onClick={leaveGuest}>
+            {t.guestSignIn}
+          </button>
+        </div>
       )}
 
       {auth && (

@@ -62,3 +62,30 @@ export function loadPendingOtp(): PendingOtp | null {
 export function savePendingOtp(otp: PendingOtp | null): void {
   writeJson('session', OTP_KEY, otp);
 }
+
+/**
+ * Booking without signing in (this tab only, sessionStorage): the choice, and
+ * the orders whose tickets this window may show. Closing the window forgets
+ * them, so the visitor saves the tickets as PDF.
+ */
+export interface GuestOrder {
+  event_id: number;
+  transaction_id: string;
+  token: string;
+}
+
+export interface GuestState {
+  on: boolean;
+  orders: GuestOrder[];
+}
+
+const GUEST_KEY = 'booking-guest';
+
+export function loadGuest(): GuestState {
+  const g = readJson<GuestState>('session', GUEST_KEY);
+  return { on: !!g?.on, orders: Array.isArray(g?.orders) ? g!.orders : [] };
+}
+
+export function saveGuest(g: GuestState): void {
+  writeJson('session', GUEST_KEY, g);
+}

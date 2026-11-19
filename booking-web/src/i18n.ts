@@ -36,6 +36,7 @@ const ar = {
   unavailable: 'الحجز غير متاح الآن. أعد المحاولة لاحقًا.',
   network: 'تعذّر الاتصال بالخادم. تحقق من اتصالك بالإنترنت ثم أعد المحاولة.',
   session_ended: 'انتهت مدة تسجيل الدخول. سجّل الدخول برقم هاتفك مرة أخرى.',
+  guest_checkout_off: 'الحجز دون تسجيل الدخول غير متاح الآن. سجّل الدخول برقم هاتفك.',
 
   // states
   notFoundTitle: 'الفعالية غير متاحة',
@@ -62,8 +63,8 @@ const ar = {
   status: { active: 'صالحة', used: 'مستخدمة', expired: 'منتهية', cancelled: 'ملغاة', refunded: 'مستردة' } as Record<string, string>,
 
   // sign in
-  yourPhone: 'رقم هاتفك',
-  phoneLead: 'نرسل لك رمزًا للتحقق. لا حاجة لإنشاء حساب.',
+  yourPhone: 'سجّل الدخول برقم هاتفك',
+  phoneLead: 'تبقى تذاكرك محفوظة برقم هاتفك، فتفتحها متى شئت من هذا الموقع أو من التطبيق، ويجدها المنظّم برقمك إذا احتجت إلى المساعدة. نرسل لك رمزًا للتحقق، ولا حاجة لإنشاء حساب.',
   phoneNumber: 'رقم الهاتف',
   sendCode: 'أرسل الرمز',
   codeTitle: 'رمز التحقق',
@@ -71,6 +72,16 @@ const ar = {
   verify: 'تحقق وتابع',
   resend: 'أعد إرسال الرمز',
   changeNumber: 'غيّر الرقم',
+
+  // booking without signing in
+  or: 'أو',
+  guestTitle: 'احجز دون تسجيل الدخول',
+  guestLead: 'لن تصلك رسالة نصية، ولن تُحفظ التذاكر برقم هاتفك. تظهر تذاكرك بعد الدفع في هذه النافذة فقط، فاحفظها بصيغة PDF قبل إغلاقها.',
+  guestContinue: 'تابع دون تسجيل الدخول',
+  guestMode: 'تحجز دون تسجيل الدخول',
+  guestSignIn: 'سجّل الدخول بدلًا من ذلك',
+  guestSaveNow: 'احفظ تذاكرك الآن بصيغة PDF. تظهر في هذه النافذة فقط، ولن تصلك رسالة نصية، ولا يمكن استرجاعها بعد إغلاقها.',
+  secureGuest: 'يتم الدفع عبر بوابة الدفع الآمنة. تظهر تذاكرك هنا بعد الدفع، في هذه النافذة فقط.',
 
   // booking
   chooseTickets: 'اختر تذاكرك',
@@ -129,6 +140,7 @@ const en: Strings = {
   unavailable: 'Booking is not available right now. Try again later.',
   network: 'Could not reach the server. Check your internet connection and try again.',
   session_ended: 'Your sign-in has ended. Sign in again with your phone number.',
+  guest_checkout_off: 'Booking without signing in is not available right now. Sign in with your phone number.',
 
   notFoundTitle: 'Event not available',
   notFound: 'We could not find this event, or online booking is not available for it.',
@@ -152,8 +164,8 @@ const en: Strings = {
   exportFailed: 'Could not prepare the file. Try again, or save each ticket on its own.',
   status: { active: 'Valid', used: 'Used', expired: 'Expired', cancelled: 'Cancelled', refunded: 'Refunded' },
 
-  yourPhone: 'Your phone number',
-  phoneLead: 'We will text you a code. No account needed.',
+  yourPhone: 'Sign in with your phone number',
+  phoneLead: 'Your tickets stay saved under your number: open them any time on this site or in the app, and the organizer can find them by your number if you need help. We will text you a code. No account needed.',
   phoneNumber: 'Phone number',
   sendCode: 'Send code',
   codeTitle: 'Verification code',
@@ -161,6 +173,15 @@ const en: Strings = {
   verify: 'Verify and continue',
   resend: 'Resend code',
   changeNumber: 'Change number',
+
+  or: 'or',
+  guestTitle: 'Book without signing in',
+  guestLead: "You won't get a text message, and the tickets are not saved under a phone number. After payment your tickets show in this window only, so save them as a PDF before you close it.",
+  guestContinue: 'Continue without signing in',
+  guestMode: 'Booking without signing in',
+  guestSignIn: 'Sign in instead',
+  guestSaveNow: "Save your tickets as a PDF now. They show in this window only, you won't get a text message, and they can't be recovered once it's closed.",
+  secureGuest: 'You pay through the secure payment gateway. Your tickets show here after payment, in this window only.',
 
   chooseTickets: 'Choose your tickets',
   bookMore: 'Book more tickets',

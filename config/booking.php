@@ -23,4 +23,11 @@ return [
     // every time (cheap 304 on the ETag). Availability is checked again at
     // checkout, so a few seconds of staleness never oversells.
     'cdn_max_age' => (int) env('BOOKING_CDN_MAX_AGE', 15),
+
+    // Booking without signing in (no phone, no SMS): the order belongs to the
+    // tenant's web guest account, and its tickets are shown only in the
+    // browser window that booked them, to be saved as PDF. The API serves them
+    // to that window's key for guest_view_hours after the order.
+    'guest_checkout' => filter_var(env('BOOKING_GUEST_CHECKOUT', true), FILTER_VALIDATE_BOOL),
+    'guest_view_hours' => (int) env('BOOKING_GUEST_VIEW_HOURS', 24),
 ];

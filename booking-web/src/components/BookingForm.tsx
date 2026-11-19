@@ -15,11 +15,13 @@ export function BookingForm(props: {
   data: EventPayload;
   t: Strings;
   hasTickets: boolean;
+  /** Booking without signing in: the footnote says where the tickets show. */
+  guest?: boolean;
   busy: boolean;
   /** gateway: the button pressed when two gateways are on (absent = the default). */
   onSubmit: (order: Order, gateway?: string) => void;
 }) {
-  const { data, t, hasTickets, busy, onSubmit } = props;
+  const { data, t, hasTickets, guest, busy, onSubmit } = props;
   const { tenant, ticket_types: types, dates } = data;
   const gateways = data.payments?.gateways ?? [];
   const [date, setDate] = useState<string | null>(() => dates.find((d) => d.available !== 0)?.date ?? null);
@@ -164,7 +166,7 @@ export function BookingForm(props: {
         </button>
       )}
       <p className="muted vb-secure">
-        <Icon name="shield-lock" /> {t.secure}
+        <Icon name="shield-lock" /> {guest ? t.secureGuest : t.secure}
       </p>
     </form>
   );

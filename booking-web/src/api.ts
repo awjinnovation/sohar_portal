@@ -72,7 +72,7 @@ export interface EventPayload {
   dates: BookingDate[];
   today: string;
   /** Two or more payment gateways on: one pay button each (names in the page language); empty or absent = one button. */
-  payments?: { gateways: { id: string; name: string }[] };
+  payments?: { gateways: { id: string; name: string }[]; guest?: boolean };
 }
 
 export interface Ticket {
@@ -170,4 +170,20 @@ export const api = {
   ) => request<{ status: 'completed' | 'pending'; payment_url?: string }>(`${ev(id)}/checkout`, { method: 'POST', token, body }),
 
   logout: (id: number, token: string) => request<void>(`${ev(id)}/logout`, { method: 'POST', token, body: {} }),
+
+  /** Booking without signing in: the answer carries the key that shows this order's tickets. */
+  guestCheckout: (
+    id: number,
+    body: { lang: Lang; form_key: string; booking_date: string | null; items: { ticket_type_id: number; quantity: number }[]; gateway?: string },
+  ) =>
+    request<{ status: 'completed' | 'pending'; payment_url?: string; transaction_id: string; guest_token: string }>(`${ev(id)}/guest/checkout`, {
+      method: 'POST',
+      body,
+    }),
+
+  guestTickets: (id: number, transactionId: string, key: string, lang: Lang, signal?: AbortSignal) =>
+    request<{ status: string; tickets: Ticket[] }>(
+      `${ev(id)}/guest/tickets?${new URLSearchParams({ transaction_id: transactionId, token: key, lang })}`,
+      { signal },
+    ),
 };

@@ -3,10 +3,12 @@
 namespace Tests\Feature\Platform;
 
 use App\Http\Controllers\Web\VisitorBookingController;
+use App\Jobs\SendOtpSms;
 use App\Models\Event;
 use App\Models\EventTicketType;
 use App\Models\Payment;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Support\TenantTime;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -56,6 +58,20 @@ class BookingApiTest extends TestCase
             'lang' => 'en', 'form_key' => 'form-1', 'booking_date' => TenantTime::today($this->tenant),
             'items' => [['ticket_type_id' => $this->general($event)->id, 'quantity' => $quantity]],
         ], $extra));
+    }
+
+    /** Booking without signing in (no token). */
+    private function bookAsGuest(Event $event, int $quantity, string $formKey = 'guest-form-0000000001')
+    {
+        return $this->postJson($this->url($event, '/guest/checkout'), [
+            'lang' => 'en', 'form_key' => $formKey, 'booking_date' => TenantTime::today($this->tenant),
+            'items' => [['ticket_type_id' => $this->general($event)->id, 'quantity' => $quantity]],
+        ]);
+    }
+
+    private function guestTickets(Event $event, string $transactionId, string $key)
+    {
+        return $this->getJson($this->url($event, '/guest/tickets').'?'.http_build_query(['transaction_id' => $transactionId, 'token' => $key, 'lang' => 'en']));
     }
 
     private function fakeCompleteUrl(string $paymentUrl): string
@@ -166,6 +182,74 @@ class BookingApiTest extends TestCase
 
         $this->book($event, $token, 3)->assertOk()->assertJsonPath('data.status', 'completed');
         $this->withToken($token)->getJson($this->url($event, '/tickets'))->assertJsonCount(3, 'data.tickets');
+    }
+
+    #[Test]
+    public function a_guest_books_without_signing_in_and_only_its_key_shows_the_tickets(): void
+    {
+        $event = $this->makeEvent(null, ['price' => '2.500']);
+        $this->getJson($this->url($event))->assertOk()->assertJsonPath('data.payments.guest', true);
+
+        $res = $this->bookAsGuest($event, 2)->assertOk()->assertJsonPath('data.status', 'pending');
+        [$tx, $key, $paymentUrl] = [$res->json('data.transaction_id'), $res->json('data.guest_token'), $res->json('data.payment_url')];
+        $this->assertStringContainsString('/payment/redirect/', $paymentUrl);
+        $payment = Payment::withoutTenantScope()->where('transaction_id', $tx)->firstOrFail();
+        $this->assertTrue($payment->metadata['guest_booking']);
+        $guest = User::findOrFail($payment->user_id);
+        $this->assertNull($guest->phone_number);
+        $this->assertStringEndsWith('@guest.invalid', $guest->email);
+        Queue::assertNotPushed(SendOtpSms::class); // no code, no SMS
+
+        $this->guestTickets($event, $tx, $key)->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('data.status', 'pending')->assertJsonPath('data.tickets', []);
+
+        // Gateway → /payment/success → back on the booking site, like a signed-in visitor.
+        $success = $this->post($this->fakeCompleteUrl($paymentUrl), ['result' => 'success'])->assertRedirect()->headers->get('Location');
+        $this->get($success)->assertRedirect(self::SITE."/e/{$event->id}?lang=en&payment=success");
+
+        $tickets = $this->guestTickets($event, $tx, $key)->assertOk()
+            ->assertJsonPath('data.status', 'completed')->assertJsonCount(2, 'data.tickets')
+            ->assertJsonPath('data.tickets.0.status', 'active')->json('data.tickets');
+        $this->assertNotEmpty($tickets[0]['qr_code']);
+
+        // Without its key, or on another event's page: nothing.
+        $this->guestTickets($event, $tx, str_repeat('0', 40))->assertNotFound();
+        $this->guestTickets($this->makeEvent(), $tx, $key)->assertNotFound();
+        // A signed-in visitor never sees them.
+        $this->withToken($this->signIn($event))->getJson($this->url($event, '/tickets'))->assertJsonPath('data.tickets', []);
+
+        // After booking.guest_view_hours the key no longer shows them.
+        $this->travel(25)->hours();
+        $this->guestTickets($event, $tx, $key)->assertStatus(410)->assertJsonPath('code', 'GUEST_TICKETS_EXPIRED');
+    }
+
+    #[Test]
+    public function guest_orders_are_kept_apart_and_free_guest_tickets_show_at_once(): void
+    {
+        $event = $this->makeEvent(null, ['price' => '1.000']);
+        $first = $this->bookAsGuest($event, 1, 'guest-form-aaaaaaaaaaaa')->assertOk()->json('data');
+        // A double tap of the same form reuses its payment; another visitor's form is another order.
+        $this->bookAsGuest($event, 1, 'guest-form-aaaaaaaaaaaa')->assertJsonPath('data.transaction_id', $first['transaction_id']);
+        $second = $this->bookAsGuest($event, 1, 'guest-form-bbbbbbbbbbbb')->assertOk()->json('data');
+        $this->assertNotSame($first['transaction_id'], $second['transaction_id']);
+        $this->guestTickets($event, $second['transaction_id'], $first['guest_token'])->assertNotFound();
+
+        $free = $this->makeEvent(null, ['price' => '0.000']);
+        $res = $this->bookAsGuest($free, 3)->assertOk()->assertJsonPath('data.status', 'completed');
+        $this->guestTickets($free, $res->json('data.transaction_id'), $res->json('data.guest_token'))
+            ->assertOk()->assertJsonCount(3, 'data.tickets');
+    }
+
+    #[Test]
+    public function guest_booking_needs_a_form_key_and_can_be_switched_off(): void
+    {
+        $event = $this->makeEvent(null, ['price' => '1.000']);
+        $this->bookAsGuest($event, 1, 'short')->assertUnprocessable();
+
+        config(['booking.guest_checkout' => false]);
+        $this->getJson($this->url($event))->assertOk()->assertJsonPath('data.payments.guest', false);
+        $this->bookAsGuest($event, 1)->assertForbidden()->assertJsonPath('code', 'GUEST_CHECKOUT_OFF');
+        $this->assertSame(0, Payment::withoutTenantScope()->count());
     }
 
     #[Test]

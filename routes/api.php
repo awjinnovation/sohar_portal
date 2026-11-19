@@ -311,6 +311,9 @@ Route::prefix('v1/booking/events/{event}')->whereNumber('event')
         Route::get('/', [$c, 'show'])->middleware(['throttle:visitor-page', 'cache.api:live'])->name('event');
         Route::post('/otp', [$c, 'sendOtp'])->middleware('throttle:otp-send')->name('otp');
         Route::post('/verify', [$c, 'verifyOtp'])->middleware('throttle:otp-verify')->name('verify');
+        // Booking without signing in (no phone, no SMS; booking.guest_checkout).
+        Route::post('/guest/checkout', [$c, 'guestCheckout'])->middleware('throttle:guest-checkout')->name('guest.checkout');
+        Route::get('/guest/tickets', [$c, 'guestTickets'])->middleware('throttle:guest-tickets')->name('guest.tickets');
         Route::middleware('auth:sanctum')->group(function () use ($c) {
             Route::get('/tickets', [$c, 'tickets'])->name('tickets');
             Route::post('/checkout', [$c, 'checkout'])->middleware('throttle:money')->name('checkout');

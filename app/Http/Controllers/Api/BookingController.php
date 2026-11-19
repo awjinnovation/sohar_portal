@@ -11,9 +11,11 @@ use App\Models\EventTicketType;
 use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Services\Auth\OtpService;
 use App\Services\Gate\BoxOfficeService;
 use App\Services\Payments\CheckoutService;
+use App\Services\Payments\GatewayCheckouts;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Support\TenantTime;
 use App\Tenancy\TenantContext;
@@ -22,7 +24,9 @@ use App\View\TenantTheme;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -39,13 +43,19 @@ use Illuminate\Validation\ValidationException;
  * GET  /api/v1/booking/events/{event}/tickets   the visitor's tickets for this event   (token)
  * POST /api/v1/booking/events/{event}/checkout  order → payment_url, or completed if free (token)
  * POST /api/v1/booking/events/{event}/logout    revoke the token                      (token)
+ * POST /api/v1/booking/events/{event}/guest/checkout  order without signing in → payment_url | completed,
+ *                                               transaction_id + guest_token (no phone, no SMS)
+ * GET  /api/v1/booking/events/{event}/guest/tickets   ?transaction_id&token → status + that order's tickets
+ *                                               (booking.guest_view_hours after the order; the site keeps the
+ *                                               key in the browser window only, so the visitor saves a PDF)
  *
  * Errors: {success:false, code, message, data?}. Codes the site shows a
  * message for: INVALID_PHONE, OTP_INVALID (data.attempts_remaining),
  * OTP_EXPIRED, OTP_ATTEMPTS_EXCEEDED, TOO_MANY_REQUESTS, ITEMS_REQUIRED,
  * DATE_REQUIRED, DATE_INVALID, SOLD_OUT (data.available), PER_ORDER_LIMIT
  * (data.per_order_max), SALES_CLOSED, TYPE_NOT_AVAILABLE, UNAVAILABLE,
- * GATEWAY_NOT_AVAILABLE (checkout `gateway` not on; data.available).
+ * GATEWAY_NOT_AVAILABLE (checkout `gateway` not on; data.available),
+ * GUEST_CHECKOUT_OFF, GUEST_TICKETS_EXPIRED, NOT_FOUND.
  *
  * Gateways: GET → `payments.gateways` [{id, name}] (names in ?lang), empty
  * when only one gateway is on; checkout accepts `gateway` (one of those ids,
@@ -122,7 +132,11 @@ class BookingController extends Controller
                 ], $dates),
                 'today' => $today,
                 // Two or more gateways on: the site shows one pay button each; [] = one button, the default gateway.
-                'payments' => ['gateways' => VisitorBookingController::gatewayChoices($tenant, $lang)],
+                'payments' => [
+                    'gateways' => VisitorBookingController::gatewayChoices($tenant, $lang),
+                    // Booking without signing in is offered (POST …/guest/checkout).
+                    'guest' => (bool) config('booking.guest_checkout', true),
+                ],
             ],
         ]);
     }
@@ -179,7 +193,14 @@ class BookingController extends Controller
 
         return response()->json(['success' => true, 'data' => [
             'phone_masked' => VisitorBookingController::maskedPhone($user->phone_number),
-            'tickets' => $tickets->map(function (Ticket $ticket) use ($lang) {
+            'tickets' => $this->ticketRows($tickets, $lang),
+        ]]);
+    }
+
+    /** @param \Illuminate\Support\Collection<int, Ticket> $tickets */
+    private function ticketRows($tickets, string $lang): array
+    {
+        return $tickets->map(function (Ticket $ticket) use ($lang) {
                 $type = $ticket->ticketType;
                 $admits = $ticket->admits();
 
@@ -197,11 +218,86 @@ class BookingController extends Controller
                     'admits_label' => $admits > 1 ? trans_choice('gate.people', $admits, ['count' => $admits], $lang) : null,
                     'requires_id' => (bool) $type?->requires_id,
                 ];
-            })->values()->all(),
-        ]]);
+            })->values()->all();
     }
 
     public function checkout(Request $request, CheckoutService $checkout, PaymentGatewayManager $gateways): JsonResponse
+    {
+        $payment = $this->placeOrder($request, $request->user(), $checkout);
+
+        return $payment instanceof JsonResponse ? $payment : $this->orderResponse($payment, $gateways, $request);
+    }
+
+    /**
+     * Booking without signing in: no phone, no code, no SMS. The order
+     * belongs to the tenant's web guest account; the visitor sees its
+     * tickets through guest_token in the browser window that booked them.
+     */
+    public function guestCheckout(Request $request, CheckoutService $checkout, PaymentGatewayManager $gateways): JsonResponse
+    {
+        [, $tenant] = $this->scope($request);
+        if (! config('booking.guest_checkout', true)) {
+            return $this->error('GUEST_CHECKOUT_OFF', 'Sign in with your phone number to book', 403);
+        }
+        // The idempotency key comes from the form key: each browser form has its own.
+        $request->validate(['form_key' => ['required', 'string', 'min:16', 'max:64']]);
+
+        $payment = $this->placeOrder($request, self::guestUser($tenant), $checkout, ['guest_booking' => true]);
+        if ($payment instanceof JsonResponse) {
+            return $payment;
+        }
+
+        return $this->orderResponse($payment, $gateways, $request, [
+            'transaction_id' => $payment->transaction_id,
+            'guest_token' => self::guestToken($payment->transaction_id),
+        ]);
+    }
+
+    /** Status and tickets of one guest order, for the window holding its key. */
+    public function guestTickets(Request $request): JsonResponse
+    {
+        [$event, , $lang] = $this->scope($request);
+        $data = $request->validate(['transaction_id' => ['required', 'string', 'max:64'], 'token' => ['required', 'string', 'max:128']]);
+
+        $payment = Payment::where('transaction_id', $data['transaction_id'])->first();
+        if (! $payment || ! ($payment->metadata['guest_booking'] ?? false)
+            || (int) ($payment->metadata['event_id'] ?? $payment->payable_id) !== (int) $event->id
+            || ! hash_equals(self::guestToken($payment->transaction_id), (string) $data['token'])) {
+            return $this->error('NOT_FOUND', 'Booking not found', 404);
+        }
+        if ($payment->created_at->lt(now()->subHours(max(1, (int) config('booking.guest_view_hours', 24))))) {
+            return $this->error('GUEST_TICKETS_EXPIRED', 'These tickets can no longer be shown here', 410);
+        }
+
+        // Like the app's status poll: a pending card payment is checked with the gateway (throttled).
+        $payment = GatewayCheckouts::checkIfStale($payment);
+        $tickets = $payment->status === 'completed'
+            ? Ticket::with('ticketType')->where('transaction_id', $payment->transaction_id)->where('event_id', $event->id)->orderBy('id')->get()
+            : collect();
+
+        return response()->json(['success' => true, 'data' => [
+            'status' => $payment->status,
+            'tickets' => $this->ticketRows($tickets, $lang),
+        ]])->header('Cache-Control', 'no-store, private');
+    }
+
+    /** The tenant's account that owns orders made without signing in (nobody signs in to it). */
+    public static function guestUser(Tenant $tenant): User
+    {
+        return User::firstOrCreate(
+            ['email' => 'web-guest+'.$tenant->id.'@guest.invalid'],
+            ['name' => 'Web guest', 'password' => Hash::make(Str::random(40))],
+        );
+    }
+
+    /** Key of one guest order's tickets (kept by the booking window that made it). */
+    public static function guestToken(string $transactionId): string
+    {
+        return substr(hash_hmac('sha256', 'booking-guest|'.$transactionId, (string) config('app.key')), 0, 40);
+    }
+
+    /** Validates and places the order; an error response when it cannot be placed. */
+    private function placeOrder(Request $request, User $user, CheckoutService $checkout, array $extraMeta = []): Payment|JsonResponse
     {
         [$event, $tenant, $lang] = $this->scope($request);
         $data = $request->validate([
@@ -225,7 +321,7 @@ class BookingController extends Controller
         }
 
         try {
-            $payment = $checkout->initialize($request->user(), $tenant, [
+            $payment = $checkout->initialize($user, $tenant, [
                 'event_id' => $event->id,
                 'booking_date' => $date,
                 'items' => $items,
@@ -233,19 +329,26 @@ class BookingController extends Controller
                 'gateway' => $data['gateway'] ?? null,
                 // A double tap of the same order reuses its payment; a changed order (or gateway) is a new one (as on the page).
                 'idempotency_key' => VisitorBookingController::webKey($data['form_key'] ?? null, $items, $date, $data['gateway'] ?? null),
-            ], ['web_booking' => true, 'web_booking_lang' => $lang]);
+            ], ['web_booking' => true, 'web_booking_lang' => $lang] + $extraMeta);
         } catch (ValidationException $e) {
             return isset($e->errors()['booking_date'])
                 ? $this->error('DATE_REQUIRED', 'Choose the day of your visit', 422)
                 : $this->error('ITEMS_REQUIRED', 'Choose at least one ticket', 422);
         }
 
+        return $payment;
+    }
+
+    private function orderResponse(Payment $payment, PaymentGatewayManager $gateways, Request $request, array $extra = []): JsonResponse
+    {
+        [, , $lang] = $this->scope($request);
+
         return match (true) {
-            $payment->status === 'completed' => response()->json(['success' => true, 'data' => ['status' => 'completed']]),
+            $payment->status === 'completed' => response()->json(['success' => true, 'data' => ['status' => 'completed'] + $extra]),
             $payment->isPending() => response()->json(['success' => true, 'data' => [
                 'status' => 'pending',
                 'payment_url' => $gateways->paymentUrl($payment, ['lang' => $lang]),
-            ]]),
+            ] + $extra]),
             default => $this->error('UNAVAILABLE', 'Booking is not available right now', 409),
         };
     }

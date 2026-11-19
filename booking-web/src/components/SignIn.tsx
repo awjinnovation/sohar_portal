@@ -4,17 +4,24 @@ import type { Strings } from '../i18n';
 import { Icon } from '../icons';
 import type { PendingOtp } from '../storage';
 
-/** Phone, then the 6-digit code (one card, two steps: the page's data-visitor-step). */
+/**
+ * Phone, then the 6-digit code (one card, two steps: the page's
+ * data-visitor-step). Under the phone step, when the event allows it, the
+ * second way in: booking without signing in (no SMS; the tickets show in this
+ * window only, to be saved as PDF).
+ */
 export function SignIn(props: {
   tenant: Tenant;
   t: Strings;
   pending: PendingOtp | null;
   busy: boolean;
+  guestAllowed: boolean;
   onSend: (phone: string) => void;
   onVerify: (code: string) => void;
   onChangeNumber: () => void;
+  onGuest: () => void;
 }) {
-  const { tenant, t, pending, busy, onSend, onVerify, onChangeNumber } = props;
+  const { tenant, t, pending, busy, guestAllowed, onSend, onVerify, onChangeNumber, onGuest } = props;
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const codeRef = useRef<HTMLInputElement>(null);
@@ -35,6 +42,7 @@ export function SignIn(props: {
 
   if (!pending) {
     return (
+      <>
       <section className="s-card" data-visitor-step="phone">
         <h2>
           <Icon name="phone" /> {t.yourPhone}
@@ -61,6 +69,23 @@ export function SignIn(props: {
           </button>
         </form>
       </section>
+      {guestAllowed && (
+        <>
+          <p className="vb-or muted" aria-hidden="true">
+            <span>{t.or}</span>
+          </p>
+          <section className="s-card" data-visitor-step="guest">
+            <h2>
+              <Icon name="ticket-perforated" /> {t.guestTitle}
+            </h2>
+            <p className="muted vb-lead">{t.guestLead}</p>
+            <button type="button" className="btn btn-outline vb-guest" disabled={busy} onClick={onGuest}>
+              <Icon name="cart" /> {t.guestContinue}
+            </button>
+          </section>
+        </>
+      )}
+      </>
     );
   }
 
