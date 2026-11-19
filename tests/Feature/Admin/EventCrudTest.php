@@ -318,6 +318,12 @@ class EventCrudTest extends TestCase
 
         $response->assertRedirect(route('admin.events.index'));
         $response->assertSessionHas('success', 'حُدِّثت الفعالية');
+
+        // Search words: a field on the edit page, saved with the event.
+        $this->get(route('admin.events.edit', $event))->assertOk()->assertSee('name="search_terms"', false);
+        $this->put(route('admin.events.update', $event), ['search_terms' => 'مهرجان صحار الخامس، Sohar Festival'] + $updatedData)
+            ->assertRedirect(route('admin.events.index'));
+        $this->assertSame(['مهرجان صحار الخامس', 'Sohar Festival'], $event->fresh()->searchTerms());
     }
 
     #[Test]
