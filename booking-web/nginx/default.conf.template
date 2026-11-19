@@ -19,11 +19,13 @@ map "$status:$uri" $booking_cache_control {
     "~:/healthz$"                   "no-store";
 }
 
-# Search engines may index the event pages only (/e/123, any query); every other
-# address gets "noindex". $request_uri, since try_files rewrites $uri to
-# /index.html. An empty value sends no header.
+# Search engines may index the events index "/" and the event pages (/e/123, any
+# query); every other address gets "noindex". The index page itself adds the
+# noindex meta tag in the app when it has no events to list. $request_uri, since
+# try_files rewrites $uri to /index.html. An empty value sends no header.
 map $request_uri $booking_robots {
     default                         "noindex";
+    "~^/(\?|$)"                     "";
     "~^/e/[0-9]+/?(\?|$)"          "";
 }
 

@@ -75,6 +75,13 @@ export interface EventPayload {
   payments?: { gateways: { id: string; name: string }[]; guest?: boolean };
 }
 
+/** One approved (published) event, for the index at "/" (public catalogue GET /api/v1/events). */
+export interface EventSummary {
+  id: number;
+  title: string;
+  image_url: string | null;
+}
+
 export interface Ticket {
   id: number;
   number: string;
@@ -144,9 +151,36 @@ async function request<T>(path: string, { method = 'GET', body, token, signal }:
 
 const ev = (id: number) => `/events/${id}`;
 
+/** The public catalogue (outside /booking): a token-less GET, so no preflight and CDN-cacheable. */
+async function catalogue<T>(path: string, signal?: AbortSignal): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/v1${path}`, { headers: { Accept: 'application/json' }, signal, credentials: 'omit', mode: 'cors', referrerPolicy: 'no-referrer' });
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') throw e;
+    throw new ApiError(0, 'NETWORK');
+  }
+  let json: { success?: boolean; code?: string; data?: unknown } | null = null;
+  try {
+    json = await response.json();
+  } catch {
+    json = null;
+  }
+  if (!response.ok || !json || json.success === false) {
+    throw new ApiError(response.status, json?.code ?? 'UNAVAILABLE', (json?.data as Record<string, unknown>) ?? {});
+  }
+  return json.data as T;
+}
+
 export const api = {
   event: (id: number, lang: Lang | null, signal?: AbortSignal) =>
     request<EventPayload>(`${ev(id)}${lang ? `?lang=${lang}` : ''}`, { signal }),
+
+  /** Approved (published) events for the index at "/"; titles follow the language. */
+  events: (lang: Lang | null, signal?: AbortSignal): Promise<EventSummary[]> =>
+    catalogue<{ id: number | string; title: string; image_url: string | null }[]>(`/events${lang ? `?lang=${lang}` : ''}`, signal).then((rows) =>
+      rows.map((r) => ({ id: Number(r.id), title: r.title, image_url: r.image_url ?? null })),
+    ),
 
   sendOtp: (id: number, phone: string, lang: Lang) =>
     request<{ phone: string; phone_masked: string; expires_in: number; otp?: string }>(`${ev(id)}/otp`, {

@@ -28,6 +28,20 @@ export function setEventHead(title: string, description: string): void {
   document.head.querySelector('meta[name="robots"]')?.remove();
 }
 
+/** The events index at "/": its title and description, canonical to the site root. */
+export function setIndexHead(title: string, description: string): void {
+  document.title = title;
+  meta('description').content = description;
+  let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'canonical';
+    document.head.appendChild(link);
+  }
+  link.href = location.origin + '/';
+  document.head.querySelector('meta[name="robots"]')?.remove();
+}
+
 /** A page with no event to show: keep it out of search results. */
 export function setNoIndex(): void {
   meta('robots').content = 'noindex';

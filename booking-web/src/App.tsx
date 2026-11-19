@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, api, type EventPayload, type Lang, type Ticket } from './api';
+import { ApiError, api, type EventPayload, type EventSummary, type Lang, type Tenant, type Ticket } from './api';
 import { BookingForm, type Order } from './components/BookingForm';
 import { Layout, Note, type Tone } from './components/Layout';
 import { SignIn } from './components/SignIn';
 import { TicketCard } from './components/TicketCard';
 import { TicketsExport } from './components/TicketsExport';
 import { HOME_URL } from './config';
-import { setEventHead, setNoIndex } from './head';
+import { setEventHead, setIndexHead, setNoIndex } from './head';
 import { initialLang, strings, type Strings } from './i18n';
 import { Icon, type IconName } from './icons';
 import { loadAuth, loadGuest, loadPendingOtp, saveAuth, saveGuest, savePendingOtp, type Auth, type GuestState, type PendingOtp } from './storage';
@@ -110,6 +110,8 @@ export function App() {
   const [error, setError] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [formKey, setFormKey] = useState(newFormKey);
+  // The index at "/" (no event in the address): the approved events, or a help card.
+  const [index, setIndex] = useState<{ kind: 'loading' | 'empty' } | { kind: 'list'; tenant: Tenant; events: EventSummary[] }>({ kind: 'loading' });
   const notesRef = useRef<HTMLDivElement>(null);
 
   const lang: Lang = data?.lang ?? requestedLang ?? 'ar';
@@ -117,10 +119,43 @@ export function App() {
 
   useEffect(() => applyLang(lang), [lang]);
 
-  // "/" (no event): the configured home page, else a short help card.
+  // "/" (no event in the address): the configured home page; otherwise the approved
+  // events — one event goes straight to it, several show an index that search engines
+  // may list, and none or an error shows a short help card kept out of search.
   useEffect(() => {
-    if (eventId === null && HOME_URL) location.replace(HOME_URL);
-  }, [eventId]);
+    if (eventId !== null) return;
+    if (HOME_URL) {
+      location.replace(HOME_URL);
+      return;
+    }
+    const ctrl = new AbortController();
+    setIndex({ kind: 'loading' });
+    api
+      .events(requestedLang, ctrl.signal)
+      .then(async (events) => {
+        if (events.length === 1) {
+          location.replace(`/e/${events[0].id}${location.search}`);
+          return;
+        }
+        if (events.length === 0) {
+          setNoIndex();
+          setIndex({ kind: 'empty' });
+          return;
+        }
+        const payload = await api.event(events[0].id, requestedLang, ctrl.signal);
+        applyTheme(payload.tenant.theme);
+        const s = strings[payload.lang];
+        setIndexHead(s.seo_title(payload.tenant.name), s.seo_description(payload.tenant.name));
+        setIndex({ kind: 'list', tenant: payload.tenant, events });
+      })
+      .catch((e) => {
+        if ((e as Error).name === 'AbortError') return;
+        setNoIndex();
+        setIndex({ kind: 'empty' });
+      });
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, requestedLang]);
 
   // The event: public, cached by the API (and a CDN in front of it).
   useEffect(() => {
@@ -372,6 +407,39 @@ export function App() {
 
   // ---------------------------------------------------------------- views
   if (eventId === null) {
+    if (index.kind === 'list') {
+      return (
+        <Layout tenant={index.tenant} lang={lang} t={t} onLang={changeLang}>
+          <h1 className="vb-index-head">
+            <Icon name="ticket-perforated" /> {t.chooseEvent}
+          </h1>
+          <div className="vb-index">
+            {index.events.map((ev) => (
+              <a key={ev.id} className="s-card vb-event vb-index-card" href={`/e/${ev.id}`}>
+                <span className="vb-event-ico">{ev.image_url ? <img src={ev.image_url} alt="" decoding="async" /> : <Icon name="ticket-perforated" />}</span>
+                <div className="vb-event-meta">
+                  <h2 className="vb-event-title">{ev.title}</h2>
+                  <span className="vb-index-cta">
+                    {t.bookYourTicket} <Icon name="box-arrow-in-right" />
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </Layout>
+      );
+    }
+    if (index.kind === 'loading') {
+      return (
+        <Layout tenant={null} lang={lang} t={t}>
+          <div className="s-card vb-skeleton" aria-busy="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        </Layout>
+      );
+    }
     return (
       <Layout tenant={null} lang={lang} t={t}>
         <section className="s-card vb-empty">
