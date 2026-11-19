@@ -40,6 +40,13 @@ A payment is completed when either:
   completeCallback (relayed by our page, accepted only with our return token)
   or a cloud notification.
 
+A signed approval is applied at once, without the check lock and without an
+API call: fulfilment is row-locked and idempotent, so the visitor's return
+never waits behind the notification asking Amwal about the same payment
+(MSR-352). A return with no valid signature asks the API once, even right
+after an app poll; if a check is already asking, its answer is awaited
+(`GatewayCheckouts::checkOnReturn()`).
+
 Either way the paid amount and currency (512 = OMR) must equal the payment's,
 otherwise it is flagged **needs review** (`amount_mismatch`) and nothing is
 issued. A declined callback / notification never fails a payment (the
@@ -189,10 +196,12 @@ for an unknown reference answers `200 {success: true, data: []}`;
 Not stated precisely in Amwal's pages; the code follows Amwal's plugin and
 fails safe (needs review / API check) if they differ:
 
-- the `Amount` format of cloud notifications (assumed OMR, e.g. `2.5`; when a
-  signed notification's amount differs, the API is asked first and the
-  notification amount is only flagged `amount_mismatch` if the API does not
-  settle it);
+- the `Amount` format of cloud notifications: OMR (`0.5`, `0.500`) and baisa
+  (`500`) are both taken as the same amount (`AmwalGateway::amountMatches()`)
+  and complete the payment without an API call; only a real difference asks
+  the API first, and the notification amount is flagged `amount_mismatch` if
+  the API does not settle it (MSR-352: live notifications wrote the amount
+  differently from our parsing, costing each payment an extra API call);
 - that the notification `MerchantId` / `TerminalId` equal the configured ones;
 - the `TxnType` values of refund / void notifications (only purchases are
   applied; others are recorded);

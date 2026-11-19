@@ -103,6 +103,11 @@ return [
         'batch' => 500,
         // A status poll from the app checks the gateway at most this often per payment.
         'poll_check_seconds' => 8,
+        // A return with no signed result (Thawani) asks the gateway once; when the
+        // webhook is asking it already, its answer is awaited up to this long.
+        'return_wait_seconds' => 10,
+        // A return page still pending reloads itself every few seconds, this many times.
+        'return_refreshes' => 10,
     ],
 
     // Retention of raw gateway logs (calls, webhook bodies). Payment events
