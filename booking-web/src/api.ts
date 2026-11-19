@@ -159,11 +159,17 @@ async function request<T>(path: string, { method = 'GET', body, token, signal }:
 
 const ev = (id: number) => `/events/${id}`;
 
-/** The public catalogue (outside /booking): a token-less GET, so no preflight and CDN-cacheable. */
-async function catalogue<T>(path: string, signal?: AbortSignal): Promise<T> {
+/**
+ * The public catalogue (outside /booking): a token-less GET, so no preflight and
+ * CDN-cacheable. The endpoint localizes by Accept-Language (a CORS-safelisted header),
+ * so the title follows the page language, not the browser's.
+ */
+async function catalogue<T>(path: string, lang: Lang | null, signal?: AbortSignal): Promise<T> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (lang) headers['Accept-Language'] = lang;
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/api/v1${path}`, { headers: { Accept: 'application/json' }, signal, credentials: 'omit', mode: 'cors', referrerPolicy: 'no-referrer' });
+    response = await fetch(`${API_BASE_URL}/api/v1${path}`, { headers, signal, credentials: 'omit', mode: 'cors', referrerPolicy: 'no-referrer' });
   } catch (e) {
     if ((e as Error).name === 'AbortError') throw e;
     throw new ApiError(0, 'NETWORK');
@@ -186,7 +192,7 @@ export const api = {
 
   /** Approved (published) events for the index at "/"; titles follow the language. */
   events: (lang: Lang | null, signal?: AbortSignal): Promise<EventSummary[]> =>
-    catalogue<{ id: number | string; title: string; image_url: string | null }[]>(`/events${lang ? `?lang=${lang}` : ''}`, signal).then((rows) =>
+    catalogue<{ id: number | string; title: string; image_url: string | null }[]>(`/events${lang ? `?lang=${lang}` : ''}`, lang, signal).then((rows) =>
       rows.map((r) => ({ id: Number(r.id), title: r.title, image_url: r.image_url ?? null })),
     ),
 
