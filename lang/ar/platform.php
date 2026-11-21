@@ -20,7 +20,6 @@ return [
         'sales_closed' => 'بيع تذاكر «:type» غير متاح في هذا الوقت.',
         'per_order_limit' => 'الحد الأقصى لتذاكر «:type» في الطلب الواحد :max.',
         'per_order_limit_total' => 'الحد الأقصى لعدد التذاكر في الطلب الواحد :max.',
-        'per_order_min' => 'الحد الأدنى لتذاكر «:type» في الطلب الواحد :min.',
         'items_required' => 'اختر تذكرة واحدة على الأقل.',
         // Validity per ticket type (docs/ticket_types_contract.md §7).
         'type_sold_out_total' => 'نفدت تذاكر «:type».',

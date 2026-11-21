@@ -130,7 +130,6 @@ class EventTicketTypeController extends Controller
             'validity' => ['nullable', Rule::in(EventTicketType::VALIDITIES)],
             'capacity' => ['nullable', 'integer', 'min:0', 'max:10000000'],
             'per_order_max' => ['required', 'integer', 'between:1,'.EventTicketType::PER_ORDER_LIMIT],
-            'per_order_min' => ['nullable', 'integer', 'between:1,'.EventTicketType::PER_ORDER_LIMIT, 'lte:per_order_max'],
             'min_age' => ['nullable', 'integer', 'between:0,120'],
             'max_age' => ['nullable', 'integer', 'between:0,120', 'gte:min_age'],
             'requires_id' => ['nullable', 'boolean'],
@@ -141,7 +140,7 @@ class EventTicketTypeController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ], [], [
             'key' => __('الرمز'), 'name_ar' => __('الاسم بالعربية'), 'name_en' => __('الاسم بالإنجليزية'), 'price' => __('السعر'),
-            'admits' => __('عدد الأشخاص'), 'validity' => __('صلاحية التذكرة'), 'per_order_max' => __('الحد الأقصى في الطلب'), 'per_order_min' => __('الحد الأدنى في الطلب'), 'max_age' => __('أقصى عمر'), 'sales_end' => __('نهاية البيع'),
+            'admits' => __('عدد الأشخاص'), 'validity' => __('صلاحية التذكرة'), 'per_order_max' => __('الحد الأقصى في الطلب'), 'max_age' => __('أقصى عمر'), 'sales_end' => __('نهاية البيع'),
         ]);
         $tenant = $this->context->get();
         $local = fn ($v) => $v ? Carbon::parse($v)->format('Y-m-d H:i:s') : null;
@@ -158,8 +157,6 @@ class EventTicketTypeController extends Controller
             'validity' => $data['validity'] ?? ($type?->validityValue() ?? EventTicketType::VALIDITY_DATE),
             'capacity' => isset($data['capacity']) ? (int) $data['capacity'] : null,
             'per_order_max' => (int) $data['per_order_max'],
-            // Omitted (older editor) = unchanged.
-            'per_order_min' => isset($data['per_order_min']) ? (int) $data['per_order_min'] : min((int) $data['per_order_max'], (int) ($type?->per_order_min ?? 1)),
             'min_age' => isset($data['min_age']) ? (int) $data['min_age'] : null,
             'max_age' => isset($data['max_age']) ? (int) $data['max_age'] : null,
             'requires_id' => $request->boolean('requires_id'),

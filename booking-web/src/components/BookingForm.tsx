@@ -39,16 +39,9 @@ export function BookingForm(props: {
     [qty, types],
   );
 
-  // Each type's own limits (admin → event → ticket types; MSR-402): the first tap goes
-  // from 0 to the minimum, and one tap below the minimum goes back to 0.
-  const step = (id: number, delta: number, min: number, max: number) =>
-    setQty((prev) => {
-      const now = prev[id] ?? 0;
-      let next = now + delta;
-      if (delta > 0 && now < min) next = min;
-      else if (delta < 0 && next < min) next = 0;
-      return { ...prev, [id]: Math.min(max, Math.max(0, next)) };
-    });
+  // Up to each type's own «الحد الأقصى في الطلب» (max_quantity; MSR-402).
+  const step = (id: number, delta: number, max: number) =>
+    setQty((prev) => ({ ...prev, [id]: Math.min(max, Math.max(0, (prev[id] ?? 0) + delta)) }));
 
   // A free order needs no gateway: one "Get the tickets" button.
   const choose = gateways.length > 1 && !(count > 0 && minor === 0);
@@ -119,18 +112,11 @@ export function BookingForm(props: {
                       · {t.admits} {type.admits_label}
                     </>
                   )}
-                  {(type.min_quantity ?? 1) > 1 && (
-                    <>
-                      {' '}
-                      · {t.minPerOrder}
-                      {type.min_quantity}
-                    </>
-                  )}
                   {!open && <> · {t.salesClosed}</>}
                 </div>
               </div>
               <div className="vb-stepper">
-                <button type="button" className="vb-step" aria-label={t.less} disabled={!open || q === 0} onClick={() => step(type.id, -1, type.min_quantity ?? 1, type.max_quantity)}>
+                <button type="button" className="vb-step" aria-label={t.less} disabled={!open || q === 0} onClick={() => step(type.id, -1, type.max_quantity)}>
                   <Icon name="dash" />
                 </button>
                 <output className="num" aria-live="polite" aria-label={`${t.quantity}: ${type.name}`}>
@@ -141,7 +127,7 @@ export function BookingForm(props: {
                   className="vb-step"
                   aria-label={t.more}
                   disabled={!open || q >= type.max_quantity}
-                  onClick={() => step(type.id, 1, type.min_quantity ?? 1, type.max_quantity)}
+                  onClick={() => step(type.id, 1, type.max_quantity)}
                 >
                   <Icon name="plus" />
                 </button>

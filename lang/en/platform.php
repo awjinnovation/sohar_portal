@@ -20,7 +20,6 @@ return [
         'sales_closed' => ':type tickets are not on sale right now.',
         'per_order_limit' => 'At most :max :type tickets per order.',
         'per_order_limit_total' => 'At most :max tickets per order.',
-        'per_order_min' => 'At least :min :type tickets per order.',
         'items_required' => 'Choose at least one ticket.',
         // Validity per ticket type (docs/ticket_types_contract.md §7).
         'type_sold_out_total' => 'No :type tickets are left.',

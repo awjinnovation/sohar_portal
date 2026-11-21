@@ -89,7 +89,7 @@ class EventTicketType extends Model
     ];
 
     protected $fillable = [
-        'event_id', 'key', 'name', 'description', 'category', 'price_minor', 'admits', 'validity', 'capacity', 'per_order_max', 'per_order_min',
+        'event_id', 'key', 'name', 'description', 'category', 'price_minor', 'admits', 'validity', 'capacity', 'per_order_max',
         'min_age', 'max_age', 'requires_id', 'sales_start', 'sales_end', 'visibility', 'color', 'sort', 'is_active',
     ];
 
@@ -104,7 +104,6 @@ class EventTicketType extends Model
         'admits' => 'integer',
         'capacity' => 'integer',
         'per_order_max' => 'integer',
-        'per_order_min' => 'integer',
         'min_age' => 'integer',
         'max_age' => 'integer',
         'requires_id' => 'boolean',
@@ -358,7 +357,6 @@ class EventTicketType extends Model
             'admits' => max(1, (int) $this->admits),
             'validity' => $this->validityValue(),
             'per_order_max' => $this->perOrderMax(),
-            'per_order_min' => $this->perOrderMin(),
             'min_age' => $this->min_age,
             'max_age' => $this->max_age,
             'requires_id' => (bool) $this->requires_id,
@@ -371,19 +369,13 @@ class EventTicketType extends Model
         ];
     }
 
-    /** Upper bound of per_order_max / per_order_min in the admin (tickets of one type in one order). */
+    /** Upper bound of per_order_max in the admin (tickets of one type in one order). */
     public const PER_ORDER_LIMIT = 100;
 
     /** Most tickets of this type in one order (admin «الحد الأقصى في الطلب»). */
     public function perOrderMax(): int
     {
         return max(1, min(self::PER_ORDER_LIMIT, (int) $this->per_order_max));
-    }
-
-    /** Fewest tickets of this type in one order when it is bought at all (MSR-402), never above the maximum. */
-    public function perOrderMin(): int
-    {
-        return max(1, min($this->perOrderMax(), (int) ($this->per_order_min ?? 1)));
     }
 
     /** {name_text, category, color, requires_id, min_age, max_age} for gate scan results. */

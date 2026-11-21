@@ -62,15 +62,9 @@ class TicketTypesAdminTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors(['key', 'price', 'admits', 'max_age', 'color']);
         $this->actingAs($admin)->postJson($base, $this->payload(['key' => 'late', 'sales_start' => '2026-12-10T10:00', 'sales_end' => '2026-12-01T10:00']))
             ->assertStatus(422)->assertJsonValidationErrors('sales_end');
-        // Minimum per order (MSR-402): 1 unless set, never above the maximum.
-        $this->assertSame(1, $family->per_order_min);
-        $this->actingAs($admin)->postJson($base, $this->payload(['key' => 'pair', 'per_order_min' => 6, 'per_order_max' => 5]))
-            ->assertStatus(422)->assertJsonValidationErrors('per_order_min');
-        $this->actingAs($admin)->postJson($base, $this->payload(['key' => 'pair', 'per_order_min' => 2, 'per_order_max' => 40]))->assertCreated();
-        $pair = EventTicketType::where('event_id', $event->id)->where('key', 'pair')->firstOrFail();
-        $this->assertSame([2, 40], [$pair->per_order_min, $pair->per_order_max]);
-        $this->assertSame(2, $pair->toApi()['per_order_min']);
-        $this->actingAs($admin)->deleteJson("$base/{$pair->id}")->assertOk();
+        // Maximum per order (MSR-402): up to 100, the booking site follows it.
+        $this->actingAs($admin)->postJson($base, $this->payload(['key' => 'big', 'per_order_max' => 101]))
+            ->assertStatus(422)->assertJsonValidationErrors('per_order_max');
 
         // Update (price changes apply to new orders; legacy event price follows General).
         $general = EventTicketType::where('event_id', $event->id)->where('key', 'general')->firstOrFail();

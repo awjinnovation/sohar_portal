@@ -44,7 +44,6 @@ const ERROR: Record<string, [Tone, IconName]> = {
   date_invalid: ['error', 'calendar-x'],
   sold_out: ['error', 'x-octagon'],
   per_order_limit: ['error', 'exclamation-circle'],
-  per_order_min: ['error', 'exclamation-circle'],
   sales_closed: ['error', 'lock'],
   type_not_available: ['error', 'x-circle'],
   gateway_not_available: ['error', 'x-circle'],
@@ -81,8 +80,6 @@ function messageText(m: Message, t: Strings, pendingMasked: string): string {
       return d.available != null ? `${t.sold_out} ${t.left}${d.available}` : t.sold_out;
     case 'per_order_limit':
       return `${t.per_order_limit}${d.per_order_max != null ? ` (${t.max}${d.per_order_max})` : ''}.`;
-    case 'per_order_min':
-      return `${t.per_order_min}${d.per_order_min != null ? ` (${t.min}${d.per_order_min})` : ''}.`;
     default:
       return (t as unknown as Record<string, string>)[m.key] ?? t.unavailable;
   }

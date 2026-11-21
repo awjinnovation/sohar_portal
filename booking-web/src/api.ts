@@ -45,8 +45,6 @@ export interface TicketType {
   admits_label: string | null;
   requires_id: boolean;
   max_quantity: number;
-  /** Fewest tickets of this type in one order when it is chosen (MSR-402); absent on older servers = 1. */
-  min_quantity?: number;
   sales_open: boolean;
 }
 

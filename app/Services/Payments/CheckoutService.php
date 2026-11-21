@@ -199,12 +199,6 @@ class CheckoutService
                     'per_order_max' => $type->perOrderMax(),
                 ]);
             }
-            if ($qty < $type->perOrderMin()) {
-                throw new ApiException('PER_ORDER_MIN', __('platform.errors.per_order_min', ['type' => $type->nameText(), 'min' => $type->perOrderMin()]), 422, [
-                    'ticket_type_id' => $type->id,
-                    'per_order_min' => $type->perOrderMin(),
-                ]);
-            }
             $lines[] = [
                 'type' => $type,
                 'ticket_type_id' => $type->id,

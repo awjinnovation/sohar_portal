@@ -42,7 +42,7 @@
             'unlimited' => __('غير محدود'), 'free' => __('مجانية'), 'edit' => __('تعديل'), 'delete' => __('حذف'), 'confirmDelete' => __('سيُحذف نوع التذكرة نهائيًا.'),
             'cannotDelete' => __('بيعت تذاكر من هذا النوع، فيمكن إيقافه ولا يمكن حذفه.'), 'newType' => __('نوع تذكرة جديد'), 'editType' => __('تعديل نوع التذكرة'),
             'saved' => __('حُفظ نوع التذكرة'), 'error' => __('تعذّر الحفظ. راجع الحقول وأعد المحاولة.'), 'salesClosed' => __('البيع مغلق الآن'), 'empty' => __('لا توجد أنواع تذاكر'),
-            'perOrder' => __('الحد الأقصى في الطلب :count'), 'perOrderMin' => __('الحد الأدنى في الطلب :count'), 'capacity' => __('السعة :count'),
+            'perOrder' => __('الحد الأقصى في الطلب :count'), 'capacity' => __('السعة :count'),
             'capacityDaily' => __('السعة اليومية'), 'capacityTotal' => __('السعة الإجمالية'),
             'capacityHelpDaily' => __('اتركها فارغة ليشارك النوع سعة الفعالية'),
             'capacityHelpTotal' => __('اتركها فارغة ليكون البيع غير محدود، ولا تسري عليه سعة الفعالية اليومية'),
@@ -122,8 +122,6 @@
                         <div class="form-text">{{ __('تُمسح التذكرة العائلية لأربعة أشخاص أربع مرات') }}</div></div>
                     <div class="col-md-4"><label class="form-label" for="tt_capacity" id="tt_capacity_label">{{ __('السعة اليومية') }}</label><input class="form-control" id="tt_capacity" data-f="capacity" type="number" min="0" dir="ltr" placeholder="{{ __('سعة الفعالية') }}">
                         <div class="form-text" id="tt_capacity_help">{{ __('اتركها فارغة ليشارك النوع سعة الفعالية') }}</div></div>
-                    <div class="col-md-4"><label class="form-label" for="tt_per_order_min">{{ __('الحد الأدنى في الطلب') }}</label><input class="form-control" id="tt_per_order_min" data-f="per_order_min" type="number" min="1" max="100" dir="ltr">
-                        <div class="form-text">{{ __('أقل عدد يشتريه الزائر من هذا النوع إذا اختاره.') }}</div></div>
                     <div class="col-md-4"><label class="form-label" for="tt_per_order_max">{{ __('الحد الأقصى في الطلب') }}</label><input class="form-control" id="tt_per_order_max" data-f="per_order_max" type="number" min="1" max="100" dir="ltr"></div>
                     <div class="col-md-3"><label class="form-label" for="tt_min_age">{{ __('أدنى عمر') }}</label><input class="form-control" id="tt_min_age" data-f="min_age" type="number" min="0" max="120" dir="ltr"></div>
                     <div class="col-md-3"><label class="form-label" for="tt_max_age">{{ __('أقصى عمر') }}</label><input class="form-control" id="tt_max_age" data-f="max_age" type="number" min="0" max="120" dir="ltr"></div>
