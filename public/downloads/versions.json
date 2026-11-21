@@ -1,4 +1,4 @@
 {
   "suhar-festival.apk": {"app": "Suhar Festival", "package": "om.nbg.soharfastival", "version": "14.0.0", "build": 14, "released": "2026-11-17", "sha256": "e4ac01f9d98bf213ef3fc5833db1761ea96b7523d8ed4746048bab55012c0347"},
-  "mawsim-gate.apk": {"app": "Mawsim Gate", "package": "om.awj.mawsim.gate", "version": "15.0.2", "build": 17, "released": "2026-11-21", "sha256": "bae7a8217947fb6e75a91d843e53c3178762646b6efd3cc5d8feb9075889383f"}
+  "mawsim-gate.apk": {"app": "Mawsim Gate", "package": "om.awj.mawsim.gate", "version": "15.1.0", "build": 18, "released": "2026-11-21", "sha256": "3414f6afa9318aba5ea278bc8a01f23a72873974a9b36269da3fc5e9d625bb71"}
 }
