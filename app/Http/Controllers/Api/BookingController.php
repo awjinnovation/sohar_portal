@@ -216,7 +216,7 @@ class BookingController extends Controller
                 return [
                     'id' => $ticket->id,
                     'number' => $ticket->ticket_number ?: $ticket->qr_code,
-                    'qr_code' => $ticket->qr_code,
+                    'qr_code' => $ticket->scanCode(),
                     'status' => $ticket->status,
                     'type_name' => $type ? $type->nameText($lang) : $ticket->ticket_type,
                     'type_color' => $type?->colorValue() ?? EventTicketType::CATEGORY_COLORS['general'],

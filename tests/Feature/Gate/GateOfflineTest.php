@@ -36,14 +36,15 @@ class GateOfflineTest extends GateTestCase
         $res = $this->gate('GET', '/api/v1/gate/manifest', [], $token)->assertOk();
         $data = $res->json('data');
         $this->assertSame(GateDay::today(), $data['date']);
-        $this->assertSame(4, $data['count']);
+        // Only tickets that can still enter (docs/gate_signed_tickets.md §3): the used one is left out.
+        $this->assertSame(3, $data['count']);
         $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $data['salt']);
         $this->assertSame('"'.$data['version'].'"', $res->headers->get('ETag'));
 
         $byHash = collect($data['tickets'])->keyBy('h');
         $h = fn ($t) => hash('sha256', $data['salt'].$t->qr_code);
         $this->assertSame(['h' => $h($active), 's' => 'active', 't' => 'vip', 'e' => $event->id, 'd' => GateDay::today(), 'a' => 1, 'u' => 0], $byHash[$h($active)]);
-        $this->assertSame('used', $byHash[$h($used)]['s']);
+        $this->assertArrayNotHasKey($h($used), $byHash->all());
         $this->assertSame('cancelled', $byHash[$h($cancelled)]['s']);
         $this->assertSame(GateDay::today(), $byHash[$h($open)]['d']);
         // no raw codes in the payload
@@ -56,7 +57,7 @@ class GateOfflineTest extends GateTestCase
         $this->scan($token, $active->qr_code)->assertJsonPath('data.result', 'valid');
         $again = $this->gate('GET', '/api/v1/gate/manifest', [], $token, ['If-None-Match' => $res->headers->get('ETag')])->assertOk();
         $this->assertNotSame($data['version'], $again->json('data.version'));
-        $this->assertSame('used', collect($again->json('data.tickets'))->firstWhere('h', $h($active))['s']);
+        $this->assertNull(collect($again->json('data.tickets'))->firstWhere('h', $h($active)), 'used now: no longer listed');
         $this->assertSame($data['salt'], $again->json('data.salt'), 'salt is stable for the day');
 
         // the heartbeat reports the same version

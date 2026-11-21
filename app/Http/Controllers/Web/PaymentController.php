@@ -466,7 +466,7 @@ class PaymentController extends Controller
     public function downloadSingleTicket(string $qrCode)
     {
         $ticket = Ticket::withoutTenantScope()
-            ->where('qr_code', $qrCode)
+            ->where('qr_code', \App\Services\Gate\TicketSignature::base($qrCode))
             ->firstOrFail();
         $this->context->set(Tenant::find($ticket->tenant_id));
         $ticket->load(['event.mapLocation', 'user', 'payment']);

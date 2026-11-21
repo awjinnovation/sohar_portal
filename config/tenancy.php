@@ -220,6 +220,15 @@ return [
             'offline_enabled' => false,
         ],
 
+        // Offline gates admit by the system's signature (docs/gate_signed_tickets.md §2).
+        // Tickets are always signed; signed_check decides when offline gates use it.
+        'gate' => [
+            'signed_check' => 'off',        // off | always | window
+            'signed_check_from' => '18:30', // window, tenant time
+            'signed_check_to' => '21:00',
+            'signed_keys_epoch' => 1,       // bumped by admin "Change signing keys now"
+        ],
+
         'messages' => [
             // Placeholders: :app (tenant name), :code (OTP), :minutes.
             'otp_sms' => [

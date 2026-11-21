@@ -280,6 +280,16 @@ class Ticket extends Model
     /**
      * Boot method to auto-generate ticket number and QR code
      */
+    /**
+     * What the QR encodes and the visitor is shown: `qr_code` plus the
+     * system's signature (docs/gate_signed_tickets.md §1). Lookups and URLs
+     * keep using `qr_code`.
+     */
+    public function scanCode(?Tenant $tenant = null): string
+    {
+        return \App\Services\Gate\TicketSignature::scanCode($this, $tenant);
+    }
+
     protected static function boot()
     {
         parent::boot();

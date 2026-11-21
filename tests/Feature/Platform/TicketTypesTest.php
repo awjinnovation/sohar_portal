@@ -176,10 +176,15 @@ class TicketTypesTest extends GateTestCase
         $this->scan($vipToken, $this->makeTicket($event, ['ticket_type' => 'family', 'ticket_type_id' => $family->id, 'max_check_ins' => 4])->qr_code)
             ->assertJsonPath('data.result', 'wrong_gate');
 
-        // Offline manifest carries admits / entries used.
+        // Offline manifest carries admits / entries used while entries are left;
+        // used up, it is no longer listed (docs/gate_signed_tickets.md §3).
+        $open = $this->makeTicket($event, ['ticket_type' => 'family', 'ticket_type_id' => $family->id, 'max_check_ins' => 4]);
+        $this->scan($token, $open->qr_code)->assertJsonPath('data.result', 'valid');
         $manifest = $this->gate('GET', '/api/v1/gate/manifest', [], $token)->assertOk();
-        $entry = collect($manifest->json('data.tickets'))->firstWhere('h', hash('sha256', $manifest->json('data.salt').$ticket->qr_code));
-        $this->assertSame([4, 4, 'used'], [$entry['a'], $entry['u'], $entry['s']]);
+        $find = fn ($t) => collect($manifest->json('data.tickets'))->firstWhere('h', hash('sha256', $manifest->json('data.salt').$t->qr_code));
+        $entry = $find($open);
+        $this->assertSame([4, 1, 'active'], [$entry['a'], $entry['u'], $entry['s']]);
         $this->assertSame(GateDay::today(), $entry['d']);
+        $this->assertNull($find($ticket), 'all 4 entries used');
     }
 }

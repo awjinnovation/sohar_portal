@@ -395,8 +395,10 @@ class BoxOfficeTest extends GateTestCase
         $login = $this->postJson('/api/v1/auth/verify-otp', ['phone_number' => self::BUYER, 'otp' => '123456'], $this->tenantHeaders())->assertOk();
         $this->assertSame($buyer->id, $login->json('user.id'));
         $mine = $this->getJson('/api/v1/tickets/my-tickets', $this->tenantHeaders(null, ['Authorization' => 'Bearer '.$login->json('token')]))->assertOk();
-        $this->assertEqualsCanonicalizing($tickets->pluck('qr_code')->all(), array_column($mine->json('data'), 'qr_code'));
-        $this->assertSame('family', collect($mine->json('data'))->firstWhere('qr_code', $tickets[1]->qr_code)['ticket_type']['key']);
+        // The app gets the signed scan codes (docs/gate_signed_tickets.md §1); their base is the ticket's qr_code.
+        $codes = array_column($mine->json('data'), 'qr_code');
+        $this->assertEqualsCanonicalizing($tickets->pluck('qr_code')->all(), array_map([\App\Services\Gate\TicketSignature::class, 'base'], $codes));
+        $this->assertSame('family', collect($mine->json('data'))->first(fn ($t) => \App\Services\Gate\TicketSignature::base($t['qr_code']) === $tickets[1]->qr_code)['ticket_type']['key']);
 
         // Paid page keeps working (and the link cannot start another payment).
         $this->post($path.'/checkout')->assertRedirect();

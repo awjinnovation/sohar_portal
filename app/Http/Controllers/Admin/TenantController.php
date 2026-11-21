@@ -185,6 +185,23 @@ class TenantController extends Controller
         return $this->form($this->currentTenant(), 'current');
     }
 
+    /**
+     * POST branding/signing-keys: new ticket signing keys for every day at once
+     * (docs/gate_signed_tickets.md §1). QRs shown from now on carry the new
+     * signatures; offline gates stop accepting the old ones by signature.
+     */
+    public function rotateSigningKeys()
+    {
+        $tenant = $this->currentTenant();
+        $epoch = \App\Services\Gate\TicketSignature::epoch($tenant) + 1;
+        $tenant->putSetting('gate.signed_keys_epoch', $epoch)->save();
+        \App\Services\Gate\TicketSignature::flush();
+
+        AuditLog::record('tenant.signing_keys_rotated', $tenant, ['epoch' => $epoch]);
+
+        return redirect()->to(route('admin.branding.edit').'#sec-gate-signed')->with('success', 'تغيّرت مفاتيح توقيع التذاكر.');
+    }
+
     public function updateCurrent(Request $request)
     {
         $tenant = $this->currentTenant();
@@ -578,6 +595,10 @@ class TenantController extends Controller
         $f['gate_sales.pos_receipt_photo_required'] = ['bool', 'boolean'];
         $f['gate_sales.offline_enabled'] = ['bool', 'boolean'];
         $f['gate_sales.pos_terminal_ids'] = ['string', 'nullable|string|max:500|regex:/^[A-Za-z0-9,;\s]*$/'];
+        // Offline check by signature (docs/gate_signed_tickets.md §2; admin/gates/_offline-check-settings).
+        $f['gate.signed_check'] = ['string', 'required|in:off,always,window'];
+        $f['gate.signed_check_from'] = ['string', 'required|date_format:H:i'];
+        $f['gate.signed_check_to'] = ['string', 'required|date_format:H:i'];
         foreach (['en', 'ar'] as $l) {
             $f["messages.box_office_sms.$l"] = ['string', 'nullable|string|max:500'];
         }

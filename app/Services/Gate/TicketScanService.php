@@ -355,7 +355,11 @@ class TicketScanService
         return $ticket;
     }
 
-    /** Trim scanner noise; accept the public ticket page URL (…/ticket/{qr_code}). */
+    /**
+     * Trim scanner noise; accept the public ticket page URL (…/ticket/{qr_code})
+     * and the signed scan code (docs/gate_signed_tickets.md §1), whose base
+     * code is the ticket's qr_code.
+     */
     private function normalizeCode(?string $code): ?string
     {
         if ($code === null) {
@@ -366,7 +370,7 @@ class TicketScanService
             $code = $m[1];
         }
 
-        return $code;
+        return TicketSignature::base($code);
     }
 
     /** Scanner sources a device may report; `box_office` is set by the server only (gate sales admit). */

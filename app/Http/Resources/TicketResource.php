@@ -21,7 +21,7 @@ class TicketResource extends JsonResource
             'id' => $this->id,
             'ticket_code' => $this->ticket_number,
             'ticket_number' => $this->ticket_number,
-            'qr_code' => $this->qr_code,
+            'qr_code' => $this->resource->scanCode(),
             'status' => $this->status,
             // Null for undated tickets (any_day / all_days): see valid_from / valid_until (docs/ticket_types_contract.md §7).
             'booking_date' => $this->booking_date?->format('Y-m-d'),

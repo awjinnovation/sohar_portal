@@ -131,7 +131,7 @@ class TicketController extends Controller
             return [
                 'id' => $t->id,
                 'ticket_code' => $t->ticket_number,
-                'qr_code' => $t->qr_code,
+                'qr_code' => $t->scanCode(),
                 'status' => $t->status,
                 'purchase_date' => $t->purchase_date,
                 'used_at' => $t->used_at,
@@ -190,7 +190,7 @@ class TicketController extends Controller
         $ticket = Ticket::where('user_id', request()->user()->id)
             ->findOrFail($id);
 
-        $qrCode = base64_encode(QrCode::format('png')->size(300)->generate($ticket->qr_code));
+        $qrCode = base64_encode(QrCode::format('png')->size(300)->generate($ticket->scanCode()));
 
         return response()->json([
             'success' => true,

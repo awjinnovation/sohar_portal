@@ -28,7 +28,7 @@
     @forelse($tickets as $index => $ticket)
         @php $start = $ticket->event?->start_time?->copy()->setTimezone($tz); @endphp
         <a href="{{ route('payment.ticket.single', ['qrCode' => $ticket->qr_code, 'lang' => $lang]) }}" class="s-card ticket-mini" style="text-decoration:none; color: inherit; display:flex">
-            <div class="qr-panel">{!! QrCode::size(120)->margin(1)->generate($ticket->qr_code) !!}</div>
+            <div class="qr-panel">{!! QrCode::size(120)->margin(1)->generate($ticket->scanCode()) !!}</div>
             <div style="flex:1; min-width:0">
                 <div class="s">{{ $t('تذكرة', 'Ticket') }} <span class="num">#{{ $index + 1 }}</span></div>
                 <div class="t">{{ \App\View\PublicPage::pick($ticket->event, 'title', $lang) }}</div>

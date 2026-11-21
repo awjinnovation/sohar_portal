@@ -246,6 +246,7 @@ Route::prefix('v1/gate')->group(function () {
             Route::get('/session', [\App\Http\Controllers\Api\GateController::class, 'session']);
             Route::post('/staff/logout', [\App\Http\Controllers\Api\GateController::class, 'staffLogout']);
             Route::get('/manifest', [\App\Http\Controllers\Api\GateController::class, 'manifest']);
+            Route::get('/manifest/changes', [\App\Http\Controllers\Api\GateController::class, 'manifestChanges']);
             Route::get('/stats', [\App\Http\Controllers\Api\GateController::class, 'stats']);
             Route::post('/heartbeat', [\App\Http\Controllers\Api\GateController::class, 'heartbeat']);
         });

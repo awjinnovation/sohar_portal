@@ -35,7 +35,7 @@
         <div class="ticket-perf"><i></i></div>
         <div class="ticket-body">
             <div class="qr-panel" @unless($isValid) style="opacity:.35; filter: grayscale(1)" @endunless aria-label="{{ $t('رمز QR للدخول', 'Entry QR code') }}">
-                {!! QrCode::size(300)->margin(2)->errorCorrection('M')->generate($ticket->qr_code) !!}
+                {!! QrCode::size(300)->margin(2)->errorCorrection('M')->generate($ticket->scanCode()) !!}
             </div>
             @if($isValid)
                 <div class="qr-caption"><i class="bi bi-brightness-high"></i> {{ $t('ارفع سطوع الشاشة واعرض الرمز عند البوابة', 'Turn up the brightness and show this code at the gate') }}</div>

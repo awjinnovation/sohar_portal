@@ -414,6 +414,8 @@
 
                 @include('admin.gates._sales-settings')
 
+                @include('admin.gates._offline-check-settings')
+
                 @include('admin.satisfaction._tenant-settings')
 
                 {{-- Billing & messages --}}
@@ -633,6 +635,12 @@
         })();
         </script>
         @endpush
+    @endif
+
+    @if($mode === 'current')
+        {{-- Outside the main form (which sends _method=PUT): admin/gates/_offline-check-settings. --}}
+        <form id="signKeysForm" action="{{ route('admin.branding.signing-keys') }}" method="POST" class="d-none"
+              data-confirm="{{ __('هل تريد تغيير مفاتيح التوقيع الآن؟ لن تقبل البوابات المنقطعة عن الاتصال الرموز السابقة بالتوقيع.') }}" data-confirm-ok="{{ __('تغيير المفاتيح') }}">@csrf</form>
     @endif
 
     @if($platform && $tenant->exists)

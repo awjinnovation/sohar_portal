@@ -238,6 +238,7 @@ Route::prefix('admin')->middleware('admin.locale')->group(function () {
         Route::middleware('can:manage settings')->group(function () {
             Route::get('branding', [Admin\TenantController::class, 'editCurrent'])->name('admin.branding.edit');
             Route::put('branding', [Admin\TenantController::class, 'updateCurrent'])->name('admin.branding.update');
+            Route::post('branding/signing-keys', [Admin\TenantController::class, 'rotateSigningKeys'])->name('admin.branding.signing-keys');
             Route::resource('app-settings', Admin\AppSettingController::class, ['as' => 'admin']);
             Route::resource('privacy-policies', Admin\PrivacyPolicyController::class, ['as' => 'admin']);
             Route::resource('terms-and-conditions', Admin\TermsAndConditionController::class, ['as' => 'admin']);

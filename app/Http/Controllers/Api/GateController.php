@@ -103,6 +103,8 @@ class GateController extends Controller
                 'direction' => $gate?->direction ?? 'entry',
                 // Box office (docs/gate_sales_contract.md §1), read-only.
                 'sales' => app(\App\Services\Gate\BoxOfficeService::class)->sessionSettings($tenant, $device),
+                // Offline check by the system's signature (docs/gate_signed_tickets.md §2).
+                'signed_check' => \App\Services\Gate\SignedCheckSettings::forSession($tenant, $date, $gate),
             ],
             'manifest_version' => $this->manifest->version($tenant, $date, $gate),
             'server_time' => TenantTime::iso(Carbon::now(), $tenant),
@@ -158,16 +160,21 @@ class GateController extends Controller
         return $this->ok($this->scanPayload($outcome, $device));
     }
 
-    /** GET /gate/manifest?date=YYYY-MM-DD (ETag / If-None-Match) */
+    /**
+     * GET /gate/manifest?date=YYYY-MM-DD[&v=2] (ETag / If-None-Match).
+     * v2: status list + cursor (docs/gate_signed_tickets.md §3); its ETag
+     * differs from v1's so an updated app never keeps a v1 list on a 304.
+     */
     public function manifest(Request $request)
     {
         $device = $this->device($request);
         $tenant = $this->context->get();
         $date = GateDay::parse($request->query('date'), $tenant);
         $gate = $device->gate;
+        $v = (int) $request->query('v', 1) >= 2 ? 2 : 1;
 
         $version = $this->manifest->version($tenant, $date, $gate);
-        $etag = '"'.$version.'"';
+        $etag = '"'.$version.($v === 2 ? '-v2' : '').'"';
         $headers = ['ETag' => $etag, 'Cache-Control' => 'private, no-cache'];
 
         $sent = array_map(fn ($t) => trim(str_replace('W/', '', $t)), explode(',', (string) $request->header('If-None-Match', '')));
@@ -175,7 +182,17 @@ class GateController extends Controller
             return response('', 304, $headers);
         }
 
-        return response()->json(['success' => true, 'message' => 'OK', 'data' => $this->manifest->build($tenant, $date, $gate)], 200, $headers);
+        return response()->json(['success' => true, 'message' => 'OK', 'data' => $this->manifest->build($tenant, $date, $gate, $v)], 200, $headers);
+    }
+
+    /** GET /gate/manifest/changes?date=YYYY-MM-DD&since=<cursor> (docs/gate_signed_tickets.md §4) */
+    public function manifestChanges(Request $request): JsonResponse
+    {
+        $device = $this->device($request);
+        $tenant = $this->context->get();
+        $date = GateDay::parse($request->query('date'), $tenant);
+
+        return $this->ok($this->manifest->changes($tenant, $date, $device->gate, $request->query('since')));
     }
 
     /** POST /gate/sync {scans: [...]} (max 500, idempotent per key) */

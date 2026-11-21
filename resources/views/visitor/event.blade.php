@@ -92,7 +92,7 @@
                     <div class="vb-ticket-event">{{ $title }}</div>
                     <div class="muted vb-ticket-when"><i class="bi bi-calendar3"></i> {{ $when }}</div>
                     <div class="qr-panel" @unless($valid) style="opacity:.35; filter: grayscale(1)" @endunless aria-label="{{ $t('رمز QR للدخول', 'Entry QR code') }}">
-                        {!! QrCode::size(240)->margin(1)->errorCorrection('M')->generate($ticket->qr_code) !!}
+                        {!! QrCode::size(240)->margin(1)->errorCorrection('M')->generate($ticket->scanCode()) !!}
                     </div>
                     <div class="vb-ticket-foot">
                         <span class="mono ltr">{{ $ticket->ticket_number ?: $ticket->qr_code }}</span>

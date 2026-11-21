@@ -856,7 +856,7 @@ class BoxOfficeService
             'tickets' => $order->issuedTickets()->map(fn (Ticket $t) => [
                 'id' => $t->id,
                 'number' => $t->ticket_number,
-                'qr_code' => $t->qr_code,
+                'qr_code' => $t->scanCode($tenant),
                 'status' => $t->status,
                 'ticket_type' => $t->ticketTypeApi(),
                 'admits' => $t->admits(),

@@ -156,9 +156,10 @@ class TicketValidityTest extends GateTestCase
         $this->scan($token, $pass->qr_code)->assertJsonPath('data.result', 'already_used');
         $this->assertSame('active', $pass->fresh()->status, 'a pass is never marked used');
 
-        // Offline devices: today's manifest says used up, tomorrow's lists it active again.
+        // Offline devices: used up today it is not in today's list (docs/gate_signed_tickets.md §3),
+        // tomorrow's lists it active again.
         $today = collect($this->gate('GET', '/api/v1/gate/manifest', [], $token)->json('data.tickets'))->firstWhere('v', 'all_days');
-        $this->assertSame(['used', 2, 2], [$today['s'], $today['u'], $today['a']]);
+        $this->assertNull($today);
 
         $this->travel(1)->days();
         $tomorrow = collect($this->gate('GET', '/api/v1/gate/manifest', [], $token)->json('data.tickets'))->firstWhere('v', 'all_days');

@@ -37,7 +37,7 @@
                     <span class="bo-badge" style="{{ \App\Models\EventTicketType::badgeStyle($type?->colorValue()) }}"><i class="bi bi-ticket-perforated"></i>{{ $typeName }}</span>
                     <span class="muted num">{{ $t('تذكرة', 'Ticket') }} {{ $index + 1 }}/{{ $tickets->count() }}</span>
                 </div>
-                <div class="qr-panel" aria-label="{{ $t('رمز QR للدخول', 'Entry QR code') }}">{!! QrCode::size(240)->margin(1)->errorCorrection('M')->generate($ticket->qr_code) !!}</div>
+                <div class="qr-panel" aria-label="{{ $t('رمز QR للدخول', 'Entry QR code') }}">{!! QrCode::size(240)->margin(1)->errorCorrection('M')->generate($ticket->scanCode()) !!}</div>
                 <div class="bo-ticket-foot">
                     <a href="{{ route('payment.ticket.single', ['qrCode' => $ticket->qr_code, 'lang' => $lang]) }}" class="mono ltr">{{ $ticket->ticket_number }}</a>
                     @if($admits > 1)
