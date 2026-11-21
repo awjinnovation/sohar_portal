@@ -126,7 +126,8 @@ class GateSalesController extends Controller
      * POST /orders/{id}/receipt (multipart or JSON: image?, idempotency_key,
      * approval_code?, card_last4?, note?) — photo of the card terminal
      * receipt of a `pos` order (§9), or without `image` the payment confirmed
-     * by hand (unless photos are required: 422 RECEIPT_PHOTO_REQUIRED).
+     * by hand (unless photos are required: 422 RECEIPT_PHOTO_REQUIRED; when
+     * the approval number is required: 422 APPROVAL_CODE_REQUIRED without it).
      * 201 with the verdict; 200 when the same key (or the same photo) was
      * already sent.
      */

@@ -473,6 +473,28 @@ class BoxOfficeCardTerminalTest extends GateTestCase
     }
 
     #[Test]
+    public function the_organizer_can_require_the_approval_number_without_a_photo(): void
+    {
+        [, $token] = $this->sellingDevice();
+        $this->gate('GET', '/api/v1/gate/session', [], $token)->assertJsonPath('data.settings.sales.pos_approval_required', false);
+        $this->tenant->putSetting('gate_sales.pos_approval_code_required', true)->save();
+        $this->gate('GET', '/api/v1/gate/session', [], $token)->assertJsonPath('data.settings.sales.pos_approval_required', true);
+        $orderId = $this->posOrder($token, $this->event())->json('data.order.id');
+
+        $this->confirmWithoutPhoto($token, $orderId)->assertStatus(422)->assertJsonPath('code', 'APPROVAL_CODE_REQUIRED');
+        $this->confirmWithoutPhoto($token, $orderId, ['card_last4' => '4321'])->assertStatus(422)->assertJsonPath('code', 'APPROVAL_CODE_REQUIRED');
+        $this->assertSame(0, BoxOfficeReceipt::count());
+
+        $this->confirmWithoutPhoto($token, $orderId, ['approval_code' => 'AB1234'])->assertCreated()
+            ->assertJsonPath('data.receipt.approval_code', 'AB1234')->assertJsonPath('data.order.status', 'paid');
+
+        // A photo still needs nothing typed.
+        $other = $this->posOrder($token, $this->event())->json('data.order.id');
+        $this->reads = $this->slip('1.000');
+        $this->sendReceipt($token, $other)->assertCreated()->assertJsonPath('data.receipt.has_photo', true);
+    }
+
+    #[Test]
     public function the_organizer_can_require_the_photo_or_hold_unphotographed_sales(): void
     {
         [, $token] = $this->sellingDevice();

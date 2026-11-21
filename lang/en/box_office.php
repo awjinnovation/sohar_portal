@@ -29,6 +29,7 @@ return [
         'receipt_attempts' => 'This order has reached the maximum number of receipt photos. Cancel it, or ask a supervisor to approve the receipt in the admin.',
         'receipt_busy' => 'An earlier photo of this order is being checked. Wait for its result, then try again.',
         'receipt_photo_required' => 'This organizer requires a photo of the card terminal receipt. Photograph the receipt and try again.',
+        'approval_code_required' => 'Enter the approval code printed on the card terminal receipt, then try again.',
         'approval_code_invalid' => 'The approval code has 4 to 12 letters or digits.',
         'receipt_not_approvable' => 'This receipt cannot be approved: the order is no longer awaiting payment, or the receipt is already accepted.',
         'receipt_not_in_review' => 'This order does not need a review.',

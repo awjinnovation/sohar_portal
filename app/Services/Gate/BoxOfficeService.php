@@ -83,6 +83,8 @@ class BoxOfficeService
             'pos_terminal_ids' => self::terminalIds($s['pos_terminal_ids'] ?? ''),
             // Stored as `pos_receipt_photo_required`; off = staff may confirm a payment without a photo.
             'pos_photo_required' => (bool) ($s['pos_receipt_photo_required'] ?? false),
+            // Stored as `pos_approval_code_required`; on = a payment confirmed without a photo needs the approval number.
+            'pos_approval_required' => (bool) ($s['pos_approval_code_required'] ?? false),
             // §10: card terminal sales with no connection (offline ticket codes, no phone, no SMS).
             'offline_enabled' => (bool) ($s['offline_enabled'] ?? false),
         ];

@@ -98,6 +98,10 @@ class CardTerminalService
         if ($image === null && BoxOfficeService::settings($tenant)['pos_photo_required']) {
             throw new ApiException('RECEIPT_PHOTO_REQUIRED', __('box_office.errors.receipt_photo_required'), 422);
         }
+        if ($image === null && BoxOfficeService::settings($tenant)['pos_approval_required']
+            && self::manualApprovalCode($manual['approval_code'] ?? null) === null) {
+            throw new ApiException('APPROVAL_CODE_REQUIRED', __('box_office.errors.approval_code_required'), 422);
+        }
 
         try {
             // One photo at a time per order: a retry while the first is being read waits for it.
