@@ -97,7 +97,8 @@ body.idle .ops-actions { opacity: 0; transition: opacity 0.4s; }
     grid-template-areas: "gates sms orders" "gates tickets tickets";
 }
 .ops-panel {
-    min-height: 0; min-width: 0; overflow: hidden;
+    /* Fits the wall screen; scrolls inside the panel when the content is taller. */
+    min-height: 0; min-width: 0; overflow: hidden auto; scrollbar-width: thin;
     display: flex; flex-direction: column; gap: 0.7rem;
     padding: 1rem 1.15rem; border-radius: 1.2rem;
     background: var(--surface, #171A21); border: 1px solid var(--hairline, #2A2F3A);
@@ -116,7 +117,8 @@ body.idle .ops-actions { opacity: 0; transition: opacity 0.4s; }
 }
 .ops-gate-cols { padding: 0 0.75rem; color: var(--muted, #9CA3AF); font-size: 0.78rem; font-weight: 600; }
 .ops-gate-cols span:nth-child(n+4) { text-align: center; }
-.ops-gate-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; overflow: hidden; min-height: 0; }
+.ops-gate-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; overflow: hidden auto; scrollbar-width: thin; min-height: 0; }
+.ops-gate { flex: 0 0 auto; }
 .ops-gate {
     position: relative; isolation: isolate;
     padding: 0.55rem 0.75rem; border-radius: 0.85rem;
@@ -174,10 +176,10 @@ body.idle .ops-actions { opacity: 0; transition: opacity 0.4s; }
 /* Tickets */
 .ops-tickets-body { flex: 1 1 auto; min-height: 0; display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr) minmax(0, 1fr); align-items: stretch; }
 .ops-ticket-nums { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; align-content: start; }
-.ops-ticket-nums div { padding: 0.5rem 0.75rem; border-radius: 0.75rem; background: var(--surface-low, #1E222B); }
+.ops-ticket-nums div { padding: 0.35rem 0.75rem; border-radius: 0.75rem; background: var(--surface-low, #1E222B); }
 .ops-ticket-nums div.lead { background: var(--brand-soft, #2E3240); }
 .ops-ticket-nums dt { color: var(--muted, #9CA3AF); font-size: 0.78rem; font-weight: 600; }
-.ops-ticket-nums dd { margin: 0; font-size: 1.7rem; font-weight: 700; }
+.ops-ticket-nums dd { margin: 0; font-size: 1.4rem; font-weight: 700; }
 .ops-ticket-nums div.lead dd { color: var(--brand, #BAC3FF); }
 .ops-ticket-nums dd { line-height: 1.25; }
 .ops-chart { margin: 0; display: flex; flex-direction: column; min-height: 0; }
