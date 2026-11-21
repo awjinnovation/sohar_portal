@@ -182,7 +182,7 @@
             <div class="vb-types">
                 @foreach($types as $type)
                     @php
-                        $max = max(1, min(10, (int) $type->per_order_max));
+                        $max = $type->perOrderMax();
                         $open = $type->salesOpen();
                         $qty = (int) old('items.'.$type->id, 0);
                     @endphp

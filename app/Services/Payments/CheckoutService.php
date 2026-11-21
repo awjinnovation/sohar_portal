@@ -73,8 +73,9 @@ class CheckoutService
 
         $lines = $this->resolveLines($event, $items, $channel);
         $quantity = array_sum(array_column($lines, 'quantity'));
-        $maxQuantity ??= (int) config('payments.max_tickets_per_order', 10);
-        if ($quantity > $maxQuantity) {
+        // The app and the booking site follow each type's own limits (resolveLines, MSR-402);
+        // the box office passes its own total (gate_sales.max_quantity).
+        if ($maxQuantity !== null && $quantity > $maxQuantity) {
             throw new ApiException('PER_ORDER_LIMIT', __('platform.errors.per_order_limit_total', ['max' => $maxQuantity]), 422,
                 ['ticket_type_id' => null, 'per_order_max' => $maxQuantity]);
         }
@@ -192,10 +193,16 @@ class CheckoutService
                     'sales_end' => \App\Support\TenantTime::iso($type->sales_end),
                 ]);
             }
-            if ($qty > max(1, (int) $type->per_order_max)) {
-                throw new ApiException('PER_ORDER_LIMIT', __('platform.errors.per_order_limit', ['type' => $type->nameText(), 'max' => $type->per_order_max]), 422, [
+            if ($qty > $type->perOrderMax()) {
+                throw new ApiException('PER_ORDER_LIMIT', __('platform.errors.per_order_limit', ['type' => $type->nameText(), 'max' => $type->perOrderMax()]), 422, [
                     'ticket_type_id' => $type->id,
-                    'per_order_max' => (int) $type->per_order_max,
+                    'per_order_max' => $type->perOrderMax(),
+                ]);
+            }
+            if ($qty < $type->perOrderMin()) {
+                throw new ApiException('PER_ORDER_MIN', __('platform.errors.per_order_min', ['type' => $type->nameText(), 'min' => $type->perOrderMin()]), 422, [
+                    'ticket_type_id' => $type->id,
+                    'per_order_min' => $type->perOrderMin(),
                 ]);
             }
             $lines[] = [

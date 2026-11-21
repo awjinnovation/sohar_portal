@@ -54,6 +54,7 @@
       if (t.max_age != null) badges.push('<span class="pill pill-neutral pill-sm">' + esc(fmt(T.ageMax, t.max_age)) + '</span>');
       if (t.min_age != null) badges.push('<span class="pill pill-neutral pill-sm">' + esc(fmt(T.ageMin, t.min_age)) + '</span>');
       if (t.capacity != null) badges.push('<span class="pill pill-neutral pill-sm">' + esc(fmt(T.capacity, t.capacity)) + '</span>');
+      if (t.per_order_min > 1) badges.push('<span class="pill pill-neutral pill-sm">' + esc(fmt(T.perOrderMin, t.per_order_min)) + '</span>');
       badges.push('<span class="pill pill-neutral pill-sm">' + esc(fmt(T.perOrder, t.per_order_max)) + '</span>');
       var left = t.available == null ? T.unlimited : t.available;
       return '<div class="tt-item' + (t.is_active ? '' : ' is-off') + '" data-id="' + t.id + '" data-key="' + esc(t.key) + '">' +
@@ -86,7 +87,7 @@
   }
 
   function fill(v) {
-    ['name_ar', 'name_en', 'description_ar', 'description_en', 'key', 'price', 'admits', 'capacity', 'per_order_max', 'min_age', 'max_age', 'sales_start', 'sales_end'].forEach(function (k) {
+    ['name_ar', 'name_en', 'description_ar', 'description_en', 'key', 'price', 'admits', 'capacity', 'per_order_min', 'per_order_max', 'min_age', 'max_age', 'sales_start', 'sales_end'].forEach(function (k) {
       field(k).value = v[k] == null ? '' : v[k];
     });
     field('category').value = v.category || 'general';
@@ -119,7 +120,7 @@
   document.querySelectorAll('[data-tt-template]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var tpl = cfg.templates[btn.getAttribute('data-tt-template')] || { category: 'other', admits: 1 };
-      var v = Object.assign({ price: '0.000', per_order_max: 10, visibility: 'public', is_active: true }, tpl);
+      var v = Object.assign({ price: '0.000', per_order_min: 1, per_order_max: 10, visibility: 'public', is_active: true }, tpl);
       v.key = uniqueKey(tpl.key || '');
       open(v, null);
     });
@@ -133,7 +134,7 @@
       if (!t) return;
       open({
         name_ar: t.name.ar, name_en: t.name.en, description_ar: t.description.ar, description_en: t.description.en, key: t.key,
-        category: t.category, price: t.price_input, admits: t.admits, validity: t.validity, capacity: t.capacity, per_order_max: t.per_order_max,
+        category: t.category, price: t.price_input, admits: t.admits, validity: t.validity, capacity: t.capacity, per_order_min: t.per_order_min, per_order_max: t.per_order_max,
         min_age: t.min_age, max_age: t.max_age, sales_start: t.sales_start_local, sales_end: t.sales_end_local,
         visibility: t.visibility, color: t.own_color, requires_id: t.requires_id, is_active: t.is_active
       }, t.id);
@@ -171,7 +172,7 @@
 
   document.getElementById('ttSave').addEventListener('click', function () {
     var body = {};
-    ['name_ar', 'name_en', 'description_ar', 'description_en', 'key', 'category', 'price', 'admits', 'validity', 'capacity', 'per_order_max', 'min_age', 'max_age', 'sales_start', 'sales_end', 'visibility'].forEach(function (k) {
+    ['name_ar', 'name_en', 'description_ar', 'description_en', 'key', 'category', 'price', 'admits', 'validity', 'capacity', 'per_order_min', 'per_order_max', 'min_age', 'max_age', 'sales_start', 'sales_end', 'visibility'].forEach(function (k) {
       var v = field(k).value; body[k] = v === '' ? null : v;
     });
     body.requires_id = field('requires_id').checked;

@@ -303,6 +303,27 @@ class BookingApiTest extends TestCase
     }
 
     #[Test]
+    public function each_ticket_type_sets_its_own_minimum_and_maximum_per_order(): void
+    {
+        $event = $this->makeEvent(null, ['total_tickets' => 500, 'available_tickets' => 500]);
+        $general = $this->general($event);
+        $general->forceFill(['per_order_max' => 25, 'per_order_min' => 2])->save();
+
+        $type = collect($this->getJson($this->url($event))->assertOk()->json('data.ticket_types'))->firstWhere('id', $general->id);
+        $this->assertSame([2, 25], [$type['min_quantity'], $type['max_quantity']], 'from the ticket type, not a fixed 10');
+
+        $token = $this->signIn($event);
+        $this->book($event, $token, 1)->assertStatus(422)->assertJsonPath('code', 'PER_ORDER_MIN')->assertJsonPath('data.per_order_min', 2);
+        $this->book($event, $token, 26)->assertStatus(422)->assertJsonPath('code', 'PER_ORDER_LIMIT')->assertJsonPath('data.per_order_max', 25);
+        $this->book($event, $token, 15, ['form_key' => 'form-15'])->assertOk();
+        $this->assertSame(1, Payment::withoutTenantScope()->count(), 'refused orders make no payment');
+
+        // A minimum above the maximum never applies.
+        $general->forceFill(['per_order_max' => 3, 'per_order_min' => 5])->save();
+        $this->assertSame([3, 3], [$general->fresh()->perOrderMin(), $general->fresh()->perOrderMax()]);
+    }
+
+    #[Test]
     public function the_token_lasts_thirty_days_and_sign_out_revokes_it(): void
     {
         $event = $this->makeEvent();

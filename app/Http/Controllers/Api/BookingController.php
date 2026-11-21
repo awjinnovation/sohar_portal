@@ -130,8 +130,10 @@ class BookingController extends Controller
                     'admits' => max(1, (int) $t->admits),
                     'admits_label' => max(1, (int) $t->admits) > 1 ? trans_choice('gate.people', (int) $t->admits, ['count' => (int) $t->admits], $lang) : null,
                     'requires_id' => (bool) $t->requires_id,
-                    // Same cap as the page's stepper.
-                    'max_quantity' => max(1, min(10, (int) $t->per_order_max)),
+                    // The type's own limits (admin → event → ticket types; MSR-402): the stepper
+                    // goes from 0 to the minimum, then up to the maximum.
+                    'max_quantity' => $t->perOrderMax(),
+                    'min_quantity' => $t->perOrderMin(),
                     'sales_open' => $t->salesOpen(),
                 ])->values()->all(),
                 'dates' => array_map(fn (array $d) => $d + [
@@ -313,7 +315,7 @@ class BookingController extends Controller
             'booking_date' => ['nullable', 'date_format:Y-m-d'],
             'items' => ['nullable', 'array', 'max:30'],
             'items.*.ticket_type_id' => ['required', 'integer'],
-            'items.*.quantity' => ['required', 'integer', 'min:0', 'max:50'],
+            'items.*.quantity' => ['required', 'integer', 'min:0', 'max:'.EventTicketType::PER_ORDER_LIMIT],
             'form_key' => ['nullable', 'string', 'max:64'],
             'gateway' => ['nullable', 'string', 'max:40'],
         ]);

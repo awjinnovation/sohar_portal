@@ -24,7 +24,7 @@ return [
     // host the gate device called (e.g. http://192.168.1.20:8002).
     'public_url' => env('PAY_LINK_BASE_URL'),
 
-    // Max tickets per checkout.
+    // Default «الحد الأقصى في الطلب» of a new ticket type; orders follow each type's own limits (MSR-402).
     'max_tickets_per_order' => 10,
 
     /*

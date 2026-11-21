@@ -33,7 +33,7 @@ class PaymentController extends Controller
             // Needed only when a line is of a `date` type (docs/ticket_types_contract.md §7); CheckoutService asks for it.
             'booking_date' => 'nullable|date_format:Y-m-d',
             // Legacy single type (key; empty / `standard` = the event's default type)…
-            'quantity' => 'required_without:items|nullable|integer|min:1|max:'.config('payments.max_tickets_per_order', 10),
+            'quantity' => 'required_without:items|nullable|integer|min:1|max:'.\App\Models\EventTicketType::PER_ORDER_LIMIT, // the type's own limits: CheckoutService
             'ticket_type' => 'nullable|string|max:40',
             // …or several types (docs/ticket_types_contract.md §2).
             'items' => 'nullable|array|min:1|max:20',

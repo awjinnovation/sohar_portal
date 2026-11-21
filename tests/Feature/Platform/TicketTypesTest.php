@@ -58,7 +58,7 @@ class TicketTypesTest extends GateTestCase
         $res->assertJsonPath('data.price_from_minor', 500)->assertJsonPath('data.price_from', '0.500')
             ->assertJsonPath('data.price', 2); // legacy price = the General type
         $this->assertSame(['id', 'key', 'name', 'name_text', 'description_text', 'category', 'icon', 'price_minor', 'price', 'is_free', 'admits', 'validity', 'per_order_max',
-            'min_age', 'max_age', 'requires_id', 'color', 'available', 'sales_open', 'sales_start', 'sales_end', 'visibility'], array_keys($types['child']));
+            'per_order_min', 'min_age', 'max_age', 'requires_id', 'color', 'available', 'sales_open', 'sales_start', 'sales_end', 'visibility'], array_keys($types['child']));
         $this->assertSame([4, 5, '6.000'], [$types['family']['admits'], $types['family']['available'], $types['family']['price']]);
         $this->assertSame([11, true, '#123456', 'Child'], [$types['child']['max_age'], $types['child']['requires_id'], $types['child']['color'], $types['child']['name_text']]);
         $this->assertSame(50, $types['general']['available']);
