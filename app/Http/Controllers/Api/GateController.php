@@ -107,8 +107,25 @@ class GateController extends Controller
                 'signed_check' => \App\Services\Gate\SignedCheckSettings::forSession($tenant, $date, $gate),
             ],
             'manifest_version' => $this->manifest->version($tenant, $date, $gate),
+            'session_version' => $this->sessionVersion($tenant, $device),
             'server_time' => TenantTime::iso(Carbon::now(), $tenant),
         ]);
+    }
+
+    /**
+     * Changes whenever GET /gate/session would: tenant settings saved (e.g.
+     * the signed check, new signing keys), the gate edited or changed, staff
+     * signed in or out, a new operating day. The heartbeat reports it, so an
+     * open app reads the session again within a minute.
+     */
+    private function sessionVersion(\App\Models\Tenant $tenant, GateDevice $device): string
+    {
+        $gate = $device->gate;
+
+        return substr(sha1(implode('|', [
+            's1', GateDay::today($tenant), $tenant->updated_at?->getTimestamp(), $device->gate_id,
+            $gate?->updated_at?->getTimestamp(), $device->staff_user_id,
+        ])), 0, 16);
     }
 
     /** POST /gate/staff/login {phone, otp} */
@@ -291,6 +308,7 @@ class GateController extends Controller
         return $this->ok([
             'server_time' => TenantTime::iso(Carbon::now(), $tenant),
             'manifest_version' => $this->manifest->version($tenant, GateDay::today($tenant), $device->gate),
+            'session_version' => $this->sessionVersion($tenant, $device),
             'device_status' => $device->status,
         ]);
     }

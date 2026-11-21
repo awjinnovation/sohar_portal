@@ -199,6 +199,16 @@ class GateSignedTicketsTest extends GateTestCase
         // A gate checks a ticket with the public key alone.
         $p = TicketSignature::parse($older->fresh()->scanCode());
         $this->assertTrue(sodium_crypto_sign_verify_detached(TicketSignature::base32Decode($p['sig']), $p['body'], base64_decode($on['keys'][$p['key_day']])));
+
+        // Field test 2026-11-21: an open app must notice the change. The heartbeat's
+        // session_version follows tenant settings (and the key epoch).
+        $hb = fn () => $this->gate('POST', '/api/v1/gate/heartbeat', ['app_version' => '15.1.1'], $token)->json('data.session_version');
+        $v1 = $hb();
+        $this->assertSame($v1, $this->gate('GET', '/api/v1/gate/session', [], $token)->json('data.session_version'));
+        $this->assertSame($v1, $hb(), 'unchanged while nothing changes');
+        $this->travel(1)->seconds();
+        $this->tenant->putSetting('gate.signed_keys_epoch', 2)->save();
+        $this->assertNotSame($v1, $hb());
     }
 
     #[Test]
