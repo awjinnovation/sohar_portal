@@ -64,6 +64,13 @@
             </ul>
         </div>
     </x-slot:actions>
+    @unless($event->freeOrdersAllowed())
+        <div class="alert alert-warning d-flex align-items-start gap-2 py-2" id="ttFreeOff">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>{{ __('الطلبات المجانية موقوفة، فلا تظهر الأنواع التي سعرها 0 للزوار ولا تُباع.') }}
+                <a href="{{ route('admin.branding.edit') }}#sec-free-orders">{{ __('تغيير الإعداد') }}</a></span>
+        </div>
+    @endunless
     <div class="tt-list" id="ttList" aria-live="polite"></div>
     <p class="form-text mb-0 mt-2"><i class="bi bi-arrows-move"></i> {{ __('اسحب الأنواع لترتيبها كما تظهر للزائر. يظهر أول نوع عام نشط سعرًا أساسيًا للفعالية.') }}</p>
     <script type="application/json" id="ttConfig">@json($ttConfig, JSON_UNESCAPED_UNICODE)</script>

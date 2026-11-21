@@ -584,6 +584,9 @@ class TenantController extends Controller
         $f['ai.monthly_token_budget'] = ['int', 'required|integer|min:0|max:1000000000'];
         $f['ai.copilot_enabled'] = ['bool', 'boolean'];
 
+        // Free ticket types (docs/ticket_types_contract.md §9; admin/tenants/_free-orders).
+        $f['tickets.free_orders'] = ['bool', 'boolean'];
+
         // Gate box office (docs/gate_sales_contract.md §1; admin/gates/_sales-settings).
         $f['gate_sales.enabled'] = ['bool', 'boolean'];
         $f['gate_sales.link_ttl_minutes'] = ['int', 'required|integer|between:5,1440'];

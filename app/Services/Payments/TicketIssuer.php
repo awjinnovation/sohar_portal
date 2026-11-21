@@ -101,7 +101,7 @@ class TicketIssuer
                 'validity' => \App\Models\EventTicketType::normalizeValidity($l['validity'] ?? null),
             ], $meta['lines']));
         }
-        $type = $event?->ticketTypeByKey($meta['ticket_type'] ?? null, \App\Models\EventTicketType::CHANNEL_BOX_OFFICE);
+        $type = $event?->ticketTypeByKey($meta['ticket_type'] ?? null, \App\Models\EventTicketType::CHANNEL_BOX_OFFICE, withFree: true);
 
         return [[
             'ticket_type_id' => $type?->id,

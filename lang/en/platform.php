@@ -16,6 +16,7 @@ return [
         'server_error' => 'Something went wrong. Please try again.',
         // Ticket types (docs/ticket_types_contract.md §2).
         'type_not_available' => 'This ticket type is not available.',
+        'free_orders_off' => 'Free :type tickets are not available right now. Please choose a paid ticket.',
         'type_sold_out' => 'No :type tickets are left for this day.',
         'sales_closed' => ':type tickets are not on sale right now.',
         'per_order_limit' => 'At most :max :type tickets per order.',

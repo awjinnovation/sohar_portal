@@ -157,6 +157,25 @@ class CheckoutService
         ];
     }
 
+    /**
+     * The item asks for a free type while the organizer takes paid tickets
+     * only (tickets.free_orders off): FREE_ORDERS_OFF, so the app and the
+     * booking site say why instead of "not available".
+     */
+    private function refuseFreeType(Event $event, array $item, string $channel): void
+    {
+        if ($event->freeOrdersAllowed()) {
+            return;
+        }
+        $all = $event->sellableTicketTypes($channel, withFree: true);
+        $type = array_key_exists('ticket_type_id', $item) && $item['ticket_type_id'] !== null
+            ? $all->firstWhere('id', (int) $item['ticket_type_id'])
+            : $event->ticketTypeByKey($item['ticket_type'] ?? null, $channel, withFree: true);
+        if ($type && (int) $type->price_minor === 0) {
+            throw new ApiException('FREE_ORDERS_OFF', __('platform.errors.free_orders_off', ['type' => $type->nameText()]), 422, ['ticket_type_id' => $type->id]);
+        }
+    }
+
     /** @return list<array{type: EventTicketType, ticket_type_id:int, key:string, name: array, name_text:string, quantity:int, unit_price_minor:int, line_total_minor:int, admits:int, validity:string}> */
     private function resolveLines(Event $event, array $items, string $channel): array
     {
@@ -175,6 +194,7 @@ class CheckoutService
                 $requested = $type?->id;
             }
             if (! $type) {
+                $this->refuseFreeType($event, $item, $channel);
                 throw new ApiException('TYPE_NOT_AVAILABLE', __('platform.errors.type_not_available'), 422, ['ticket_type_id' => $requested]);
             }
             $merged[$type->id] = ($merged[$type->id] ?? 0) + $qty;

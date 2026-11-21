@@ -16,6 +16,7 @@ return [
         'server_error' => 'حدث خطأ. حاول مرة أخرى.',
         // Ticket types (docs/ticket_types_contract.md §2).
         'type_not_available' => 'نوع التذكرة هذا غير متاح للشراء.',
+        'free_orders_off' => 'تذاكر «:type» المجانية غير متاحة حاليًا، ويمكن اختيار نوع مدفوع.',
         'type_sold_out' => 'نفدت تذاكر «:type» لهذا اليوم.',
         'sales_closed' => 'بيع تذاكر «:type» غير متاح في هذا الوقت.',
         'per_order_limit' => 'الحد الأقصى لتذاكر «:type» في الطلب الواحد :max.',

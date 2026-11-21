@@ -121,6 +121,15 @@ class Tenant extends Model
         return (bool) $this->setting("modules.$module", false);
     }
 
+    /**
+     * Ticket types priced 0 may be ordered (admin «السماح بالطلبات المجانية»,
+     * docs/ticket_types_contract.md §9). Off: paid tickets only.
+     */
+    public function freeOrdersAllowed(): bool
+    {
+        return filter_var($this->setting('tickets.free_orders', true), FILTER_VALIDATE_BOOLEAN);
+    }
+
     public function currency(): string
     {
         return (string) $this->setting('tenant.currency', 'OMR');

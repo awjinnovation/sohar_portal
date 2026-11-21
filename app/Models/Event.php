@@ -116,28 +116,42 @@ class Event extends Model implements HasMedia
     }
 
     /** Active types sold in a channel (app = public only, box_office = public + box_office). */
-    public function sellableTicketTypes(string $channel = EventTicketType::CHANNEL_APP)
+    public function sellableTicketTypes(string $channel = EventTicketType::CHANNEL_APP, bool $withFree = false)
     {
-        return EventTicketType::withoutTenantScope()->where('event_id', $this->id)->active()
+        $types = EventTicketType::withoutTenantScope()->where('event_id', $this->id)->active()
             ->forChannel($channel)->ordered()->get()->each->setRelation('event', $this);
+
+        // Paid tickets only (tenant setting tickets.free_orders off): free types are not for sale.
+        return $withFree || $this->freeOrdersAllowed()
+            ? $types
+            : $types->filter(fn (EventTicketType $t) => (int) $t->price_minor > 0)->values();
+    }
+
+    /** The organizer allows ticket types priced 0 to be ordered (Tenant::freeOrdersAllowed). */
+    public function freeOrdersAllowed(): bool
+    {
+        $current = app(\App\Tenancy\TenantContext::class)->get();
+        $tenant = $current && (int) $current->id === (int) $this->tenant_id ? $current : $this->tenant;
+
+        return $tenant?->freeOrdersAllowed() ?? true;
     }
 
     /** The type a legacy single-`quantity` order maps to: `general`, else the first active type of the channel. */
-    public function defaultTicketType(string $channel = EventTicketType::CHANNEL_APP): ?EventTicketType
+    public function defaultTicketType(string $channel = EventTicketType::CHANNEL_APP, bool $withFree = false): ?EventTicketType
     {
-        $types = $this->sellableTicketTypes($channel);
+        $types = $this->sellableTicketTypes($channel, $withFree);
 
         return $types->firstWhere('key', 'general') ?? $types->first();
     }
 
-    /** Type by key for legacy callers (`standard` = the default type). */
-    public function ticketTypeByKey(?string $key, string $channel = EventTicketType::CHANNEL_APP): ?EventTicketType
+    /** Type by key for legacy callers (`standard` = the default type). $withFree: also free types while they are off. */
+    public function ticketTypeByKey(?string $key, string $channel = EventTicketType::CHANNEL_APP, bool $withFree = false): ?EventTicketType
     {
         if ($key === null || $key === '' || $key === 'standard') {
-            return $this->defaultTicketType($channel);
+            return $this->defaultTicketType($channel, $withFree);
         }
 
-        return $this->sellableTicketTypes($channel)->firstWhere('key', $key);
+        return $this->sellableTicketTypes($channel, $withFree)->firstWhere('key', $key);
     }
 
     /** Date shown with type availability: today while the event runs, else its first day (null without dates). */
@@ -187,7 +201,7 @@ class Event extends Model implements HasMedia
      */
     public function syncPriceFromTypes(): void
     {
-        $from = $this->defaultTicketType()?->price_minor;
+        $from = $this->defaultTicketType(withFree: true)?->price_minor;
         if ($from === null) {
             return;
         }
@@ -211,7 +225,7 @@ class Event extends Model implements HasMedia
     public function unitPriceMinor(?string $ticketType = null, int $decimals = 3): int
     {
         // Ticket types are authoritative (docs/ticket_types_contract.md).
-        if ($ticketType && ($type = $this->ticketTypeByKey($ticketType, EventTicketType::CHANNEL_BOX_OFFICE))) {
+        if ($ticketType && ($type = $this->ticketTypeByKey($ticketType, EventTicketType::CHANNEL_BOX_OFFICE, withFree: true))) {
             return (int) $type->price_minor;
         }
         if ($ticketType && is_array($this->pricing)) {

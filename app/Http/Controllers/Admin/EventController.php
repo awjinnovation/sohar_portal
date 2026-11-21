@@ -105,7 +105,7 @@ class EventController extends Controller
         if (array_key_exists('price', $validated) && $validated['price'] === null) {
             unset($validated['price']);
         }
-        if (isset($validated['price']) && ($default = $event->defaultTicketType())) {
+        if (isset($validated['price']) && ($default = $event->defaultTicketType(withFree: true))) {
             $default->update(['price_minor' => $this->currentTenant()?->toMinor((string) $validated['price']) ?? 0]);
         }
         $validated['currency'] = $validated['currency'] ?? $this->currentTenant()?->currency() ?? 'OMR';

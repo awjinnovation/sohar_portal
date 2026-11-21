@@ -220,6 +220,12 @@ return [
             'offline_enabled' => false,
         ],
 
+        // Ticket types priced 0 (docs/ticket_types_contract.md §9): false = paid tickets
+        // only; free types are hidden from the app, booking site and box office and refused.
+        'tickets' => [
+            'free_orders' => true,
+        ],
+
         // Offline gates admit by the system's signature (docs/gate_signed_tickets.md §2).
         // Tickets are always signed; signed_check decides when offline gates use it.
         'gate' => [

@@ -65,7 +65,7 @@
         'sec-identity' => ['building', 'الهوية'], 'sec-logos' => ['image', 'الشعارات'], 'sec-colors' => ['palette', 'الألوان'],
         'sec-type' => ['fonts', 'الخطوط والشكل'], 'sec-locale' => ['globe2', 'اللغة والتواصل'], 'sec-modules' => ['toggles', 'الوحدات'],
         'sec-map' => ['geo-alt', 'الخريطة'], 'sec-wallet' => ['wallet2', 'المحفظة'], 'sec-points' => ['stars', 'النقاط'],
-        'sec-app' => ['phone', 'التطبيق'], 'sec-ai' => ['stars', 'ai.admin.ai_settings'], 'sec-gate-sales' => ['cart-check', 'مبيعات البوابات'], 'sec-radi' => ['emoji-smile', 'راضي'], 'sec-billing' => ['receipt', 'الفوترة والرسائل'],
+        'sec-app' => ['phone', 'التطبيق'], 'sec-ai' => ['stars', 'ai.admin.ai_settings'], 'sec-free-orders' => ['ticket-perforated', 'التذاكر المجانية'], 'sec-gate-sales' => ['cart-check', 'مبيعات البوابات'], 'sec-radi' => ['emoji-smile', 'راضي'], 'sec-billing' => ['receipt', 'الفوترة والرسائل'],
     ];
     if ($platform) { $sections['sec-gateway'] = ['shield-lock', 'بوابة الدفع']; }
     $sections['sec-advanced'] = ['code-slash', 'متقدم'];
@@ -411,6 +411,8 @@
                 </x-admin.card>
 
                 @include('admin.ai._tenant-settings')
+
+                @include('admin.tenants._free-orders')
 
                 @include('admin.gates._sales-settings')
 
