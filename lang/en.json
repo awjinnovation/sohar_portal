@@ -1654,6 +1654,7 @@
     "لا يوجد مسح": "No scans",
     ":online من :total": ":online of :total",
     ":n في الدقيقة": ":n per minute",
+    "مدفوعة :paid، مجانية :free": "Paid :paid, free :free",
     "أقدم رسالة تنتظر منذ :time": "Oldest message waiting for :time",
     "أقدم مهمة تنتظر منذ :time": "Oldest job waiting for :time",
     "لا شيء في الانتظار": "Nothing waiting",

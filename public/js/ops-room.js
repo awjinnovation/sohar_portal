@@ -54,7 +54,7 @@
     function renderKpis(s) {
         var tk = s.tickets || {}, g = s.gates || {}, sms = s.sms || {}, o = s.orders || {};
         set('tickets.today', fmt(tk.today));
-        set('tickets.hint', t('per_min', { n: fmt(tk.per_minute) }));
+        set('tickets.hint', t('paid_free', { paid: fmt(tk.paid), free: fmt(tk.free) }));
         set('gates.in', fmt(g.in));
         set('gates.hint', t('per_min', { n: fmt(g.per_minute) }));
         set('gates.inside', fmt(g.inside));
@@ -136,7 +136,7 @@
     }
 
     function renderTickets(tk) {
-        ['people', 'last_15m', 'last_hour'].forEach(function (k) { set('tickets.' + k, fmt(tk[k])); });
+        ['paid', 'free', 'people', 'last_15m', 'last_hour'].forEach(function (k) { set('tickets.' + k, fmt(tk[k])); });
         var counts = (tk.series || {}).counts || [];
         var bars = $('#ticketBars');
         bars.innerHTML = spark(counts, 'labels');

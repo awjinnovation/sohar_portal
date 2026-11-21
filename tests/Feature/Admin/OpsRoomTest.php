@@ -94,6 +94,17 @@ class OpsRoomTest extends GateTestCase
     }
 
     #[Test]
+    public function tickets_are_split_into_paid_and_free(): void
+    {
+        $this->makeTicket(); // priced 1.000
+        $this->makeTicket(null, ['price' => '0.500']);
+        $this->makeTicket(null, ['price' => '0.000', 'ticket_type' => 'child']);
+
+        $t = $this->payload()['tickets'];
+        $this->assertSame([3, 2, 1], [$t['today'], $t['paid'], $t['free']]);
+    }
+
+    #[Test]
     public function tickets_are_counted_per_channel(): void
     {
         $online = $this->makeTicket(null, ['transaction_id' => 'TX-OPS-1']);

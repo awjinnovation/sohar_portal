@@ -34,6 +34,7 @@
         'no_scans' => __('لا يوجد مسح'),
         'devices' => __(':online من :total'),
         'per_min' => __(':n في الدقيقة'),
+        'paid_free' => __('مدفوعة :paid، مجانية :free'),
         'oldest' => __('أقدم رسالة تنتظر منذ :time'),
         'oldest_job' => __('أقدم مهمة تنتظر منذ :time'),
         'empty_queue' => __('لا شيء في الانتظار'),
@@ -161,6 +162,8 @@
             <div class="ops-tickets-body">
                 <dl class="ops-ticket-nums">
                     <div class="lead"><dt>{{ __('اليوم') }}</dt><dd class="num" data-k="tickets.today">0</dd></div>
+                    <div><dt>{{ __('مدفوعة') }}</dt><dd class="num" data-k="tickets.paid">0</dd></div>
+                    <div><dt>{{ __('مجانية') }}</dt><dd class="num" data-k="tickets.free">0</dd></div>
                     <div><dt>{{ __('عدد الأشخاص') }}</dt><dd class="num" data-k="tickets.people">0</dd></div>
                     <div><dt>{{ __('آخر 15 دقيقة') }}</dt><dd class="num" data-k="tickets.last_15m">0</dd></div>
                     <div><dt>{{ __('آخر ساعة') }}</dt><dd class="num" data-k="tickets.last_hour">0</dd></div>

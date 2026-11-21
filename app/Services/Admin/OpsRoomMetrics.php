@@ -77,7 +77,8 @@ class OpsRoomMetrics
     {
         $today = Ticket::query()->where('tickets.created_at', '>=', $dayStart);
         $row = (clone $today)->toBase()
-            ->selectRaw('count(*) as c, coalesce(sum(case when max_check_ins > 1 then max_check_ins else 1 end), 0) as people')
+            ->selectRaw('count(*) as c, coalesce(sum(case when max_check_ins > 1 then max_check_ins else 1 end), 0) as people,
+                coalesce(sum(case when price > 0 then 1 else 0 end), 0) as paid')
             ->first();
         $since = fn (int $minutes) => (clone $today)->where('tickets.created_at', '>=', $now->copy()->subMinutes($minutes))->count();
         $last15 = $since(15);
@@ -94,6 +95,9 @@ class OpsRoomMetrics
         return [
             'today' => (int) ($row->c ?? 0),
             'people' => (int) ($row->people ?? 0),
+            // Paid = issued at a price; free = price 0 (e.g. child tickets).
+            'paid' => (int) ($row->paid ?? 0),
+            'free' => (int) ($row->c ?? 0) - (int) ($row->paid ?? 0),
             'last_15m' => $last15,
             'last_hour' => $since(60),
             'per_minute' => round($last15 / 15, 1),
