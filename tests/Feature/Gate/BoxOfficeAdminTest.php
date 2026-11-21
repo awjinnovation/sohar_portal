@@ -116,7 +116,7 @@ class BoxOfficeAdminTest extends GateTestCase
         ])->assertSessionHasNoErrors()->assertRedirect(route('admin.branding.edit'));
         $settings = BoxOfficeService::settings($this->tenant->fresh());
         $this->assertSame(['enabled' => false, 'link_ttl_minutes' => 45, 'send_sms' => false, 'max_quantity' => 6, 'allow_future_dates' => true,
-            'pos_enabled' => false, 'pos_accept_unverified' => true, 'pos_terminal_ids' => [], 'pos_photo_required' => false, 'pos_approval_required' => false, 'offline_enabled' => true], $settings);
+            'pos_enabled' => false, 'pos_accept_unverified' => true, 'pos_terminal_ids' => [], 'pos_photo_required' => false, 'pos_approval_required' => false, 'pos_check_deferred' => false, 'offline_enabled' => true], $settings);
         $this->assertSame(':app: pay at :url', $this->tenant->fresh()->setting('messages.box_office_sms.en'));
 
         $this->actingAs($admin)->put(route('admin.branding.update'), ['name' => ['en' => 'North', 'ar' => 'الشمال'], 's' => ['gate_sales' => ['link_ttl_minutes' => '2']]])

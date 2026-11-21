@@ -473,6 +473,25 @@ class BoxOfficeCardTerminalTest extends GateTestCase
     }
 
     #[Test]
+    public function the_automatic_check_can_be_deferred_so_the_gate_does_not_wait(): void
+    {
+        [, $token] = $this->sellingDevice();
+        $this->tenant->putSetting('gate_sales.pos_receipt_check_deferred', true)->save();
+        $this->reads = $this->slip('9.000'); // would be rejected if it were read
+        $orderId = $this->posOrder($token, $this->event())->json('data.order.id');
+
+        $res = $this->sendReceipt($token, $orderId)->assertCreated()
+            ->assertJsonPath('data.receipt.verdict', 'review')
+            ->assertJsonPath('data.receipt.ai', 'deferred')
+            ->assertJsonPath('data.receipt.has_photo', true)
+            ->assertJsonPath('data.order.status', 'paid')
+            ->assertJsonPath('data.order.needs_review', true);
+        $this->assertSame(['check_deferred'], $this->codes($res));
+        $this->assertSame(0, $this->aiCalls, 'the photo is not read while the gate waits');
+        $this->assertNotNull(BoxOfficeReceipt::firstOrFail()->path);
+    }
+
+    #[Test]
     public function the_organizer_can_require_the_approval_number_without_a_photo(): void
     {
         [, $token] = $this->sellingDevice();

@@ -215,6 +215,7 @@ return [
             'pos_accept_unverified' => true, // a receipt that cannot be fully checked: true = issue + flag for review, false = hold for a supervisor
             'pos_terminal_ids' => '',        // comma-separated TIDs of the organizer's terminals; empty = any terminal
             'pos_receipt_photo_required' => false, // false = staff may confirm a card payment without a receipt photo (flagged for review)
+            'pos_receipt_check_deferred' => false, // true = store the receipt photo without reading it now (accepted as review, checked later)
             'pos_approval_code_required' => false, // true = a payment confirmed without a photo must carry the approval number from the slip
             // §10: with no connection the gate device sells on the card terminal itself (offline
             // ticket codes, no phone, no SMS), prints the tickets and syncs the sale later.

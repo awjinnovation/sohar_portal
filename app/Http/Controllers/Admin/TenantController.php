@@ -597,6 +597,7 @@ class TenantController extends Controller
         $f['gate_sales.pos_accept_unverified'] = ['bool', 'boolean'];
         $f['gate_sales.pos_receipt_photo_required'] = ['bool', 'boolean'];
         $f['gate_sales.pos_approval_code_required'] = ['bool', 'boolean'];
+        $f['gate_sales.pos_receipt_check_deferred'] = ['bool', 'boolean'];
         $f['gate_sales.offline_enabled'] = ['bool', 'boolean'];
         $f['gate_sales.pos_terminal_ids'] = ['string', 'nullable|string|max:500|regex:/^[A-Za-z0-9,;\s]*$/'];
         // Offline check by signature (docs/gate_signed_tickets.md §2; admin/gates/_offline-check-settings).

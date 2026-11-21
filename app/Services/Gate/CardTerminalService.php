@@ -63,6 +63,9 @@ class CardTerminalService
 {
     public const MAX_ATTEMPTS = 5;
 
+    /** `ai_status` of a photo stored without reading it (`gate_sales.pos_receipt_check_deferred`). */
+    public const STATUS_DEFERRED = 'deferred';
+
     public const DISK = 'local';
 
     public const MAX_IMAGE_KB = 10240;
@@ -142,7 +145,10 @@ class CardTerminalService
         $path = sprintf('box-office-receipts/%d/%s/%s.%s', $tenant->id, now()->format('Y/m'), Str::uuid(), self::MIMES[$mime] ?? 'jpg');
         Storage::disk(self::DISK)->put($path, $bytes);
 
-        $read = $this->reader->read($tenant, $bytes, $mime, $staff);
+        // `pos_receipt_check_deferred`: the photo is kept and read later, so the gate does not wait for the model.
+        $read = BoxOfficeService::settings($tenant)['pos_check_deferred']
+            ? ['status' => self::STATUS_DEFERRED, 'model' => null, 'fields' => null]
+            : $this->reader->read($tenant, $bytes, $mime, $staff);
         $judged = $this->judge($tenant, $order, $sha, $read);
 
         $receipt = new BoxOfficeReceipt([
@@ -341,7 +347,11 @@ class CardTerminalService
 
         $f = $read['fields'];
         if ($read['status'] !== ReceiptReader::STATUS_OK || ! is_array($f)) {
-            $add('review', $read['status'] === ReceiptReader::STATUS_BUDGET ? 'ai_budget' : 'ai_unavailable');
+            $add('review', match ($read['status']) {
+                self::STATUS_DEFERRED => 'check_deferred',
+                ReceiptReader::STATUS_BUDGET => 'ai_budget',
+                default => 'ai_unavailable',
+            });
         } elseif (! $f['is_receipt']) {
             $add('reject', 'not_a_receipt');
         } else {

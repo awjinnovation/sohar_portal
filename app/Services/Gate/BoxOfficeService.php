@@ -85,6 +85,8 @@ class BoxOfficeService
             'pos_photo_required' => (bool) ($s['pos_receipt_photo_required'] ?? false),
             // Stored as `pos_approval_code_required`; on = a payment confirmed without a photo needs the approval number.
             'pos_approval_required' => (bool) ($s['pos_approval_code_required'] ?? false),
+            // Stored as `pos_receipt_check_deferred`; on = the photo is stored, not read while the gate waits.
+            'pos_check_deferred' => (bool) ($s['pos_receipt_check_deferred'] ?? false),
             // §10: card terminal sales with no connection (offline ticket codes, no phone, no SMS).
             'offline_enabled' => (bool) ($s['offline_enabled'] ?? false),
         ];

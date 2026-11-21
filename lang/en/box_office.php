@@ -61,6 +61,7 @@ return [
         'low_legibility' => 'The photo is not clear.',
         'screen_photo' => 'The photo looks taken from another screen or edited.',
         'ai_unavailable' => 'The receipt could not be checked automatically right now.',
+        'check_deferred' => 'The receipt photo was stored without the automatic check; it is checked later.',
         'ai_budget' => 'Automatic checks have reached their monthly limit.',
         'no_photo' => 'Payment confirmed without a receipt photo.',
         'possible_duplicate' => 'The same approval code and amount were recorded for order :reference, so this may be a duplicate.',
