@@ -101,6 +101,9 @@ class GateSignedTicketsTest extends GateTestCase
         $reentry = $this->inTenant($this->tenant, fn () => $m->build($this->tenant, GateDay::today(), $this->makeGate(['event_id' => $event->id, 'allow_reentry' => true])));
         $this->assertEqualsCanonicalizing([$h($active), $h($today), $h($cancelled)], $hashes($reentry), 'used today stays for re-entry; used days ago does not');
         $this->assertNotContains($h($old), $hashes($reentry));
+
+        $exit = $this->inTenant($this->tenant, fn () => $m->build($this->tenant, GateDay::today(), $this->makeGate(['event_id' => $event->id, 'direction' => 'both'])));
+        $this->assertContains($h($today), $hashes($exit), 'a visitor who entered today can leave through an offline exit gate');
     }
 
     #[Test]

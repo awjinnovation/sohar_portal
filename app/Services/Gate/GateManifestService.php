@@ -129,7 +129,7 @@ class GateManifestService
      *
      * Only tickets that can still enter are listed (docs/gate_signed_tickets.md
      * §3): used tickets are left out, except those used today at a gate that
-     * allows re-entry. v1 keeps cancelled / refunded entries (their offline
+     * allows re-entry or lets visitors out (direction exit / both). v1 keeps cancelled / refunded entries (their offline
      * message); v2 (`$v >= 2`) moves them, and the used ones, into `status`
      * (2 bits per ticket id), adds `i` (ticket id) to every entry and a
      * `cursor` for GET /gate/manifest/changes.
@@ -142,7 +142,8 @@ class GateManifestService
         $salt = $this->salt($tenant, $date);
         $today = $this->entriesToday($tenant, $date, $gate);
         $refunded = $this->refundedIds($date, $gate);
-        $usedToday = $gate?->allow_reentry ? GateDay::window($date, $tenant) : null;
+        // Re-entry and exit gates keep tickets used today (a re-entry after an exit, a visitor leaving).
+        $usedToday = $gate && ($gate->allow_reentry || $gate->direction !== 'entry') ? GateDay::window($date, $tenant) : null;
         $tickets = [];
         $codes = [];
 
@@ -272,9 +273,9 @@ class GateManifestService
 
     /**
      * Whether an entry goes into `tickets`: active ones; used ones only when
-     * used today at a re-entry gate; cancelled / refunded only in v1.
+     * used today at a re-entry or exit gate; cancelled / refunded only in v1.
      *
-     * @param  array{0: Carbon, 1: Carbon}|null  $usedToday  re-entry gate: today's UTC window
+     * @param  array{0: Carbon, 1: Carbon}|null  $usedToday  re-entry / exit gate: today's UTC window
      */
     private function listed(array $entry, object $row, ?array $usedToday, int $v): bool
     {
